@@ -1,0 +1,8 @@
+*.log
+*.todo
+.DS_Store
+.nyc_output
+dist
+chrome
+coverage
+node_modules

@@ -1,0 +1,46 @@
+{
+  "name": "somedom",
+  "version": "0.0.0",
+  "description": "Building blocks for the DOM.",
+  "main": "dist/somedom.es.js",
+  "module": "dist/somedom.es.js",
+  "browser": "dist/somedom.min.js",
+  "scripts": {
+    "build:browser": "bili --target browser --format umd-min --name somedom --js buble",
+    "build:node": "bili --target node --js buble --format es",
+    "build": "npm run build:browser && npm run build:node",
+    "dev": "bili --format iife-min --js buble tests/e2e/*.test.js --name sandbox -o docs",
+    "watch": "npm test -- -w",
+    "serve": "live-server docs",
+    "test": "npm run test:unit --",
+    "test:ci": "npm run coverage && npm run report --",
+    "test:unit": "NODE_ENV=test _mocha --exit --recursive -r esm -bR spec tests/unit",
+    "coverage": "nyc -x '**/fixtures/**' -x '**/*.test.js' npm run test:unit",
+    "coverage:unit": "npm run coverage -- npm run test:unit",
+    "codecov": "codecov --file=coverage/lcov.info -e TRAVIS_NODE_VERSION",
+    "report": "nyc report",
+    "lint": "eslint src tests",
+    "pretest": "npm run lint",
+    "test-e2e": "BASE_URL=http://localhost:8080 testcafe",
+    "test-live": "BASE_URL=http://localhost:8080 testcafe-live",
+    "test-e2e-ci": "npm run test-e2e -- --ports 9505,9506 remote:1"
+  },
+  "author": "Alvaro Cabrera <pateketrueke@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "bili": "^3.1.2",
+    "chai": "^4.1.2",
+    "codecov": "^3.0.4",
+    "eslint": "^5.4.0",
+    "eslint-config-airbnb-base": "^13.1.0",
+    "eslint-plugin-import": "^2.14.0",
+    "esm": "^3.0.78",
+    "mocha": "^5.2.0",
+    "nyc": "^12.0.2",
+    "testcafe": "^0.21.1",
+    "testdouble": "^3.8.1"
+  },
+  "dependencies": {
+    "live-server": "^1.2.0"
+  }
+}

@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>somedom</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="sandbox.iife.min.js"></script>
+  <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>somedom</h1>
+      <p>Building blocks for the DOM.</p>
+    </header>
+
+    <section>
+      <h2>Install</h2>
+
+      <p>Get it through <code>npm</code> or <code>yarn</code>, e.g.</p>
+      <pre>$ npm install <b>somedom</b> --save-dev</pre>
+
+      <p>Now you can <code>import</code> the bits you need, see below.</p>
+    </section>
+
+    <section>
+      <h2>Tests</h2>
+
+      <p>This guide has embbeded <code>&lt;script&gt;</code> tags invoking <code>test(...)</code> calls, no wonder yet.</p>
+      <p>Behind there's a function named <code>appendChild</code> linked to <code>document.currentScript</code> at execution time.</p>
+
+      <dl>
+        <dt>Example</dt>
+        <dd>
+          <p>Those <code>appendChild</code> calls are removed from the code for readability.</p>
+          <small>output:</small>
+          <script>test((_, appendChild) => {
+            appendChild(document.createTextNode('Hello world.'));
+          });</script>
+        </dd>
+        <dd>
+          <p>Also, <code>somedom</code> is bound to this function.</p>
+          <small>output:</small>
+          <script>test((somedom, appendChild) => {
+            var keys = Object.keys(somedom);
+            var text = `{ ${keys.join(', ')} }`;
+
+            appendChild(document.createTextNode(text));
+          });</script>
+        </dd>
+        <dd>
+          <p>Errors thrown are captured and shown as below:</p>
+          <small>output:</small>
+          <script>test(() => {
+            throw new Error('It should not happen.');
+          });</script>
+        </dd>
+      </dl>
+    </section>
+
+    <h3>API</h3>
+    <p>Produce, patch and render <i>vnodes</i>, mount/unmount them from the DOM, mix and compose hooks, etc.</p>
+
+    <details>
+      <summary><code>h()</code></summary>
+      <dl>
+        <dt><code>h(name[, props], ...children)</code></dt>
+        <dd>
+          <p>This function will produce a <code>vnode</code> value.</p>
+          <small>output:</small>
+          <script>test(({ h }, appendChild) => {
+            var vnode = h('a',
+              { href: '#' }, 'This is', 'JSON');
+
+            appendChild(document.createTextNode(JSON.stringify(vnode)));
+          });</script>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>pre()</code></summary>
+      <dl>
+        <dt><code>pre(vnode[, svg[, cb]])</code></dt>
+        <dd>
+          <p>Use this function to debug <i>vnodes</i> and <b>tag</b> functions.</p>
+          <small>output:</small>
+          <script>test(({ pre }, appendChild) => {
+            appendChild(pre(['root', [
+              ['children', { boolean: true }, [
+                ['node', { string: 'value' }],
+                ['node', [
+                  '\nSome text: ',
+                  ['subnode', { number: 1 }],
+                  'More text here.\n'
+                ]],
+              ]]
+            ]]));
+          });</script>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>bind()</code></summary>
+      <dl>
+        <dt><code>bind(render[, ...callbacks])</code></dt>
+        <dd>
+          <p>This function will help you to merge given callbacks as a <b>tag</b> function.
+          It receives an initial <i>render</i> function and a list of <i>callbacks</i> to be applied.</p>
+          <p>By default the built in <code>render</code> can be used, but you can roll your own.</p>
+          <p>Always return a valid <i>HTMLElement</i> or <i>TextNode</i>, otherwise return <code>cb(..., svg)</code>.</p>
+          <small>output:</small>
+          <script>test(({ bind }, appendChild) => {
+            function debug(vnode, svg, cb) {
+              var json = JSON.stringify(vnode, null, 2);
+
+              var code = document.createElement('pre');
+              var text = document.createTextNode(json);
+
+              code.className = 'highlight';
+              code.appendChild(text);
+
+              return code;
+            }
+
+            var format = bind(debug);
+
+            appendChild(format(['span']));
+          });</script>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>view()</code></summary>
+      <dl>
+        <dt><code>view(tag, state, actions)</code></dt>
+        <dd>
+          <p>Views are higher abstractions over <code>state</code> and <code>actions</code> handling their own updates.</p>
+          <p>Both arguments are given to the <b>tag</b> function in order to produce a valid <code>vnode</code>.</p>
+          <p>Once <code>view</code> is called a new function is returned ready to be mounted.</p>
+          <fieldset id="target"></fieldset>
+          <script>test(({ view, bind, mount, render, listeners }, appendChild) => {
+            var $actions = {
+              down: value => state => ({
+                count: state.count - value,
+              }),
+              up: value => state => ({
+                count: state.count + value,
+              }),
+            };
+
+            var $state = {
+              count: 0
+            };
+
+            var $view = (state, actions) => ['div', [
+              ['h1', state.count],
+              ['button',
+                { onclick: () => actions.down(1) }, '-'],
+              ['button',
+                { onclick: () => actions.up(1) }, '+'],
+              ['button',
+                { onclick: () => actions.unmount() }, 'Remove me'],
+            ]];
+
+            var app = view($view, $state, $actions);
+            var tag = bind(render, listeners());
+
+            function append() {
+              app('#target', tag);
+            }
+
+            mount('#target', ['button',
+              { onclick: append }, 'Add counter'], tag);
+            appendChild();
+          });</script>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>mount()</code></summary>
+      <dl>
+        <dt><code>mount(target[, vnode[, cb]])</code></dt>
+        <dd>
+          <p>Use this function to attach elements on the DOM, it receives an string selector or HTMLElement as target, the given <code>vnode</code> will be the source.</p>
+          <p>If no <code>target</code> is given it will use <code>document.body</code> as fallback.</p>
+          <p>Passing a custom <b>tag</b> (<code>cb</code>) function also works.</p>
+          <small>output:</small>
+          <fieldset id="test1"></fieldset>
+          <fieldset class="test2"></fieldset>
+          <fieldset name="my-target"></fieldset>
+          <script>test(({ mount, render }, appendChild) => {
+            mount(test1, 'Mounted at #test1');
+
+            mount('.test2', ['span',
+              ['Mounted at ', ['code', '.test2']],
+            ]);
+
+            var target = document
+              .querySelector('[name=my-target]');
+
+            mount(target,
+              render(['code', 'Mounted at `[name=my-target]`']));
+            appendChild();
+          });</script>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>patch()</code></summary>
+      <dl>
+        <dt><code>patch(target, vnode, next[, svg[, cb]])</code></dt>
+        <dd>
+          <p>Update a previous <code>vnode</code> with a <code>next</code> one, this function will fix the DOM for you.</p>
+          <fieldset id="test"></fieldset>
+          <script>test(({ mount, patch }, appendChild) => {
+            function view(counter) {
+              return ['span', ['Count: ', counter]];
+            }
+
+            var inc = 0;
+            var dom = view(0);
+            var node = mount('#test', dom);
+
+            setInterval(() => {
+              inc += 1;
+
+              var old = dom;
+              var next = (dom = view(inc));
+
+              patch(node.parentNode, old, next);
+            }, 50);
+            appendChild();
+          });</script>
+        </dd>
+        <dd>
+          <p>It will also sync hooks from any given <b>tag</b> function.</p>
+          <fieldset id="test0"></fieldset>
+          <script>test(({ bind, patch, mount, render, listeners, attributes, animation, styles }, appendChild) => {
+            var tag = bind(render,
+              listeners(),
+              attributes({
+                update: animation,
+                enter: animation,
+                exit: animation,
+                style: styles,
+              }));
+
+            function shuffle(a) {
+              for (var i = a.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var x = a[i];
+                var y = a[j];
+                a[i] = y;
+                a[j] = x;
+              }
+
+              return a;
+            }
+
+            function getItems() {
+              var len = Math.round(Math.random() * 10) + 1;
+
+              return Array.from({ length: len })
+                .map((_, k) => ['li', {
+                  update: ['animated', 'fadeIn'],
+                  enter: ['animated', 'fadeIn'],
+                  exit: ['animated', 'fadeOut', 'faster'],
+                  style: {
+                    transition: 'color .2s',
+                    color: [
+                      'red',
+                      'blue',
+                    ][+(Math.random() > 0.5)],
+                  },
+                }, ['Item ', k + 1]]);
+            }
+
+            function view() {
+              return ['ul', shuffle(getItems())];
+            }
+
+            var dom = view();
+            var timer;
+
+            mount(test0, dom, tag);
+
+            function toggle() {
+              if (timer) {
+                timer = clearTimeout(timer);
+              } else {
+                timer = setInterval(() => {
+                  var old = dom;
+                  var next = (dom = view());
+
+                  patch(test0, old, next, null, tag);
+                }, 2000);
+              }
+            }
+
+            appendChild(tag(['label', [
+              ['input', {
+                onclick: toggle,
+                type: 'checkbox'
+              }],
+              'Play',
+            ]]));
+          });</script>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>render()</code></summary>
+      <dl>
+        <dt><code>render(vnode[, svg[, cb]])</code></dt>
+        <dd>
+          <p>This function accepts only scalars and <code>vnode</code> values.</p>
+          <small>output:</small>
+          <script>test(({ render }, appendChild) => {
+            try {
+              appendChild(render());
+            } catch (e) {
+              appendChild(render(e.toString()));
+            }
+          });</script>
+        </dd>
+        <dd>
+          <p>Given strings are rendered as <code>TextNode</code> elements.</p>
+          <small>output:</small>
+          <script>test(({ render }, appendChild) => {
+            appendChild(render('Hello world.'));
+          });</script>
+        </dd>
+        <dd>
+          <p>You can render single or nested <i>vnodes</i>, attributes are supported as well.</p>
+          <small>output:</small>
+          <script>test(({ render }, appendChild) => {
+            appendChild(render(['b', 'Bold, ']));
+            appendChild(render(['em', [['span', 'Italic ']]]));
+            appendChild(render(['span', { style: 'color:red' }, '& Colored.']));
+          });</script>
+        </dd>
+        <dd>
+          <p>Emmet-like syntax can be used too, just <code>id</code> and <code>class</code> props are supported.</p>
+          <p>If you're using objects as props dont' forget to bind <code>attributes</code> to make'em work together.</p>
+          <small>output:</small>
+          <script>test(({ pre, bind, render, attributes, classes }, appendChild) => {
+            appendChild(pre(['button#a.b.c', 'No props']));
+
+            appendChild(pre(['button#a.b.c',
+              { id: 'x' }, 'Override ID']));
+
+            appendChild(pre(['button#a.b.c',
+              { class: 'test' }, 'Simple class names']));
+
+            var tag = bind(render, attributes({
+              class: classes,
+            }));
+
+            appendChild(pre(['button#a.b.c',
+              { class: ['foo', 'bar'] },
+              'Arrays as class names'], null, tag));
+
+            appendChild(pre(['button#a.b.c',
+              { class: { enabled: 1, disabled: 0 } },
+              'Objects as class names'], null, tag));
+          });</script>
+        </dd>
+        <dd>
+          <p>SVG support is handled for you. However, elements without an <code>svg</code> root requires <code>true</code> as second argument.</p>
+          <small>output:</small>
+          <script>test(({ mount, render }, appendChild) => {
+            var attrs = {
+              width: 16,
+              height: 16,
+              viewBox: '0 0 32 32',
+            };
+
+            var icons = {
+              play: 'M6 4l20 12-20 12z',
+              pause: 'M4 4h10v24h-10zM18 4h10v24h-10z',
+            };
+
+            function getIcon(name) {
+              return ['path', {
+                d: icons[name],
+              }];
+            }
+
+            appendChild(render(['svg', attrs, [getIcon('play')]]));
+
+            var svg = appendChild(render(['svg', attrs]));
+            var path = render(getIcon('pause'), true);
+
+            mount(svg, path);
+          });</script>
+        </dd>
+        <dd>
+          <p>All functions are executed during <code>render</code> calls.</p>
+          <small>output:</small>
+          <script>test(({ render }, appendChild) => {
+            var Em = Array.prototype.concat.bind(['em']);
+
+            function Del(props, children) {
+              return ['del', [[Em, props, children]]];
+            }
+
+            appendChild(render([Del, 'OSOM!']));
+          });</script>
+        </dd>
+        <dd>
+          <p>Those functions can also return <i>HTMLElements</i>, <i>TextNodes</i>, more <i>vnodes</i>, etc.</p>
+          <small>output:</small>
+          <script>test(({ render }, appendChild) => {
+            function tag(props, children) {
+              return document.createTextNode(children);
+            }
+
+            appendChild(render([tag, 'Done.']));
+          });</script>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>unmount()</code></summary>
+      <dl>
+        <dt><code>unmount(target[, cb])</code></dt>
+        <dd>
+          <p>Removes the given node from the DOM. It also invoke available hooks before complete removal.</p>
+          <p>If you give a function as second argument, the element is removed only when <code>done</code> is called.</p>
+          <fieldset>
+            <ul id="test3"></ul>
+          </fieldset>
+          <script>test(({ bind, render, mount, unmount, listeners }, appendChild) => {
+            var tag = bind(render, listeners());
+
+            function Button(label, onClick) {
+              return ['button', { onclick: onClick }, label];
+            }
+
+            function remove(target) {
+              unmount(target, done => {
+                if (confirm('Are you sure?')) {
+                  done();
+                }
+              });
+            }
+
+            function append() {
+              var node = tag(['li', [
+                new Date().toISOString(),
+                Button('Remove', () => remove(node))
+              ]]);
+
+              mount('#test3', node);
+            }
+
+            var button = Button('Add item', append);
+
+            mount('#test3', tag(['li', [button]]));
+            appendChild();
+          });</script>
+        </dd>
+      </dl>
+    </details>
+
+    <h3>Hooks</h3>
+    <p>Listen for events on the DOM, setup element's lifecycle or enhance dynamic <code>class</code> names, etc.</p>
+
+    <details>
+      <summary><code>listeners()</code></summary>
+      <dl>
+        <dt><code>listeners([globals])</code></dt>
+        <dd>
+          <p>This hook allows you to bind any event-handler from your elements' props.</p>
+          <p>Any given <code>globals</code> will be also used as default event handlers, if they return <code>false</code> the rest of handlers will be skipped.</p>
+          <small>output:</small>
+          <script>test(({ bind, render, listeners }, appendChild) => {
+            var tag = bind(render, listeners({
+              onclick: () => Math.random() < 0.5,
+            }));
+
+            function click() {
+              confirm('It worked?');
+            }
+
+            appendChild(tag(['button',
+              { onclick: click }, 'Click me']));
+          });</script>
+        </dd>
+        <dd>
+          <p>Event listeners also help you to manage the element's lifecycle: <code>oncreate</code>, <code>onupdate</code> and <code>ondestroy</code>.</p>
+          <small>output:</small>
+          <fieldset>
+            <span id="test5"></span>
+            <span id="info"></span>
+          </fieldset>
+          <script>test(({ bind, patch, mount, render, unmount, listeners }, appendChild) => {
+            var tag = bind(render, listeners());
+
+            var node;
+            var vnode;
+            var calls = [];
+
+            function Button(label) {
+              return ['button', {
+                onclick: () => calls.shift()(),
+                oncreate: () => {
+                  info.innerHTML = 'Created.';
+                },
+                onupdate: () => {
+                  info.innerHTML = 'Updated.';
+                },
+                ondestroy: () => {
+                  info.innerHTML = 'Destroyed.';
+                },
+              }, label];
+            }
+
+            calls.push(() => {
+              patch(node, vnode,
+                Button('It worked?'), null, tag, null);
+            });
+
+            calls.push(() => {
+              unmount(node);
+            });
+
+            vnode = Button('Click me.');
+
+            mount('#test5', node = tag(vnode));
+            appendChild();
+          });</script>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>attributes()</code></summary>
+      <dl>
+        <dt><code>attributes([helpers])</code></dt>
+        <dd>
+          <p>Through this hook <code>style</code> and <code>class</code> props can be fixed if they're objects.</p>
+          <small>output:</small>
+          <script>test(({ pre, bind, render, attributes, classes, styles }, appendChild) => {
+            var tag = bind(render, attributes({
+              class: classes,
+              style: styles,
+            }));
+
+            var props = {
+              style: {
+                color: 'purple',
+              },
+              class: {
+                present: 1,
+                hidden: 0,
+              },
+            };
+
+            appendChild(pre(['span', props, 'EXAMPLE'], null, tag));
+          });</script>
+        </dd>
+        <dd>
+          <p>Also <code>update</code>, <code>enter</code> and <code>exit</code> props can be used for toggling <code>classes</code> during the elements' lifecycle.</p>
+          <small>output:</small>
+          <fieldset>
+            <ul id="test4"></ul>
+          </fieldset>
+          <script>test(({ bind, mount, render, unmount, listeners, attributes, animation, classes, styles }, appendChild) => {
+            var tag = bind(render,
+              listeners(), // for click events
+              attributes({
+                enter: animation,
+                exit: animation,
+                class: classes,
+                style: styles,
+              }));
+
+            function append() {
+              var item = tag(['li', {
+                enter: ['animated', 'fadeIn'],
+                exit: ['animated', 'slideUp', 'faster'],
+              }, [
+                ['button',
+                  { onclick: () => {
+                    unmount(item);
+                  } }, 'Remove'],
+                ['span', 'EXAMPLE'],
+              ]]);
+
+              mount('#test4', item);
+            }
+
+            var button = ['button',
+              { onclick: append }, 'Add item'];
+
+            mount('#test4', tag(['li', [button]]));
+            appendChild();
+          });</script>
+        </dd>
+        <dd>
+          <p>Otherwise, any given props matching <code>helpers</code> will be invoked as fallback for unhandled props.</p>
+          <small>output:</small>
+          <script>test(({ pre, bind, render, attributes }, appendChild) => {
+            var attrs = bind(render,
+              attributes({
+                json: value => JSON.stringify(value),
+              }));
+
+            var props = {
+              json: [1, 2, [3, 4, [5]]],
+            };
+
+            appendChild(pre(['span', props, 'EXAMPLE'], null, attrs));
+          });</script>
+        </dd>
+        <dd>
+          <p>Non matched props that remain as objects will be converted to <code>data-*</code> attributes.</p>
+          <small>output:</small>
+          <script>test(({ pre, bind, render, attributes }, appendChild) => {
+            var attrs = bind(render, attributes());
+
+            var props = {
+              arrays: ['TESTING'],
+              objects: {
+                prop: 'A string.',
+                nested: {
+                  key: 'value',
+                  values: [1, 2, 3],
+                },
+              },
+            };
+
+            appendChild(pre(['span', props, 'EXAMPLE'], null, attrs));
+          });</script>
+        </dd>
+      </dl>
+    </details>
+  </main>
+</body>
+</html>

@@ -1,0 +1,221 @@
+html {
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  margin: 0;
+  box-sizing: inherit;
+}
+
+body {
+  font-size: 12pt;
+}
+
+html, body {
+  height: 100%;
+}
+
+body, a, input, button {
+  font-family: Montserrat, Helvetica;
+}
+
+main > details > summary {
+  outline: none;
+  border-bottom: 1px dashed silver;
+  padding: 4px 8px;
+}
+
+main {
+  max-width: 500px;
+  margin: 420px auto;
+}
+
+dd + dd {
+  border-top: 1px solid silver;
+}
+
+dd details {
+  font-size: .9em;
+}
+
+p {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+p:first-child {
+  margin-top: 0;
+}
+
+span > code,
+li > code,
+p code {
+  background-color: rgba(0, 0, 0, .1);
+}
+
+span > code::after,
+span > code::before,
+li > code::after,
+li > code::before,
+p code::after,
+p code::before {
+  content: '`';
+}
+
+dt {
+  font-weight: bold;
+  padding-left: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid silver;
+}
+
+section > pre,
+dd {
+  background-color: #edeff0;
+}
+
+dd,
+body,
+section > pre,
+fieldset {
+  padding: 8px 16px;
+}
+
+dd fieldset {
+  padding: 8px;
+}
+
+ul {
+  padding: 0;
+  list-style-type: none;
+}
+
+li {
+  clear: both;
+}
+
+li + li {
+  margin-top: 8px;
+}
+
+li + li button {
+  float: right;
+}
+
+pre {
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+button,
+summary {
+  cursor: pointer;
+}
+
+button + button {
+  margin-left: 4px;
+}
+
+details[open] > summary {
+  opacity: 1;
+  color: silver;
+}
+
+small {
+  display: block;
+  color: gray;
+}
+
+dt,
+h2,
+h1,
+h3,
+small,
+summary {
+  user-select: none;
+}
+
+p,
+dd summary {
+  opacity: .5;
+}
+
+fieldset {
+  border: 1px dashed gray;
+}
+
+dl,
+h3,
+details {
+  margin-top: 16px;
+}
+
+main > details:last-child {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+}
+
+label > input {
+  margin-right: 8px;
+}
+
+fieldset + label,
+summary + pre {
+  margin-top: 8px;
+}
+
+main > section {
+  margin: 12px auto 16px auto;
+}
+
+li {
+  overflow: hidden;
+}
+
+fieldset, ul, li {
+  transition: all .2s;
+}
+
+.error {
+  color: white;
+  padding: 4px  8px;
+  background: #ab0000;
+}
+
+.keyword { color: #a71d5d; }
+.string,
+.regexp { color: #df5000; }
+.special { color: #0086b3; }
+.class { color: #333333; }
+.number { color: #63a35c; }
+.comment { color: #969896; font-style: italic; }
+
+.animated {
+  animation-duration: 1s;
+  animation-fill-mode: both;
+}
+
+.fast { animation-duration: .5s;  }
+.faster { animation-duration: .3s;  }
+
+.fadeIn { animation-name: fadeIn; }
+.fadeOut { animation-name: fadeOut; }
+.slideUp { animation-name: fadeOut, zoomOut; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; height: 1em; }
+  to { opacity: 0; height: 0; }
+}
+
+@keyframes zoomOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(2); }
+}

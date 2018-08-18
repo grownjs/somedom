@@ -1,0 +1,25 @@
+version: '2'
+
+services:
+  chrome:
+    image: martinsthiago/chrome:64.0.3282.186
+    command: google-chrome http://somedom:9505/browser/connect
+    volumes:
+      - ../chrome/:/data
+    ports:
+      - 9505:9505
+      - 9506:9506
+    links:
+      - somedom
+  somedom:
+    build:
+      context: ../
+      dockerfile: ./docker/Dockerfile
+    image: jsonschema-form-mw/app
+    container_name: somedom_e2e
+    command: sleep infinity
+    entrypoint: /home/docker/startup.dev.sh
+    expose:
+      - 3001
+    ports:
+      - 3001:3001
