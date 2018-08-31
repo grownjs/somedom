@@ -90,8 +90,6 @@ export function createElement(name) {
       }
     },
     appendChild(n) {
-      if (n === el) throw new Error('Cannot self-mount nodes!');
-
       n.parentNode = el;
       el.childNodes.push(n);
     },
