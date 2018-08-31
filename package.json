@@ -35,12 +35,11 @@
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-plugin-import": "^2.14.0",
     "esm": "^3.0.78",
+    "live-server": "^1.2.0",
     "mocha": "^5.2.0",
     "nyc": "^12.0.2",
     "testcafe": "^0.21.1",
     "testdouble": "^3.8.1"
   },
-  "dependencies": {
-    "live-server": "^1.2.0"
-  }
+  "dependencies": {}
 }
