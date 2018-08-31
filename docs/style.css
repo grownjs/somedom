@@ -9,6 +9,18 @@ html {
 
 body {
   font-size: 12pt;
+  padding: 0;
+}
+
+body::before {
+  position: fixed;
+  height: 100vh;
+  width: 100%;
+  top: 0;
+  content: ' ';
+  z-index: 1;
+  pointer-events: none;
+  background-image: linear-gradient(transparent, transparent, transparent, white);
 }
 
 html, body {
@@ -75,7 +87,6 @@ dd {
 }
 
 dd,
-body,
 section > pre,
 fieldset {
   padding: 8px 16px;
