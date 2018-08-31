@@ -8,7 +8,7 @@
   "scripts": {
     "build:browser": "bili --target browser --format umd-min --name somedom --js buble",
     "build:node": "bili src/index.js --target node --js buble --format es,cjs",
-    "build:ssr": "bili src/ssr/index.js --target node --js buble --format cjs --name render",
+    "build:ssr": "bili src/ssr/index.js --target node --js buble --format cjs --name somedom-ssr",
     "build": "npm run build:browser && npm run build:node && npm run build:ssr",
     "dev": "bili --format iife-min --js buble tests/e2e/*.test.js --name sandbox -o docs",
     "watch": "npm test -- -w",
