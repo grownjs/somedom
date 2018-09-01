@@ -119,7 +119,7 @@ describe('util', () => {
       expect(isNode([])).to.be.false;
       expect(isNode([''])).to.be.false;
       expect(isNode(['x'])).to.be.true;
-      expect(isNode([Function])).to.be.false;
+      expect(isNode([Function])).to.be.true;
     });
   });
 
@@ -132,7 +132,7 @@ describe('util', () => {
       expect(isEmpty('')).to.be.true;
       expect(isEmpty([])).to.be.true;
       expect(isEmpty({})).to.be.true;
-      expect(isEmpty(Function)).to.be.true;
+      expect(isEmpty(Function)).to.be.false;
     });
   });
 

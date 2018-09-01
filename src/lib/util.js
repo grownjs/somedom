@@ -22,13 +22,14 @@ export const isDiff = (prev, next) => {
 };
 
 export const isEmpty = value => {
+  if (isFunction(value)) return false;
   if (isArray(value)) return value.length === 0;
   if (isObject(value)) return Object.keys(value).length === 0;
 
   return typeof value === 'undefined' || value === '' || value === null || value === false;
 };
 
-export const isNode = x => isArray(x) && x.length <= 3 && (typeof x[0] === 'string' || typeof x[0] === 'function');
+export const isNode = x => isArray(x) && x.length <= 3 && (typeof x[0] === 'string' || typeof x[0] === 'function') && !isEmpty(x[0]);
 
 export const dashCase = value => value.replace(/[A-Z]/g, '-$&').toLowerCase();
 export const toArray = value => (!isEmpty(value) && !isArray(value) ? [value] : value) || [];
