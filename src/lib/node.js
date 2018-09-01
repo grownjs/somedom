@@ -1,5 +1,5 @@
 import {
-  isFunction, isScalar, isArray, isNode, isEmpty, isUndef, isDiff, append, replace, detach, zipMap,
+  isFunction, isScalar, isNode, isEmpty, isUndef, isDiff, append, replace, detach, zipMap,
 } from './util';
 
 import { assignProps, updateProps, fixProps } from './attrs';
@@ -33,7 +33,7 @@ export function createElement(value, svg, cb) {
   if (!el && isFunction(tag)) {
     el = tag(attrs, children);
 
-    if (isScalar(el) || isArray(el)) {
+    if (isScalar(el) || isNode(el)) {
       el = createElement(el, svg, cb);
     }
 
@@ -50,7 +50,9 @@ export function createElement(value, svg, cb) {
     .then(() => isFunction(el.exit) && el.exit())
     .then(() => detach(el));
 
-  children.map(vnode => !isEmpty(vnode) && el.appendChild(createElement(vnode, isSvg, cb)));
+  children.forEach(vnode => {
+    if (!isEmpty(vnode)) el.appendChild(createElement(vnode, isSvg, cb));
+  });
 
   return el;
 }
@@ -102,8 +104,10 @@ export function updateElement(target, prev, next, svg, cb, i = 0) {
       }
     } else if (!prev && next) mountElement(target, next, cb);
     else if (prev && !next) return destroyElement(target.childNodes[i]);
-    else if (prev[0] !== next[0]) replace(target, createElement(next, svg, cb), i);
-    else return updateElement(target.childNodes[i], prev, next, svg, cb, null);
+    else if (prev[0] !== next[0]) {
+      if (isNode(prev) && isNode(next)) replace(target, createElement(next, svg, cb), i);
+      else return zipMap(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+    } else return updateElement(target.childNodes[i], prev, next, svg, cb, null);
   });
 }
 
