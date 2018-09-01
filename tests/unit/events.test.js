@@ -94,7 +94,6 @@ describe('events', () => {
 
     it('should not register event-handlers twice', () => {
       delete div.events;
-      window.onclick = 1;
 
       addEvents(div, 'onclick', cb);
       addEvents(div, 'onclick', cb);
@@ -104,7 +103,6 @@ describe('events', () => {
 
     it('can detach events through the teardown() hook', () => {
       delete div.events;
-      window.onclick = 1;
 
       addEvents(div, 'onclick', cb);
 
@@ -113,8 +111,6 @@ describe('events', () => {
     });
 
     it('will invoke attached events through a proxy-handler', () => {
-      window.onclick = 1;
-
       addEvents(div, 'onclick', cb);
 
       div.dispatchEvent({
@@ -123,10 +119,6 @@ describe('events', () => {
       });
 
       expect(td.explain(cb).callCount).to.eql(1);
-    });
-
-    it('will validate given functions against window', () => {
-      expect(() => addEvents(div, 'onsomething', cb)).to.throw("Unknown event 'onsomething'");
     });
 
     it('will hook given functions as event-handlers', () => {

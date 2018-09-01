@@ -29,10 +29,6 @@ export function addEvents(el, name, value, globals) {
     }
 
     if (name.substr(0, 2) === 'on' && EE_SUPPORTED.indexOf(name) === -1) {
-      if (typeof window !== 'undefined' && !(name in window)) {
-        throw new Error(`Unknown event '${name}'`);
-      }
-
       const type = name.substr(2);
 
       if (!el.events[type]) el.addEventListener(type, eventListener, false);
