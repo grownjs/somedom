@@ -25,12 +25,12 @@ describe('attrs', () => {
     it('should fix emmet-like syntax as regular attributes', () => {
       expect(fixProps(['#a'])).to.eql(['div', { id: 'a' }, []]);
       expect(fixProps(['div#a'])).to.eql(['div', { id: 'a' }, []]);
-      expect(fixProps(['div.b.c'])).to.eql(['div', { class: 'b c' }, []]);
-      expect(fixProps(['div#a.b.c'])).to.eql(['div', { id: 'a', class: 'b c' }, []]);
+      expect(fixProps(['div.b.c'])).to.eql(['div', { class: ['b', 'c'] }, []]);
+      expect(fixProps(['div#a.b.c'])).to.eql(['div', { id: 'a', class: ['b', 'c'] }, []]);
     });
 
     it('should merge given classes with static ones', () => {
-      expect(fixProps(['div#a.b.c', { class: undefined }])).to.eql(['div', { id: 'a', class: 'b c' }, []]);
+      expect(fixProps(['div#a.b.c', { class: undefined }])).to.eql(['div', { id: 'a', class: ['b', 'c'] }, []]);
       expect(fixProps(['div#a.b.c', { class: 'd' }])).to.eql(['div', { id: 'a', class: ['b', 'c', 'd'] }, []]);
       expect(fixProps(['div#a.b.c', { class: { d: 1 } }])).to.eql(['div', { id: 'a', class: { b: 1, c: 1, d: 1 } }, []]);
     });
