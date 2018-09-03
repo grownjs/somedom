@@ -69,7 +69,7 @@ export const trim = value => {
   return value.replace(new RegExp(`^ {${depth}}`, 'mg'), '').trim();
 };
 
-export const zipMap = (a, b, cb) => Promise.all(Array.from({ length: Math.max(a.length, b.length) }).map((_, i) => cb(a[i], b[i], i)));
+export const zipMap = (a, b, cb) => Array.from({ length: Math.max(a.length, b.length) }).map((_, i) => cb(a[i], b[i], i));
 export const apply = (cb, length, options = {}) => (...args) => length === args.length && cb(...args, options);
 export const raf = cb => ((typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout)(cb);
 

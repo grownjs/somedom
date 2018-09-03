@@ -88,27 +88,23 @@ export function updateElement(target, prev, next, svg, cb, i = 0) {
   if (i === null) {
     const a = fixProps([...prev]);
     const b = fixProps([...next]);
-    const c = updateProps(target, a[1], b[1], svg, cb);
 
-    return Promise.resolve()
-      .then(c && Promise.resolve()
-        .then(() => isFunction(target.onupdate) && target.onupdate(target))
-        .then(() => isFunction(target.update) && target.update()))
-      .then(() => zipMap(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z)));
-  }
+    if (updateProps(target, a[1], b[1], svg, cb)) {
+      if (isFunction(target.onupdate)) target.onupdate(target);
+      if (isFunction(target.update)) target.update();
+    }
 
-  return Promise.resolve().then(() => {
-    if (isScalar(prev) && isScalar(next)) {
-      if (isDiff(prev, next)) {
-        target.childNodes[i].nodeValue = next;
-      }
-    } else if (!prev && next) mountElement(target, next, cb);
-    else if (prev && !next) return destroyElement(target.childNodes[i]);
-    else if (prev[0] !== next[0]) {
-      if (isNode(prev) && isNode(next)) replace(target, createElement(next, svg, cb), i);
-      else return zipMap(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z));
-    } else return updateElement(target.childNodes[i], prev, next, svg, cb, null);
-  });
+    zipMap(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
+  } else if (isScalar(prev) && isScalar(next)) {
+    if (isDiff(prev, next)) {
+      target.childNodes[i].nodeValue = next;
+    }
+  } else if (!prev && next) append(target, createElement(next, svg, cb));
+  else if (prev && !next) destroyElement(target.childNodes[i]);
+  else if (prev[0] !== next[0]) {
+    if (isNode(prev) && isNode(next)) replace(target, createElement(next, svg, cb), i);
+    else zipMap(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+  } else updateElement(target.childNodes[i], prev, next, svg, cb, null);
 }
 
 export function createView(tag, state, actions) {
@@ -123,7 +119,9 @@ export function createView(tag, state, actions) {
         prev[cur] = (...args) => Promise.resolve()
           .then(() => actions[cur](...args)(data))
           .then(result => Object.assign(data, result))
-          .then(newData => updateElement(childNode, vnode, vnode = tag(newData, $), null, cb, null)); // eslint-disable-line
+          .then(newData => {
+            updateElement(childNode, vnode, vnode = tag(newData, $), null, cb, null);
+          });
 
         return prev;
       }, {});
