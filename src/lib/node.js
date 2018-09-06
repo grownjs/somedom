@@ -2,7 +2,9 @@ import {
   isFunction, isScalar, isNode, isEmpty, isUndef, isDiff, append, replace, detach, zipMap,
 } from './util';
 
-import { assignProps, updateProps, fixProps } from './attrs';
+import {
+  assignProps, updateProps, fixProps, fixTree,
+} from './attrs';
 
 export const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -29,17 +31,6 @@ export function createElement(value, svg, cb) {
   }
 
   if (isFunction(el)) return createElement(el(), isSvg, cb);
-
-  if (!el && isFunction(tag)) {
-    el = tag(attrs, children);
-
-    if (isScalar(el) || isNode(el)) {
-      el = createElement(el, svg, cb);
-    }
-
-    return el;
-  }
-
   if (!isEmpty(attrs)) assignProps(el, attrs, isSvg, cb);
   if (isFunction(el.oncreate)) el.oncreate(el);
   if (isFunction(el.enter)) el.enter();
@@ -120,13 +111,13 @@ export function createView(tag, state, actions) {
           .then(() => actions[cur](...args)(data))
           .then(result => Object.assign(data, result))
           .then(newData => {
-            updateElement(childNode, vnode, vnode = tag(newData, $), null, cb, null);
+            updateElement(childNode, vnode, vnode = fixTree(tag(newData, $)), null, cb, null);
           });
 
         return prev;
       }, {});
 
-    childNode = mountElement(el, vnode = tag(data, $), cb);
+    childNode = mountElement(el, vnode = fixTree(tag(data, $)), cb);
 
     $.unmount = () => destroyElement(childNode);
     $.target = childNode;
