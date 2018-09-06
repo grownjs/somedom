@@ -83,17 +83,17 @@ export function createElement(name) {
       const props = Object.keys(el.attributes).reduce((prev, cur) => {
         prev.push(` ${cur}="${encodeText(el.attributes[cur])}"`);
         return prev;
-      }, []).join('');
+      }, []);
 
       if (el.className) {
         props.push(` class="${el.className}"`);
       }
 
       if (CLOSE_TAGS.indexOf(name) !== -1) {
-        return `<${name}${props}/>`;
+        return `<${name}${props.join('')}/>`;
       }
 
-      return `<${name}${props}>${el.innerHTML}</${name}>`;
+      return `<${name}${props.join('')}>${el.innerHTML}</${name}>`;
     },
     replaceChild(n, o) {
       const i = el.childNodes.indexOf(o);
