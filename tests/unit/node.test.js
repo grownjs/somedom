@@ -70,17 +70,14 @@ describe('node', () => {
     });
 
     it('should handle functions as elements', () => {
-      const div = document.createElement('div');
       const attrs = {};
       const nodes = [];
 
       const Spy = td.func('Component');
 
-      td.when(Spy(attrs, nodes)).thenReturn(div);
-      td.when(Spy(null, ['TEXT'])).thenReturn('TEXT');
+      td.when(Spy(attrs, nodes)).thenReturn(['div']);
 
-      expect(createElement([Spy, attrs, nodes])).to.eql(div);
-      expect(createElement([Spy, null, ['TEXT']]).nodeValue).to.eql('TEXT');
+      expect(createElement([Spy, attrs, nodes]).tagName).to.eql('DIV');
     });
 
     it('should pass given attributes to assignProps()', () => {
