@@ -1,4 +1,5 @@
 import { isFunction, format } from '../lib/util';
+import { mountElement, createElement } from '../lib/node';
 
 import {
   patchDocument,
@@ -7,18 +8,26 @@ import {
   dropWindow,
 } from './doc';
 
-export default async function renderToString(app, cb) {
+export default function renderToString(vnode, cb = createElement) {
   patchDocument();
   patchWindow();
 
-  const ctx = app(document.createElement('div'));
+  const target = document.createElement('div');
 
-  if (isFunction(cb)) await cb(ctx);
+  const vm = {
+    async toString() {
+      return format(this.target ? this.target.outerHTML : target.innerHTML);
+    },
+  };
 
-  try {
-    return format(ctx.target.outerHTML);
-  } finally {
-    dropDocument();
-    dropWindow();
+  if (isFunction(vnode)) {
+    Object.assign(vm, vnode(target, cb));
+  } else {
+    mountElement(target, vnode, cb);
   }
+
+  dropDocument();
+  dropWindow();
+
+  return vm;
 }

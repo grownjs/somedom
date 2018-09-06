@@ -48,15 +48,22 @@ function getMock(value) {
 }
 
 describe('SSR', () => {
-  it('should render mounted nodes as markup', async () => {
-    const html = await renderToString(main());
+  it('can render static vnodes as markup', async () => {
+    const vnode = ['h1', 'It works!'];
+    const dom = renderToString(vnode);
 
-    expect(html).to.eql(getMock(0));
+    const html = await dom.toString();
+
+    expect(html).to.eql('<h1>It works!</h1>');
   });
 
-  it('can invoke actions before rendering', async () => {
+  it('can render dynamic views as markup', async () => {
     const nth = Math.round(Math.random() * 10) + 1;
-    const html = await renderToString(main(), ctx => ctx.up(nth));
+    const app = renderToString(main());
+
+    await app.up(nth);
+
+    const html = await app.toString();
 
     expect(html).to.eql(getMock(nth));
   });
