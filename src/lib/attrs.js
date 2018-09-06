@@ -1,14 +1,34 @@
 import {
-  isEmpty, isObject, isFunction, isScalar, isDiff, isArray, toArray,
+  isEmpty, isObject, isFunction, isScalar, isDiff, isNode, isArray, toArray,
 } from './util';
 
 export const XLINK_NS = 'http://www.w3.org/1999/xlink';
 export const ELEM_REGEX = /(\w*)(#\w+)?([\w.]+)?/;
 
+export function fixTree(vnode) {
+  vnode = isNode(vnode) && isFunction(vnode[0])
+    ? vnode[0](vnode[1], toArray(vnode[2]))
+    : vnode;
+
+  if (isArray(vnode[2])) {
+    vnode[2].forEach((sub, i) => {
+      if (isNode(sub)) {
+        vnode[2][i] = fixTree(sub);
+      }
+    });
+  }
+
+  return vnode;
+}
+
 export function fixProps(vnode) {
   if (isArray(vnode[1]) || isScalar(vnode[1])) {
     vnode[2] = vnode[1];
     vnode[1] = null;
+  }
+
+  if (isFunction(vnode[0])) {
+    vnode = vnode[0](vnode[1], toArray(vnode[2]));
   }
 
   let attrs = vnode[1] || null;
