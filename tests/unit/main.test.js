@@ -4,7 +4,7 @@ import td from 'testdouble';
 import { expect } from 'chai';
 
 import {
-  h, pre, bind, listeners, attributes,
+  h, pre, bind, patch, render, listeners, attributes,
 } from '../../src';
 
 import { format } from '../../src/lib/util';
@@ -48,9 +48,9 @@ describe('somedom', () => {
     });
 
     it('should call tag function if arity is <= 2', () => {
-      const render = bind(tag, test1, test2);
+      const $ = bind(tag, test1, test2);
 
-      expect(render(1, 2)).to.be.undefined;
+      expect($(1, 2)).to.be.undefined;
 
       expect(td.explain(tag).callCount).to.eql(1);
       expect(td.explain(test1).callCount).to.eql(0);
@@ -58,9 +58,9 @@ describe('somedom', () => {
     });
 
     it('should apply given [...callbacks] if arity >= 3', () => {
-      const render = bind(tag, test1, test2);
+      const $ = bind(tag, test1, test2);
 
-      expect(render(1, 2, 3)).to.be.undefined;
+      expect($(1, 2, 3)).to.be.undefined;
 
       expect(td.explain(tag).callCount).to.eql(0);
       expect(td.explain(test1).callCount).to.eql(1);
@@ -72,6 +72,50 @@ describe('somedom', () => {
     it('should expose curried functions', () => {
       expect(typeof listeners()).to.eql('function');
       expect(typeof attributes()).to.eql('function');
+    });
+  });
+
+  describe('patch', () => {
+    beforeEach(doc.enable);
+    afterEach(doc.disable);
+
+    it('will sync event-handlers properly', async () => {
+      const $ = bind(render, listeners());
+      const rm = td.func('removeItem');
+
+      let data = [
+        { id: 1, value: 'Item 1' },
+        { id: 2, value: 'Item 2' },
+        { id: 3, value: 'Item 3' },
+        { id: 4, value: 'Item 4' },
+        { id: 5, value: 'Item 5' },
+      ];
+
+      function filter(nth) {
+        data = data.filter(x => x.id !== nth);
+      }
+
+      data.map(x => td.when(rm(x.id)).thenDo(() => filter(x.id)));
+
+      function view() {
+        return ['ul', data.map(x => ['li', { onclick: () => rm(x.id) }, x.value])];
+      }
+
+      let vnode = view();
+      const node = $(vnode);
+
+      for (let i = 0; i < 2; i += 1) {
+        node.withText(`Item ${i + 1}`)[0].dispatchEvent({ type: 'click' });
+        patch(node, vnode, vnode = view(), null, $, null);
+      }
+
+      await new Promise(ok => setTimeout(ok, 100));
+
+      expect(format(node.outerHTML)).to.eql(format(`<ul>
+        <li>Item 3</li>
+        <li>Item 4</li>
+        <li>Item 5</li>
+      </ul>`));
     });
   });
 });
