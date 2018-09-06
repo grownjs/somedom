@@ -31,6 +31,8 @@ export function fixProps(vnode) {
     vnode = fixProps(vnode[0](vnode[1], toArray(vnode[2])));
   }
 
+  if (!isNode(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
+
   let attrs = vnode[1] || null;
   let name = vnode[0];
 
