@@ -15,7 +15,7 @@
     </header>
 
     <section>
-      <h2>Install</h2>
+      <h2>Installation</h2>
 
       <p>Get it through <code>npm</code> or <code>yarn</code>, e.g.</p>
       <pre>$ npm install <b>somedom</b> --save-dev</pre>
@@ -24,7 +24,7 @@
     </section>
 
     <section>
-      <h2>Tests</h2>
+      <h2>E2E Tests</h2>
 
       <p>This guide has embbeded <code>&lt;script&gt;</code> tags invoking <code>test(...)</code> calls, no wonder yet.</p>
       <p>Behind there's a function named <code>appendChild</code> linked to <code>document.currentScript</code> at execution time.</p>
@@ -58,7 +58,7 @@
       </dl>
     </section>
 
-    <h3>API</h3>
+    <h3>Reference API</h3>
     <p>Produce, patch and render <i>vnodes</i>, mount/unmount them from the DOM, mix and compose hooks, etc.</p>
 
     <details>
@@ -106,9 +106,8 @@
       <dl>
         <dt><code>bind(render[, ...callbacks])</code></dt>
         <dd>
-          <p>This function will help you to merge given callbacks as a <b>tag</b> function.
-          It receives an initial <i>render</i> function and a list of <i>callbacks</i> to be applied.</p>
-          <p>By default the built in <code>render</code> can be used, but you can roll your own.</p>
+          <p>This function will help you to merge given middleare as a <b>tag</b> function.</p>
+          <p>It receives an initial <i>render</i> function and a list of <i>callbacks</i> to be applied.</p>
           <p>Always return a valid <i>HTMLElement</i> or <i>TextNode</i>, otherwise return <code>cb(..., svg)</code>.</p>
           <small>output:</small>
           <script>test(({ bind }, appendChild) => {
@@ -432,7 +431,7 @@
       <dl>
         <dt><code>unmount(target[, cb])</code></dt>
         <dd>
-          <p>Removes the given node from the DOM. It also invoke available hooks before complete removal.</p>
+          <p>Removes the given node from the DOM. It also invoke registered hooks before complete removal.</p>
           <p>If you give a function as second argument, the element is removed only when <code>done</code> is called.</p>
           <fieldset>
             <ul id="test3"></ul>
@@ -470,7 +469,7 @@
       </dl>
     </details>
 
-    <h3>Hooks</h3>
+    <h3>Available Hooks</h3>
     <p>Listen for events on the DOM, setup element's lifecycle or enhance dynamic <code>class</code> names, etc.</p>
 
     <details>
@@ -640,6 +639,29 @@
 
             appendChild(pre(['span', props, 'EXAMPLE'], null, attrs));
           });</script>
+        </dd>
+      </dl>
+    </details>
+
+    <h3>Server Side Rendering</h3>
+    <p>To render entire <i>vnode</i> trees on the back-end use:</p>
+    <p><code>import <b>renderToString</b> from 'somedom/ssr';</code></p>
+    <details>
+      <summary><code>renderToString()</code></summary>
+      <dl>
+        <dt><code>renderToString(vnode[, cb])</code></dt>
+        <dd>
+          <p>This function will produce HTML as its output.</p>
+          <pre class="highlight">var test = ['h1', 'It works!'];
+var html = await renderToString(test);
+
+console.log(html); // &lt;h1&gt;It works!&lt;/h1&gt;</pre>
+        </dd>
+        <dd>
+          <p>Any given function will be invoked before rendering.</p>
+          <pre class="highlight">renderToString(vnode, target => {
+  target.className += ' is-ssr';
+});</pre>
         </dd>
       </dl>
     </details>

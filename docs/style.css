@@ -34,10 +34,11 @@ body, a, input, button {
 main > details > summary {
   outline: none;
   border-bottom: 1px dashed silver;
-  padding: 4px 8px;
+  padding: 4px 0;
 }
 
 main {
+  padding: 12px;
   max-width: 500px;
   margin: 420px auto;
 }
@@ -188,6 +189,10 @@ li {
 
 fieldset, ul, li {
   transition: all .2s;
+}
+
+fieldset + fieldset {
+  border-top: 0;
 }
 
 .error {
