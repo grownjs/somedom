@@ -5,7 +5,7 @@ export const isObject = value => value !== null && (typeof value === 'function' 
 export const isScalar = value => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
 
 export const isDiff = (prev, next) => {
-  if (typeof prev !== typeof next) return true;
+  if (isFunction(prev) || isFunction(next) || typeof prev !== typeof next) return true;
   if (isArray(prev)) {
     if (prev.length !== next.length) return true;
     if (prev.some(x => next.indexOf(x) === -1)) return true;
