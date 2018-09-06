@@ -346,7 +346,7 @@
         </dd>
         <dd>
           <p>Emmet-like syntax can be used too, just <code>id</code> and <code>class</code> props are supported.</p>
-          <p>If you're using objects as props dont' forget to bind <code>attributes</code> to make'em work together.</p>
+          <p>As it'll use objects as props dont' forget to bind <code>attributes</code> to make'em work together.</p>
           <small>output:</small>
           <script>test(({ pre, bind, render, attributes, classes }, appendChild) => {
             appendChild(pre(['button#a.b.c', 'No props']));
@@ -410,17 +410,6 @@
             }
 
             appendChild(render([Del, 'OSOM!']));
-          });</script>
-        </dd>
-        <dd>
-          <p>Those functions can also return <i>HTMLElements</i>, <i>TextNodes</i>, more <i>vnodes</i>, etc.</p>
-          <small>output:</small>
-          <script>test(({ render }, appendChild) => {
-            function tag(props, children) {
-              return document.createTextNode(children);
-            }
-
-            appendChild(render([tag, 'Done.']));
           });</script>
         </dd>
       </dl>
@@ -646,7 +635,7 @@
     <h3>Server Side Rendering</h3>
     <p>To render entire <i>vnode</i> trees on the back-end use:</p>
     <p><code>import <b>renderToString</b> from 'somedom/ssr';</code></p>
-    <details open>
+    <details>
       <summary><code>renderToString()</code></summary>
       <dl>
         <dt><code>renderToString(vnode[, cb])</code></dt>
