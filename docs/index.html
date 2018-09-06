@@ -5,7 +5,7 @@
   <title>somedom</title>
   <link rel="stylesheet" href="style.css">
   <script src="sandbox.iife.min.js"></script>
-  <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:400,600" rel="stylesheet">
 </head>
 <body>
   <main>
@@ -646,22 +646,35 @@
     <h3>Server Side Rendering</h3>
     <p>To render entire <i>vnode</i> trees on the back-end use:</p>
     <p><code>import <b>renderToString</b> from 'somedom/ssr';</code></p>
-    <details>
+    <details open>
       <summary><code>renderToString()</code></summary>
       <dl>
         <dt><code>renderToString(vnode[, cb])</code></dt>
         <dd>
-          <p>This function will produce HTML as its output.</p>
+          <p>Returns a new function, when invoked it'll produce HTML as its output.</p>
           <pre class="highlight">var test = ['h1', 'It works!'];
-var html = await renderToString(test);
+var dom = renderToString(test);
+var html = await dom();
 
 console.log(html); // &lt;h1&gt;It works!&lt;/h1&gt;</pre>
         </dd>
         <dd>
-          <p>Any given function will be invoked before rendering.</p>
-          <pre class="highlight">renderToString(vnode, target => {
-  target.className += ' is-ssr';
-});</pre>
+          <p>Any given callback will be used as <b>tag</b> function.</p>
+          <pre class="highlight">var $ = bind(render, attributes({
+  class: classes,
+}));
+
+var dom = renderToString(vnode, $);
+var html = await dom();</pre>
+        </dd>
+        <dd>
+          <p>Views can be rendered too, e.g.</p>
+          <pre class="highlight">var app = view($view, $state, $actions);
+var dom = renderToString(app, $);
+
+await dom.up(1);
+
+var html = await dom();</pre>
         </dd>
       </dl>
     </details>
