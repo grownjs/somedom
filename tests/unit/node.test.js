@@ -244,6 +244,22 @@ describe('node', () => {
       updateElement(a, ['a', [['b']]], ['a', [['b']]], null, undefined, null);
       expect(a.outerHTML).to.eql('<a><b></b></a>');
     });
+
+    it('patch over function values', () => {
+      const Em = Array.prototype.concat.bind(['em']);
+
+      function Del(props, children) {
+        return ['del', [[Em, props, children]]];
+      }
+
+      const $old = [Del, 'OK'];
+      const $new = [Del, 'OSOM!'];
+
+      a.appendChild(createElement($old));
+      updateElement(a, $old, $new);
+
+      expect(a.outerHTML).to.eql('<a><del><em>OSOM!</em></del></a>');
+    });
   });
 
   describe('createView', () => {
