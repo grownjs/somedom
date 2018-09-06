@@ -7,7 +7,7 @@ export const ELEM_REGEX = /(\w*)(#\w+)?([\w.]+)?/;
 
 export function fixTree(vnode) {
   vnode = isNode(vnode) && isFunction(vnode[0])
-    ? vnode[0](vnode[1], toArray(vnode[2]))
+    ? fixTree(vnode[0](vnode[1], toArray(vnode[2])))
     : vnode;
 
   if (isArray(vnode[2])) {
@@ -28,7 +28,7 @@ export function fixProps(vnode) {
   }
 
   if (isFunction(vnode[0])) {
-    vnode = vnode[0](vnode[1], toArray(vnode[2]));
+    vnode = fixProps(vnode[0](vnode[1], toArray(vnode[2])));
   }
 
   let attrs = vnode[1] || null;
