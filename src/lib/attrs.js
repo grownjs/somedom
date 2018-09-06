@@ -17,7 +17,7 @@ export function fixProps(vnode) {
   if (typeof name === 'string') {
     const matches = name.match(ELEM_REGEX);
 
-    attrs = attrs || {};
+    attrs = { ...attrs };
     name = matches[1] || ((matches[2] || matches[3]) ? 'div' : null);
 
     if (matches[2]) {

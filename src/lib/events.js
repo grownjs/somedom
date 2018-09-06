@@ -33,7 +33,7 @@ export function addEvents(el, name, value, globals) {
 
       if (!el.events[type]) el.addEventListener(type, eventListener, false);
 
-      el.events[type] = value && (e => invokeEvent(e, name, value, globals));
+      el.events[type] = e => invokeEvent(e, name, value, globals);
     } else {
       (EE_SUPPORTED.indexOf(name) > -1 ? el : el.events)[name] = value;
     }
