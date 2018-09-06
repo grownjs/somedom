@@ -20,11 +20,9 @@ export function createElement(value, svg, cb) {
   const [tag, attrs, children] = fixProps([...value]);
   const isSvg = svg || tag === 'svg';
 
-  let el;
-
-  if (typeof tag === 'string') {
-    el = isSvg ? document.createElementNS(SVG_NS, tag) : document.createElement(tag);
-  }
+  let el = isSvg
+    ? document.createElementNS(SVG_NS, tag)
+    : document.createElement(tag);
 
   if (isFunction(cb)) {
     el = cb(el, tag, attrs, children) || el;
