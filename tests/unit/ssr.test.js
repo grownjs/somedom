@@ -52,7 +52,7 @@ describe('SSR', () => {
     const vnode = ['h1', 'It works!'];
     const dom = renderToString(vnode);
 
-    const html = await dom.toString();
+    const html = await dom();
 
     expect(html).to.eql('<h1>It works!</h1>');
   });
@@ -63,7 +63,7 @@ describe('SSR', () => {
 
     await app.up(nth);
 
-    const html = await app.toString();
+    const html = await app();
 
     expect(html).to.eql(getMock(nth));
   });

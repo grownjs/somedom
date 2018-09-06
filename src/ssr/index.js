@@ -14,14 +14,12 @@ export default function renderToString(vnode, cb = createElement) {
 
   const target = document.createElement('div');
 
-  const vm = {
-    async toString() {
-      return format(this.target ? this.target.outerHTML : target.innerHTML);
-    },
-  };
+  async function render() {
+    return format(render.target ? render.target.outerHTML : target.innerHTML);
+  }
 
   if (isFunction(vnode)) {
-    Object.assign(vm, vnode(target, cb));
+    Object.assign(render, vnode(target, cb));
   } else {
     mountElement(target, vnode, cb);
   }
@@ -29,5 +27,5 @@ export default function renderToString(vnode, cb = createElement) {
   dropDocument();
   dropWindow();
 
-  return vm;
+  return render;
 }
