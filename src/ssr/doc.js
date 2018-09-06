@@ -17,6 +17,22 @@ export const CLOSE_TAGS = [
   'wbr',
 ];
 
+export function withText(value) {
+  const found = [];
+
+  function walk(sub, nodes) {
+    nodes.forEach(x => {
+      if (!x.childNodes) {
+        if (x.nodeValue && x.nodeValue.indexOf(value) !== -1) found.push(sub);
+      } else walk(x, x.childNodes);
+    });
+  }
+
+  walk(this, this.childNodes);
+
+  return found;
+}
+
 export function encodeText(value) {
   return value
     .replace(/</g, '&lt;')
@@ -25,7 +41,10 @@ export function encodeText(value) {
 }
 
 export function dispatchEvent(e) {
-  (this.eventListeners[e.type] || []).map(cb => cb(e));
+  (this.eventListeners[e.type] || []).map(cb => cb({
+    currentTarget: this,
+    ...e,
+  }));
 }
 
 export function addEventListener(name, callback) {
@@ -45,6 +64,7 @@ export function createElement(name) {
     className: '',
     attributes: {},
     childNodes: [],
+    withText,
     dispatchEvent,
     addEventListener,
     removeEventListener,
@@ -78,16 +98,12 @@ export function createElement(name) {
     replaceChild(n, o) {
       const i = el.childNodes.indexOf(o);
 
-      if (i !== -1) {
-        el.childNodes.splice(i, 1, n);
-      }
+      if (i !== -1) el.childNodes.splice(i, 1, n);
     },
     removeChild(n) {
       const i = el.childNodes.indexOf(n);
 
-      if (i !== -1) {
-        el.childNodes.splice(i, 1);
-      }
+      if (i !== -1) el.childNodes.splice(i, 1);
     },
     appendChild(n) {
       n.parentNode = el;
