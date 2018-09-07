@@ -245,6 +245,12 @@ describe('node', () => {
       expect(a.outerHTML).to.eql('<a><b></b></a>');
     });
 
+    it('will append given children', () => {
+      a.appendChild(createElement(['b']));
+      updateElement(a, ['b'], [['i'], ['i'], ['i']]);
+      expect(a.outerHTML).to.eql('<a><b></b><i></i><i></i></a>');
+    });
+
     it('patch over function values', () => {
       const Em = Array.prototype.concat.bind(['em']);
 
