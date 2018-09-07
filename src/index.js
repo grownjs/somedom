@@ -19,7 +19,7 @@ import {
 
 import { addEvents } from './lib/events';
 
-export const h = (name = 'div', attrs, ...children) => [name, attrs, children];
+export const h = (name, attrs, ...children) => [name, attrs, children];
 
 export const pre = (vnode, svg, cb = render) => {
   return cb(['pre', { class: 'highlight' }, format(cb(vnode, svg).outerHTML)], svg);

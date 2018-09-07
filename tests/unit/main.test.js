@@ -14,11 +14,8 @@ import doc from './fixtures/document';
 
 describe('somedom', () => {
   describe('h', () => {
-    it('should fallback to valid defaults', () => {
-      expect(h()).to.eql(['div', undefined, []]);
-    });
-
     it('should return whatever you pass to', () => {
+      expect(h()).to.eql([undefined, undefined, []]);
       expect(h(1, 2, 3, 4, 5)).to.eql([1, 2, [3, 4, 5]]);
     });
   });

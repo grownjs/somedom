@@ -34,7 +34,7 @@ export function fixProps(vnode) {
   if (!isNode(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
 
   const matches = vnode[0].match(ELEM_REGEX);
-  const name = matches[1] || ((matches[2] || matches[3]) ? 'div' : null);
+  const name = matches[1] || 'div';
   const attrs = { ...vnode[1] };
 
   if (matches[2]) {
