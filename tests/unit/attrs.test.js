@@ -78,11 +78,6 @@ describe('attrs', () => {
       expect(div.attributes).to.eql({ test: 'test' });
     });
 
-    it('should handle boolean attributes as expected', () => {
-      assignProps(div, { test: true });
-      expect(div.attributes).to.eql({ test: 'test' });
-    });
-
     it('should handle attributes from svg-elements too', () => {
       const svg = document.createElementNS('xmlns', 'svg');
 
