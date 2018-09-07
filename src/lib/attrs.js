@@ -44,14 +44,14 @@ export function fixProps(vnode) {
   if (matches[3]) {
     const classes = matches[3].substr(1).split('.');
 
-    if (isObject(attrs.class)) {
-      classes.forEach(x => { attrs.class[x] = 1; });
-    } else if (isArray(attrs.class) || isScalar(attrs.class)) {
-      attrs.class = !isArray(attrs.class) ? attrs.class.split(' ') : attrs.class;
+    if (isArray(attrs.class) || isScalar(attrs.class)) {
+      attrs.class = !isArray(attrs.class) ? attrs.class.split(/\W/) : attrs.class;
       attrs.class = classes.concat(attrs.class).reduce((prev, cur) => {
         if (prev.indexOf(cur) === -1) prev.push(cur);
         return prev;
       }, []);
+    } else if (isObject(attrs.class)) {
+      classes.forEach(x => { attrs.class[x] = 1; });
     } else {
       attrs.class = classes;
     }
