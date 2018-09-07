@@ -1,5 +1,3 @@
-/* istanbul ignore file */
-
 export const CLOSE_TAGS = [
   'area',
   'base',
@@ -69,12 +67,25 @@ export function createElement(name) {
     addEventListener,
     removeEventListener,
     classList: {
-      add: value => {
-        el.className = el.className.split(/\s+/).concat(value).join(' ');
+      add: (...value) => {
+        const classes = el.className.trim().split(/\W/);
+
+        el.className = classes.concat(value.filter(x => classes.indexOf(x) === -1)).join(' ');
       },
-      remove: value => {
-        el.className = el.className.replace(new RegExp(`(\\b|^)\\s*${value}\\s*(\\b|$)`), '');
+      remove: (...value) => {
+        el.className = el.className.replace(new RegExp(`(\\b|^)\\s*${value.join('|')}\\s*(\\b|$)`), '').trim();
       },
+      replace: (oldC, newC) => {
+        el.className = el.className.replace(new RegExp(`(\\b|^)\\s*${oldC}\\s*(\\b|$)`), ` ${newC} `).trim();
+      },
+      item: nth => el.className.split(/\W/)[nth] || null,
+      toggle: (value, force) => {
+        if (force === true) el.classList.add(value);
+        else if (force === false) el.classList.remove(value);
+        else if (el.classList.contains(value)) el.classList.remove(value);
+        else el.classList.add(value);
+      },
+      contains: value => el.className.split(/\W/).indexOf(value) !== -1,
     },
     get innerHTML() {
       return el.childNodes.map(node => node.outerHTML || node.nodeValue).join('');

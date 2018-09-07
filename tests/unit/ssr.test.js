@@ -1,13 +1,15 @@
 /* eslint-disable no-unused-expressions */
 
+import td from 'testdouble';
 import { expect } from 'chai';
 
 import { view } from '../../src';
 import { trim } from '../../src/lib/util';
 
 import renderToString from '../../src/ssr';
+import doc from './fixtures/document';
 
-/* global describe, it */
+/* global beforeEach, afterEach, describe, it */
 
 function main() {
   const $actions = {
@@ -66,5 +68,52 @@ describe('SSR', () => {
     const html = await app();
 
     expect(html).to.eql(getMock(nth));
+  });
+
+  describe('document', () => {
+    beforeEach(doc.enable);
+    afterEach(doc.disable);
+
+    it('works fine with classList', () => {
+      const div = document.createElement('div');
+
+      div.classList.add('foo', 'bar');
+      div.classList.remove('foo');
+      div.classList.toggle('baz');
+      div.classList.replace('baz', 'buzz');
+      div.classList.toggle('test');
+      div.classList.toggle('test');
+      div.classList.toggle('test', true);
+      div.classList.toggle('test', false);
+
+      expect(div.classList.item(0)).to.eql('bar');
+      expect(div.classList.item(1)).to.eql('buzz');
+      expect(div.classList.contains('foo')).to.be.false;
+      expect(div.classList.contains('bar')).to.be.true;
+      expect(div.classList.contains('baz')).to.be.false;
+      expect(div.classList.contains('buzz')).to.be.true;
+
+      expect(div.outerHTML).to.eql('<div class="bar buzz"></div>');
+    });
+
+    it('should handle self-closing tags', () => {
+      expect(document.createElement('img').outerHTML).to.eql('<img/>');
+    });
+
+    it('should handle event-listeners too', () => {
+      const a = document.createElement('a');
+      const fn = td.func('callback');
+
+      a.addEventListener('test', fn);
+      a.removeEventListener('undef');
+
+      a.dispatchEvent({ type: 'test' });
+
+      expect(td.explain(fn).callCount).to.eql(1);
+
+      a.removeEventListener('test', fn);
+
+      expect(a.eventListeners).to.eql({ test: [] });
+    });
   });
 });
