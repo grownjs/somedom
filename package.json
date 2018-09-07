@@ -22,6 +22,7 @@
     "report": "nyc report",
     "lint": "eslint src tests",
     "pretest": "npm run lint",
+    "prepublish": "npm run build",
     "test-e2e": "BASE_URL=http://localhost:8080 testcafe",
     "test-live": "BASE_URL=http://localhost:8080 testcafe-live",
     "test-e2e-ci": "npm run test-e2e -- --ports 9505,9506 remote:1"
