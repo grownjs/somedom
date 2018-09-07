@@ -2,7 +2,11 @@
 
 import td from 'testdouble';
 import { expect } from 'chai';
-import { assignProps, updateProps, fixProps } from '../../src/lib/attrs';
+
+import {
+  assignProps, updateProps, fixProps, fixTree,
+} from '../../src/lib/attrs';
+
 import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
@@ -10,6 +14,14 @@ import doc from './fixtures/document';
 describe('attrs', () => {
   beforeEach(doc.enable);
   afterEach(doc.disable);
+
+  describe('fixTree', () => {
+    it('will invoke tag functions recursively', () => {
+      const tree = [() => [() => ['span', 'O', [[() => ['em', 'k']], '!']]]];
+
+      expect(fixTree(tree)).to.eql(['span', 'O', [['em', 'k'], '!']]);
+    });
+  });
 
   describe('fixProps', () => {
     it('should fail on invalid or missing input', () => {
