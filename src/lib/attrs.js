@@ -33,33 +33,27 @@ export function fixProps(vnode) {
 
   if (!isNode(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
 
-  let attrs = vnode[1] || null;
-  let name = vnode[0];
+  const matches = vnode[0].match(ELEM_REGEX);
+  const name = matches[1] || ((matches[2] || matches[3]) ? 'div' : null);
+  const attrs = { ...vnode[1] };
 
-  if (typeof name === 'string') {
-    const matches = name.match(ELEM_REGEX);
+  if (matches[2]) {
+    attrs.id = matches[2].substr(1);
+  }
 
-    attrs = { ...attrs };
-    name = matches[1] || ((matches[2] || matches[3]) ? 'div' : null);
+  if (matches[3]) {
+    const classes = matches[3].substr(1).split('.');
 
-    if (matches[2]) {
-      attrs.id = matches[2].substr(1);
-    }
-
-    if (matches[3]) {
-      const classes = matches[3].substr(1).split('.');
-
-      if (isObject(attrs.class)) {
-        classes.forEach(x => { attrs.class[x] = 1; });
-      } else if (isArray(attrs.class) || isScalar(attrs.class)) {
-        attrs.class = !isArray(attrs.class) ? attrs.class.split(' ') : attrs.class;
-        attrs.class = classes.concat(attrs.class).reduce((prev, cur) => {
-          if (prev.indexOf(cur) === -1) prev.push(cur);
-          return prev;
-        }, []);
-      } else {
-        attrs.class = classes;
-      }
+    if (isObject(attrs.class)) {
+      classes.forEach(x => { attrs.class[x] = 1; });
+    } else if (isArray(attrs.class) || isScalar(attrs.class)) {
+      attrs.class = !isArray(attrs.class) ? attrs.class.split(' ') : attrs.class;
+      attrs.class = classes.concat(attrs.class).reduce((prev, cur) => {
+        if (prev.indexOf(cur) === -1) prev.push(cur);
+        return prev;
+      }, []);
+    } else {
+      attrs.class = classes;
     }
   }
 
