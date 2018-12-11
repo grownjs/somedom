@@ -92,7 +92,9 @@ export function createElement(name) {
     },
     get outerHTML() {
       const props = Object.keys(el.attributes).reduce((prev, cur) => {
-        prev.push(` ${cur}="${encodeText(el.attributes[cur])}"`);
+        if (typeof el.attributes[cur] !== 'object') {
+          prev.push(` ${cur}="${encodeText(el.attributes[cur])}"`);
+        }
         return prev;
       }, []);
 
