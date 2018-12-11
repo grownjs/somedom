@@ -13,6 +13,7 @@ export function destroyElement(target, wait = cb => cb()) {
 }
 
 export function createElement(value, svg, cb) {
+  if (isFunction(value)) return value(svg, cb);
   if (isScalar(value)) return document.createTextNode(value);
   if (isUndef(value)) throw new TypeError(`Empty or invalid node, given '${value}'`);
   if (!isNode(value)) return;
