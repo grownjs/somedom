@@ -32,7 +32,7 @@ export function withText(value) {
 }
 
 export function encodeText(value) {
-  return value
+  return String(value)
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
