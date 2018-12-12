@@ -31,7 +31,7 @@ export function datasets(el, name, props) {
         ? JSON.stringify(props[key])
         : props[key];
 
-      el.setAttribute(`data-${name}-${key}`, value);
+      el.setAttribute(`${name !== 'data' ? 'data-' : ''}${name}-${key}`, value);
     });
   }
 }

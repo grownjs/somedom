@@ -79,6 +79,11 @@ describe('props', () => {
       datasets(div, 'test', { a: { b: 'c' } });
       expect(div.outerHTML).to.eql('<div data-test-a="{&quot;b&quot;:&quot;c&quot;}"></div>');
     });
+
+    it('should keep given data-* as is', () => {
+      datasets(div, 'data', { title: 'OK' });
+      expect(div.outerHTML).to.eql('<div data-title="OK"></div>');
+    });
   });
 
   describe('nextProps', () => {
