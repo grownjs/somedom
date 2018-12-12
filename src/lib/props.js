@@ -25,7 +25,7 @@ export function classes(props) {
 export function datasets(el, name, props) {
   if (isArray(props)) {
     el.setAttribute(`data-${name}`, JSON.stringify(props));
-  } else {
+  } else if (!isFunction(props)) {
     Object.keys(props).forEach(key => {
       const value = !isScalar(props[key])
         ? JSON.stringify(props[key])

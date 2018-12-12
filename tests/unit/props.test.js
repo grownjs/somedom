@@ -84,6 +84,13 @@ describe('props', () => {
       datasets(div, 'data', { title: 'OK' });
       expect(div.outerHTML).to.eql('<div data-title="OK"></div>');
     });
+
+    it('should skip given functions', () => {
+      function foo() {}
+      foo.bar = 'baz';
+      datasets(div, 'data', foo);
+      expect(div.outerHTML).to.eql('<div></div>');
+    });
   });
 
   describe('nextProps', () => {
