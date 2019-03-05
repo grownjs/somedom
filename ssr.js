@@ -1,1 +1,1 @@
-module.exports = require('./dist/somedom-ssr.cjs');
+module.exports = require('./dist/index.ssr.js');
