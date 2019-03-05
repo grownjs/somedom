@@ -3,7 +3,7 @@ import {
 } from './util';
 
 export const XLINK_NS = 'http://www.w3.org/1999/xlink';
-export const ELEM_REGEX = /(\w*)(#\w+)?([\w.]+)?/;
+export const ELEM_REGEX = /(\w*)(#[\w-]+)?([\w.-]+)?/;
 
 export function fixTree(vnode) {
   vnode = isNode(vnode) && isFunction(vnode[0])
