@@ -7,9 +7,10 @@
   "browser": "dist/somedom.umd.js",
   "scripts": {
     "build:browser": "bili --format umd-min --module-name somedom --minimal --file-name somedom.umd.js",
-    "build:node": "bili src/index.js --minimal --format cjs --format es --file-name somedom.js",
+    "build:node": "bili src/index.js --minimal --format cjs --file-name somedom.js",
+    "build:esm": "bili src/index.js --minimal --format es --file-name somedom.mjs",
     "build:ssr": "bili src/ssr/index.js --minimal --format cjs --file-name somedom.ssr.js",
-    "build": "npm run build:browser && npm run build:node && npm run build:ssr",
+    "build": "npm run build:browser && npm run build:node && npm run build:esm && npm run build:ssr",
     "dev": "bili --format iife-min --minimal tests/e2e/*.test.js --module-name sandbox -d docs",
     "watch": "npm test -- -w",
     "serve": "live-server docs",
