@@ -5,13 +5,13 @@ FROM mhart/alpine-node:11 as nodejs
   RUN pip install awscli
 
 FROM nodejs
-  RUN mkdir /app
+  RUN mkdir /var/lib/app
 
-  COPY package*.json /app/
-  WORKDIR /app
+  COPY package*.json /var/lib/app/
+  WORKDIR /var/lib/app
   RUN npm ci
 
-  COPY ./ /app
+  COPY ./ /var/lib/app
   RUN npm run build
 
   COPY ./docker/scripts /home/docker/

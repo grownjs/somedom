@@ -8,7 +8,7 @@ dev: src docker ## Start dev tasks
 
 test: src docker ## Run tests for CI
 	@docker-compose $(BASE_COMPOSE) up -d chrome
-	@docker exec somedom_e2e /home/docker/run-tests.sh
+	@docker exec e2e /home/docker/run-tests.sh
 
 bash: ## SSH into container
 	@docker-compose $(BASE_COMPOSE) exec somedom /bin/bash
