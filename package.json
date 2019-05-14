@@ -5,6 +5,10 @@
   "main": "dist/somedom.js",
   "module": "dist/somedom.mjs",
   "browser": "dist/somedom.umd.js",
+  "files": [
+    "dist/*.*",
+    "ssr.js"
+  ],
   "scripts": {
     "build:browser": "bili --format umd-min --module-name somedom --minimal --file-name somedom.umd.js",
     "build:node": "bili src/index.js --minimal --format cjs --file-name somedom.js",

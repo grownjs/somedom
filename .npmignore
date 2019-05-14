@@ -1,8 +1,0 @@
-src
-docs
-tests
-docker
-chrome
-Makefile
-coverage
-.travis.yml
