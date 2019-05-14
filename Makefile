@@ -11,10 +11,10 @@ test: src docker ## Run tests for CI
 	@docker exec e2e /home/docker/run-tests.sh
 
 bash: ## SSH into container
-	@docker-compose $(BASE_COMPOSE) exec somedom /bin/bash
+	@docker-compose $(BASE_COMPOSE) exec app /bin/bash
 
 logs: ## Display docker logs
-	@docker-compose $(BASE_COMPOSE) logs -f somedom
+	@docker-compose $(BASE_COMPOSE) logs -f app
 
 build: ## Build image for docker
 	@docker-compose $(BASE_COMPOSE) build
