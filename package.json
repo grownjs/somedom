@@ -48,7 +48,7 @@
     "nyc": "^14.1.1",
     "set-value": ">=2.0.1",
     "sirv-cli": "^0.4.4",
-    "testcafe": "^15.1.317922",
+    "testcafe": "^1.5.0",
     "testdouble": "^3.11.0"
   }
 }
