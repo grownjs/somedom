@@ -35,17 +35,20 @@
   "author": "Alvaro Cabrera <pateketrueke@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "bili": "^4.4.0",
+    "bili": "^4.8.1",
     "chai": "^4.1.2",
     "codecov": "^3.0.4",
     "eslint": "^6.4.0",
     "eslint-config-airbnb-base": "^14.0.0",
     "eslint-plugin-import": "^2.14.0",
-    "esm": "^3.0.78",
-    "mocha": "^6.0.2",
+    "esm": ">=3.1.0",
+    "js-yaml": ">=3.13.1",
+    "lodash": ">=4.17.13",
+    "mocha": "^6.2.0",
     "nyc": "^14.1.1",
+    "set-value": ">=2.0.1",
     "sirv-cli": "^0.4.4",
-    "testcafe": "^1.1.0",
+    "testcafe": "^15.1.317922",
     "testdouble": "^3.11.0"
   }
 }
