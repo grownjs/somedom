@@ -206,40 +206,41 @@ describe('node', () => {
       expect(a.outerHTML).to.eql('<a href="#"></a>');
     });
 
-    it('will invoke hooks on update', async () => {
+    it('will invoke hooks on update', () => {
       a.onupdate = td.func('onupdate');
       a.update = td.func('update');
 
-      await updateElement(a, ['a'], ['a', { href: '#' }], null, undefined, null);
+      updateElement(a, ['a'], ['a', { href: '#' }], null, undefined, null);
 
       expect(td.explain(a.onupdate).callCount).to.eql(1);
       expect(td.explain(a.update).callCount).to.eql(1);
     });
 
-    it('can replace childNodes', async () => {
-      await updateElement(div, ['a'], ['b']);
+    it('can replace childNodes', () => {
+      updateElement(div, ['a'], ['b']);
       expect(div.outerHTML).to.eql('<div><b></b></div>');
     });
 
-    it('can append childNodes', async () => {
-      await updateElement(a, ['a'], ['a', [['c', 'd']]], null, undefined, null);
+    it('can append childNodes', () => {
+      updateElement(a, ['a'], ['a', [['c', 'd']]], null, undefined, null);
       expect(div.outerHTML).to.eql('<div><a><c>d</c></a></div>');
     });
 
     it('can remove childNodes', async () => {
       a.appendChild(createElement(['b']));
 
-      updateElement(a, ['a', [['b']]], ['a'], null, undefined, null);
+      await updateElement(a, ['a', [['b']]], ['a'], null, undefined, null);
 
+      // FIXME: avoid this...
       await new Promise(resolve => setTimeout(resolve));
 
       expect(div.outerHTML).to.eql('<div><a></a></div>');
     });
 
-    it('can update TextNodes', async () => {
+    it('can update TextNodes', () => {
       a.appendChild(document.createTextNode());
-      await updateElement(a, ['a', 'old'], ['a', 'old'], null, undefined, null);
-      await updateElement(a, ['a', 'old'], ['a', 'new'], null, undefined, null);
+      updateElement(a, ['a', 'old'], ['a', 'old'], null, undefined, null);
+      updateElement(a, ['a', 'old'], ['a', 'new'], null, undefined, null);
       expect(div.outerHTML).to.eql('<div><a>new</a></div>');
     });
 
