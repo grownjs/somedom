@@ -15,7 +15,7 @@ export function values(attrs, cb) {
 }
 
 export function styles(props) {
-  return values(props, (v, k) => `${dashCase(k)}: ${v}`, '; ');
+  return values(props, (v, k) => `${dashCase(k)}: ${v}`);
 }
 
 export function classes(props) {

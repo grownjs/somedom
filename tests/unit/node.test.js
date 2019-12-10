@@ -11,6 +11,11 @@ import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
 
+async function tick(cb) {
+  await new Promise(ko => process.nextTick(ko));
+  cb();
+}
+
 describe('node', () => {
   beforeEach(doc.enable);
   afterEach(doc.disable);
@@ -229,7 +234,7 @@ describe('node', () => {
     it('can remove childNodes', async () => {
       a.appendChild(createElement(['b']));
 
-      await updateElement(a, ['a', [['b']]], ['a'], null, undefined, null);
+      await tick(() => updateElement(a, ['a', [['b']]], ['a'], null, undefined, null));
 
       // FIXME: avoid this...
       await new Promise(resolve => setTimeout(resolve));
