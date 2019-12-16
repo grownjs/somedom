@@ -5,7 +5,6 @@ help: Makefile
 
 ci: src deps ## Run CI scripts
 	@npm run test -- --color
-	@npm run codecov
 
 dev: src deps ## Start dev tasks
 	@npm run dev & npm run serve

@@ -19,7 +19,6 @@
     "test:unit": "NODE_ENV=test _mocha --exit --recursive -r esm -bR spec tests/unit",
     "coverage": "nyc -x '**/fixtures/**' -x '**/*.test.js' npm run test:unit",
     "coverage:unit": "npm run coverage -- npm run test:unit",
-    "codecov": "codecov --file=coverage/lcov.info -e TRAVIS_NODE_VERSION",
     "report": "nyc report",
     "lint": "eslint src tests",
     "pretest": "npm run lint",
@@ -30,7 +29,6 @@
   "license": "MIT",
   "devDependencies": {
     "chai": "^4.1.2",
-    "codecov": "^3.0.4",
     "eslint": "^6.4.0",
     "eslint-config-airbnb-base": "^14.0.0",
     "eslint-plugin-import": "^2.14.0",

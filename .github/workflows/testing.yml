@@ -12,3 +12,8 @@ jobs:
           BROWSER: chromium:headless
         with:
           args: ci
+
+      - uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage/lcov.info
