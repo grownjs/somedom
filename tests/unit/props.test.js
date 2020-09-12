@@ -95,7 +95,7 @@ describe('props', () => {
 
   describe('nextProps', () => {
     it('will handle hooks for class-based animations', async () => {
-      const run = nextProps(div, 'test', ['x', 'y']);
+      const run = nextProps(div, ['x', 'y']);
 
       td.replace(div.classList, 'add', td.func('addClass'));
       td.replace(div.classList, 'remove', td.func('removeClass'));
