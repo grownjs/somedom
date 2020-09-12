@@ -14,7 +14,7 @@
     "build": "rollup -c",
     "watch": "npm test -- -w",
     "serve": "sirv start docs --dev --quiet --single --port 8080",
-    "test": "npm run test:e2e -- ${BROWSER:-chrome:headless} -a 'npm run serve' tests/e2e/cases",
+    "test": "npm run test:unit && npm run test:e2e -- ${BROWSER:-chrome:headless} -a 'npm run serve' tests/e2e/cases",
     "test:ci": "npm run coverage && npm run report -- -r lcov && npm run test -- --color",
     "test:unit": "NODE_ENV=test _mocha --exit --colors --recursive -r esm -bR spec tests/unit",
     "coverage": "nyc --silent -x '**/fixtures/**' -x '**/*.test.js' npm run test:unit",
