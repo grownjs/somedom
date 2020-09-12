@@ -23,7 +23,7 @@
     "lint": "eslint src tests",
     "pretest": "npm run lint",
     "prepublishOnly": "NODE_ENV=production npm run build",
-    "test:e2e": "BASE_URL=http://localhost:8080 testcafe"
+    "test:e2e": "BASE_URL=http://localhost:8080 testcafe --color"
   },
   "author": "Alvaro Cabrera <pateketrueke@gmail.com>",
   "license": "MIT",
