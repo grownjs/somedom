@@ -36,7 +36,7 @@ export function datasets(el, name, props) {
   }
 }
 
-export function nextProps(el, type, names) {
+export function nextProps(el, names) {
   return () => new Promise(resolve => {
     let t;
 
@@ -68,4 +68,4 @@ export function invokeProps(el, name, value, helpers) {
 
 export const applyStyles = value => styles(value).join('; ');
 export const applyClasses = value => classes(value).join(' ');
-export const applyAnimations = (value, name, el) => { el[name] = nextProps(el, name, classes(value)); };
+export const applyAnimations = (value, name, el) => { el[name] = nextProps(el, classes(value)); };

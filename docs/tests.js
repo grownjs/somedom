@@ -336,7 +336,7 @@
     }
   }
 
-  function nextProps(el, type, names) {
+  function nextProps(el, names) {
     return () => new Promise(resolve => {
       let t;
 
@@ -368,7 +368,7 @@
 
   const applyStyles = value => styles(value).join('; ');
   const applyClasses = value => classes(value).join(' ');
-  const applyAnimations = (value, name, el) => { el[name] = nextProps(el, name, classes(value)); };
+  const applyAnimations = (value, name, el) => { el[name] = nextProps(el, classes(value)); };
 
   const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
 
