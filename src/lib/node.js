@@ -110,7 +110,7 @@ export function createView(tag, state, actions) {
           .then(() => actions[cur](...args)(state))
           .then(result => Object.assign(state, result))
           .then(() => Promise.all(fns.map(fn => fn(state))))
-          .then(() => updateElement(childNode, vnode, vnode = fixTree(tag(state, $)), null, cb, null));
+          .then(() => updateElement(childNode, vnode, vnode = fixTree(tag(state, $)), null, cb, null)); // eslint-disable-line
 
         return prev;
       }, {});
