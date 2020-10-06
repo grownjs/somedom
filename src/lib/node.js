@@ -99,7 +99,7 @@ export function updateElement(target, prev, next, svg, cb, i = 0) {
 
 export function createView(tag, state, actions) {
   return (el, cb = createElement) => {
-    const data = { ...state };
+    const fns = [];
 
     let childNode;
     let vnode;
@@ -107,17 +107,17 @@ export function createView(tag, state, actions) {
     const $ = Object.keys(actions)
       .reduce((prev, cur) => {
         prev[cur] = (...args) => Promise.resolve()
-          .then(() => actions[cur](...args)(data))
-          .then(result => Object.assign(data, result))
-          .then(newData => {
-            updateElement(childNode, vnode, vnode = fixTree(tag(newData, $)), null, cb, null);
-          });
+          .then(() => actions[cur](...args)(state))
+          .then(result => Object.assign(state, result))
+          .then(() => Promise.all(fns.map(fn => fn(state))))
+          .then(() => updateElement(childNode, vnode, vnode = fixTree(tag(state, $)), null, cb, null));
 
         return prev;
       }, {});
 
-    childNode = mountElement(el, vnode = fixTree(tag(data, $)), cb);
+    childNode = mountElement(el, vnode = fixTree(tag(state, $)), cb);
 
+    $.subscribe = fn => Promise.resolve(fn(state)).then(() => fns.push(fn));
     $.unmount = () => destroyElement(childNode);
     $.target = childNode;
 
