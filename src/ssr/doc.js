@@ -103,6 +103,11 @@ export function createElement(name) {
 
       if (i !== -1) el.childNodes.splice(i, 1);
     },
+    insertBefore(n, o) {
+      const i = el.childNodes.indexOf(o);
+
+      if (i !== -1) el.childNodes.splice(i, 0, n);
+    },
     appendChild(n) {
       n.parentNode = el;
       el.childNodes.push(n);
@@ -136,8 +141,8 @@ export function createElementNS(ns, name) {
   };
 }
 
-export function createTextNode(value) {
-  return { nodeValue: value };
+export function createTextNode(nodeValue, parentNode) {
+  return { nodeValue, parentNode };
 }
 
 export function patchDocument() {

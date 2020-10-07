@@ -86,8 +86,12 @@ export const raf = cb => ((typeof window !== 'undefined' && window.requestAnimat
 
 export const replace = (target, node, i) => target.replaceChild(node, target.childNodes[i]);
 export const remove = (target, node) => target && target.removeChild(node);
-export const detach = target => remove(target.parentNode, target);
 
 export const append = (target, node) => (node instanceof Fragment
   ? node.childNodes.map(sub => append(target, sub))
   : target.appendChild(node));
+
+export const detach = (target, node) => {
+  if (node) target.parentNode.insertBefore(node, target);
+  remove(target.parentNode, target);
+};

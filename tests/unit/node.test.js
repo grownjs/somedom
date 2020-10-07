@@ -30,7 +30,7 @@ describe('node', () => {
       const div = document.createElement('div');
       div.appendChild(tree);
 
-      expect(div.outerHTML).to.eql('<div><span>foo</span>\n<span>bar</span></div>');
+      expect(div.outerHTML).to.eql('<div><span>foo</span><span>bar</span></div>');
     });
   });
 
@@ -223,6 +223,19 @@ describe('node', () => {
     it('can patch node attributes', () => {
       updateElement(a, ['a'], ['a', { href: '#' }], null, undefined, null);
       expect(a.outerHTML).to.eql('<a href="#"></a>');
+    });
+
+    it('can patch from text nodes', () => {
+      updateElement(a, ['a'], ['foo bar'], null, undefined, null);
+      expect(div.outerHTML).to.eql('<div>foo bar</div>');
+
+      a = div.childNodes[0] = document.createTextNode('foo bar', div);
+      updateElement(a, [a.nodeValue], ['foo ', 'barX'], null, undefined, null);
+      expect(div.outerHTML).to.eql('<div>foo barX</div>');
+
+      a = div.childNodes[0] = document.createTextNode('foo barX', div);
+      updateElement(a, [a.nodeValue], ['a', ' OK'], null, undefined, null);
+      expect(div.outerHTML).to.eql('<div><a> OK</a></div>');
     });
 
     it('will invoke hooks on update', () => {

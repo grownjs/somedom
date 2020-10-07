@@ -44,6 +44,6 @@ export class Fragment {
   }
 
   get outerHTML() {
-    return this.childNodes.map(node => node.outerHTML).join('\n');
+    return this.childNodes.map(node => node.outerHTML || node.nodeValue).join('');
   }
 }

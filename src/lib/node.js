@@ -90,12 +90,14 @@ export function updateElement(target, prev, next, svg, cb, i = 0) {
       return;
     }
 
-    if (updateProps(target, a[1], b[1], svg, cb)) {
-      if (isFunction(target.onupdate)) target.onupdate(target);
-      if (isFunction(target.update)) target.update();
-    }
+    if (isNode(a) && isNode(b)) {
+      if (updateProps(target, a[1], b[1], svg, cb)) {
+        if (isFunction(target.onupdate)) target.onupdate(target);
+        if (isFunction(target.update)) target.update();
+      }
 
-    zipMap(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
+      zipMap(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
+    } else detach(target, createElement(b, svg, cb));
   } else if (isScalar(prev) && isScalar(next)) {
     if (isDiff(prev, next)) {
       target.childNodes[i].nodeValue = next;
