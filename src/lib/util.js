@@ -1,5 +1,9 @@
+export const XLINK_NS = 'http://www.w3.org/1999/xlink';
+export const ELEM_REGEX = /^(\w*|[.#]\w+)(#[\w-]+)?([\w.-]+)?$/;
+
 export const isArray = value => Array.isArray(value);
 export const isFunction = value => typeof value === 'function';
+export const isSelector = value => value && ELEM_REGEX.test(value);
 export const isUndef = value => typeof value === 'undefined' || value === null;
 export const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
 export const isScalar = value => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
@@ -29,7 +33,7 @@ export const isEmpty = value => {
   return typeof value === 'undefined' || value === '' || value === null || value === false;
 };
 
-export const isNode = x => isArray(x) && x.length <= 3 && (typeof x[0] === 'string' || typeof x[0] === 'function') && !isEmpty(x[0]);
+export const isNode = x => isArray(x) && x.length <= 3 && ((typeof x[0] === 'string' && isSelector(x[0])) || typeof x[0] === 'function');
 
 export const dashCase = value => value.replace(/[A-Z]/g, '-$&').toLowerCase();
 export const toArray = value => (!isEmpty(value) && !isArray(value) ? [value] : value) || [];
@@ -67,6 +71,14 @@ export const trim = value => {
   const depth = spaces.split('').length;
 
   return value.replace(new RegExp(`^ {${depth}}`, 'mg'), '').trim();
+};
+
+export const clone = value => {
+  if (!value || typeof value !== 'object') return value;
+  if (isArray(value)) return value.map(x => clone(x));
+  if (value instanceof Date) return new Date(value.getTime());
+  if (value instanceof RegExp) return new RegExp(value.source, value.flags);
+  return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
 };
 
 export const zipMap = (a, b, cb) => Array.from({ length: Math.max(a.length, b.length) }).map((_, i) => cb(a[i], b[i], i));

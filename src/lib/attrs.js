@@ -1,11 +1,11 @@
 import {
   isEmpty, isObject, isFunction, isScalar, isDiff, isNode, isArray, toArray,
+  XLINK_NS, ELEM_REGEX,
 } from './util';
 
-export const XLINK_NS = 'http://www.w3.org/1999/xlink';
-export const ELEM_REGEX = /(\w*)(#[\w-]+)?([\w.-]+)?/;
-
 export function fixTree(vnode) {
+  if (!isNode(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
+
   vnode = isNode(vnode) && isFunction(vnode[0])
     ? fixTree(vnode[0](vnode[1], toArray(vnode[2])))
     : vnode;
@@ -22,6 +22,10 @@ export function fixTree(vnode) {
 }
 
 export function fixProps(vnode) {
+  if (Array.isArray(vnode) && !isNode(vnode)) {
+    return vnode.map(fixProps);
+  }
+
   if (isArray(vnode[1]) || isScalar(vnode[1])) {
     vnode[2] = vnode[1];
     vnode[1] = null;

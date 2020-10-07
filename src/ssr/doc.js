@@ -153,6 +153,10 @@ export function createElement(name) {
   return el;
 }
 
+export function createDocumentFragment() {
+  return new DocumentFragment();
+}
+
 export function createElementNS(ns, name) {
   return {
     ...createElement(name),
@@ -172,6 +176,7 @@ export function patchDocument() {
     createElement,
     createTextNode,
     querySelector() {},
+    createDocumentFragment,
   };
 }
 
@@ -181,9 +186,7 @@ export function patchWindow() {
     dispatchEvent,
     addEventListener,
     removeEventListener,
-    DocumentFragment,
   };
-  Object.assign(global, global.window);
 }
 
 export function dropDocument() {
@@ -191,11 +194,5 @@ export function dropDocument() {
 }
 
 export function dropWindow() {
-  if (global.window) {
-    Object.keys(global.window).forEach(key => {
-      delete global[key];
-    });
-  }
-
   delete global.window;
 }
