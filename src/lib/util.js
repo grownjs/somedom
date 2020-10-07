@@ -1,5 +1,4 @@
-export const XLINK_NS = 'http://www.w3.org/1999/xlink';
-export const ELEM_REGEX = /^(\w*|[.#]\w+)(#[\w-]+)?([\w.-]+)?$/;
+import { Fragment, ELEM_REGEX } from './shared';
 
 export const isArray = value => Array.isArray(value);
 export const isFunction = value => typeof value === 'function';
@@ -87,5 +86,8 @@ export const raf = cb => ((typeof window !== 'undefined' && window.requestAnimat
 
 export const replace = (target, node, i) => target.replaceChild(node, target.childNodes[i]);
 export const remove = (target, node) => target && target.removeChild(node);
-export const append = (target, node) => target.appendChild(node);
 export const detach = target => remove(target.parentNode, target);
+
+export const append = (target, node) => (node instanceof Fragment
+  ? node.childNodes.map(sub => append(target, sub))
+  : target.appendChild(node));

@@ -306,7 +306,7 @@ describe('node', () => {
         .thenReturn(['a']);
     });
 
-    it('can be removed form the DOM calling unmount()', async () => {
+    it('can be removed from the DOM calling unmount()', async () => {
       const app = createView(tag, data, actions);
       const $ = app();
 
@@ -323,7 +323,7 @@ describe('node', () => {
     });
 
     it('should re-render on state changes', async () => {
-      const app = createView(({ foo }) => ['a', foo], data, actions);
+      const app = createView(({ foo }) => [['a', foo]], data, actions);
       const $ = app();
 
       expect($.target.outerHTML).to.eql('<a>BAR</a>');

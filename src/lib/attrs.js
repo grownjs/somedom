@@ -1,9 +1,11 @@
 import {
   isEmpty, isObject, isFunction, isScalar, isDiff, isNode, isArray, toArray,
-  XLINK_NS, ELEM_REGEX,
 } from './util';
 
+import { XLINK_NS, ELEM_REGEX } from './shared';
+
 export function fixTree(vnode) {
+  if (Array.isArray(vnode) && !isNode(vnode)) return vnode.map(fixTree);
   if (!isNode(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
 
   vnode = isNode(vnode) && isFunction(vnode[0])

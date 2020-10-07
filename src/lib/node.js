@@ -1,12 +1,13 @@
 import {
-  isFunction, isScalar, isArray, isNode, isEmpty, isUndef, isDiff, zipMap, append, replace, detach, clone,
+  isFunction, isScalar, isArray, isNode, isEmpty, isUndef, isDiff,
+  zipMap, append, replace, detach, clone,
 } from './util';
 
 import {
   assignProps, updateProps, fixProps, fixTree,
 } from './attrs';
 
-export const SVG_NS = 'http://www.w3.org/2000/svg';
+import { Fragment, SVG_NS } from './shared';
 
 export function destroyElement(target, wait = cb => cb()) {
   return Promise.resolve().then(() => wait(() => target.remove()));
@@ -17,17 +18,11 @@ export function createElement(value, svg, cb) {
   if (isScalar(value)) return document.createTextNode(value);
   if (isUndef(value)) throw new TypeError(`Empty or invalid node, given '${value}'`);
 
-  if (isArray(value) && !isNode(value)) {
-    const fragment = document.createDocumentFragment();
-
-    value.forEach(node => {
-      append(fragment, createElement(node, svg, cb));
-    });
-
-    return fragment;
+  if (!isNode(value)) {
+    return isArray(value)
+      ? new Fragment(value, node => createElement(node, svg, cb))
+      : value;
   }
-
-  if (!isNode(value)) return value;
 
   const [tag, attrs, children] = fixProps([...value]);
   const isSvg = svg || tag === 'svg';
@@ -89,6 +84,11 @@ export function updateElement(target, prev, next, svg, cb, i = 0) {
   if (i === null) {
     const a = fixProps([...prev]);
     const b = fixProps([...next]);
+
+    if (target instanceof Fragment) {
+      zipMap(a, b, (x, y, z) => updateElement(target.childNodes[z], x, y, svg, cb, null));
+      return;
+    }
 
     if (updateProps(target, a[1], b[1], svg, cb)) {
       if (isFunction(target.onupdate)) target.onupdate(target);

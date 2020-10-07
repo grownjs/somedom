@@ -1,3 +1,5 @@
+import { Fragment } from '../lib/shared';
+
 export const CLOSE_TAGS = [
   'area',
   'base',
@@ -52,20 +54,6 @@ export function addEventListener(name, callback) {
 export function removeEventListener(name, callback) {
   if (this.eventListeners[name]) {
     this.eventListeners[name].splice(this.eventListeners[name].indexOf(callback), 1);
-  }
-}
-
-export class DocumentFragment {
-  constructor() {
-    this.childNodes = [];
-  }
-
-  appendChild(node) {
-    this.childNodes.push(node);
-  }
-
-  get outerHTML() {
-    return this.childNodes.map(node => node.outerHTML).join('\n');
   }
 }
 
@@ -154,7 +142,7 @@ export function createElement(name) {
 }
 
 export function createDocumentFragment() {
-  return new DocumentFragment();
+  return new Fragment();
 }
 
 export function createElementNS(ns, name) {
@@ -186,7 +174,9 @@ export function patchWindow() {
     dispatchEvent,
     addEventListener,
     removeEventListener,
+    DocumentFragment: Fragment,
   };
+  global.DocumentFragment = Fragment;
 }
 
 export function dropDocument() {
@@ -195,4 +185,5 @@ export function dropDocument() {
 
 export function dropWindow() {
   delete global.window;
+  delete global.DocumentFragment;
 }
