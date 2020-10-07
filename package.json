@@ -13,6 +13,7 @@
     "dev": "rollup -c -w",
     "build": "rollup -c",
     "watch": "npm test -- -w",
+    "watch:unit": "npm run test:unit -- -w",
     "serve": "sirv start docs --dev --quiet --single --port 8080",
     "test": "npm run test:unit && npm run test:e2e -- ${BROWSER:-chrome:headless} -a 'npm run serve' tests/e2e/cases",
     "test:ci": "npm run coverage && npm run report -- -r lcov && npm run test -- --color",
