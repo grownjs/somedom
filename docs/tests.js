@@ -193,6 +193,17 @@
     if (isFunction(value)) return value(svg, cb);
     if (isScalar(value)) return document.createTextNode(value);
     if (isUndef(value)) throw new TypeError(`Empty or invalid node, given '${value}'`);
+
+    if (Array.isArray(value) && !isNode(value)) {
+      const fragment = new DocumentFragment();
+
+      value.forEach(node => {
+        fragment.appendChild(createElement(node, svg, cb));
+      });
+
+      return fragment;
+    }
+
     if (!isNode(value)) return value;
 
     const [tag, attrs, children] = fixProps([...value]);
@@ -246,7 +257,7 @@
 
     const el = isScalar(view) || isNode(view) ? cb(view) : view;
 
-    append(target, el);
+    append(target, Array.isArray(el) ? cb(el) : el);
 
     return el;
   }
@@ -276,7 +287,7 @@
 
   function createView(tag, state, actions) {
     return (el, cb = createElement) => {
-      const data = { ...state };
+      const fns = [];
 
       let childNode;
       let vnode;
@@ -284,17 +295,17 @@
       const $ = Object.keys(actions)
         .reduce((prev, cur) => {
           prev[cur] = (...args) => Promise.resolve()
-            .then(() => actions[cur](...args)(data))
-            .then(result => Object.assign(data, result))
-            .then(newData => {
-              updateElement(childNode, vnode, vnode = fixTree(tag(newData, $)), null, cb, null);
-            });
+            .then(() => actions[cur](...args)(state))
+            .then(result => Object.assign(state, result))
+            .then(() => Promise.all(fns.map(fn => fn(state))))
+            .then(() => updateElement(childNode, vnode, vnode = fixTree(tag(state, $)), null, cb, null)); // eslint-disable-line
 
           return prev;
         }, {});
 
-      childNode = mountElement(el, vnode = fixTree(tag(data, $)), cb);
+      childNode = mountElement(el, vnode = fixTree(tag(state, $)), cb);
 
+      $.subscribe = fn => Promise.resolve(fn(state)).then(() => fns.push(fn));
       $.unmount = () => destroyElement(childNode);
       $.target = childNode;
 
