@@ -5,8 +5,13 @@ import {
 import { XLINK_NS, ELEM_REGEX } from './shared';
 
 export function fixTree(vnode) {
-  if (Array.isArray(vnode) && !isNode(vnode)) return vnode.map(fixTree);
-  if (!isNode(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
+  if (!isNode(vnode)) {
+    if (Array.isArray(vnode)) {
+      return vnode.map(fixTree);
+    }
+
+    throw new Error(`Invalid vnode, given '${vnode}'`);
+  }
 
   vnode = isNode(vnode) && isFunction(vnode[0])
     ? fixTree(vnode[0](vnode[1], toArray(vnode[2])))
@@ -24,8 +29,8 @@ export function fixTree(vnode) {
 }
 
 export function fixProps(vnode) {
-  if (Array.isArray(vnode) && !isNode(vnode)) {
-    return vnode.map(fixProps);
+  if (isScalar(vnode) || !isNode(vnode)) {
+    return Array.isArray(vnode) ? vnode.map(fixProps) : vnode;
   }
 
   if (isArray(vnode[1]) || isScalar(vnode[1])) {

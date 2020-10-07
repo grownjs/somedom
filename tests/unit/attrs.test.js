@@ -25,9 +25,9 @@ describe('attrs', () => {
 
   describe('fixProps', () => {
     it('should fail on invalid or missing input', () => {
-      expect(fixProps).to.throw();
+      expect(fixProps).not.to.throw();
       expect(() => fixProps([])).not.to.throw();
-      expect(() => fixProps([''])).to.throw();
+      expect(() => fixProps([''])).not.to.throw();
     });
 
     it('should normalize given vnodes', () => {

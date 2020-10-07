@@ -1,8 +1,36 @@
 (function () {
   'use strict';
 
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
   const ELEM_REGEX = /^(\w*|[.#]\w+)(#[\w-]+)?([\w.-]+)?$/;
+
+  class Fragment {
+    constructor(data, cb) {
+      this.childNodes = [];
+
+      if (data) {
+        data.forEach(node => {
+          this.appendChild(cb(node));
+        });
+      }
+    }
+
+    appendChild(node) {
+      this.childNodes.push(node);
+    }
+
+    remove() {
+      this.childNodes.forEach(node => {
+        node.parentNode.removeChild(node);
+      });
+    }
+
+    get outerHTML() {
+      return this.childNodes.map(node => node.outerHTML).join('\n');
+    }
+  }
 
   const isArray = value => Array.isArray(value);
   const isFunction = value => typeof value === 'function';
@@ -90,11 +118,20 @@
 
   const replace = (target, node, i) => target.replaceChild(node, target.childNodes[i]);
   const remove = (target, node) => target && target.removeChild(node);
-  const append = (target, node) => target.appendChild(node);
   const detach = target => remove(target.parentNode, target);
 
+  const append = (target, node) => (node instanceof Fragment
+    ? node.childNodes.map(sub => append(target, sub))
+    : target.appendChild(node));
+
   function fixTree(vnode) {
-    if (!isNode(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
+    if (!isNode(vnode)) {
+      if (Array.isArray(vnode)) {
+        return vnode.map(fixTree);
+      }
+
+      throw new Error(`Invalid vnode, given '${vnode}'`);
+    }
 
     vnode = isNode(vnode) && isFunction(vnode[0])
       ? fixTree(vnode[0](vnode[1], toArray(vnode[2])))
@@ -112,9 +149,8 @@
   }
 
   function fixProps(vnode) {
-    if (Array.isArray(vnode) && !isNode(vnode)) {
-      return vnode.map(fixProps);
-    }
+    if (Array.isArray(vnode) && !isNode(vnode)) return vnode.map(fixProps);
+    if (isScalar(vnode)) return vnode;
 
     if (isArray(vnode[1]) || isScalar(vnode[1])) {
       vnode[2] = vnode[1];
@@ -198,8 +234,6 @@
     return changed;
   }
 
-  const SVG_NS = 'http://www.w3.org/2000/svg';
-
   function destroyElement(target, wait = cb => cb()) {
     return Promise.resolve().then(() => wait(() => target.remove()));
   }
@@ -209,17 +243,11 @@
     if (isScalar(value)) return document.createTextNode(value);
     if (isUndef(value)) throw new TypeError(`Empty or invalid node, given '${value}'`);
 
-    if (isArray(value) && !isNode(value)) {
-      const fragment = document.createDocumentFragment();
-
-      value.forEach(node => {
-        append(fragment, createElement(node, svg, cb));
-      });
-
-      return fragment;
+    if (!isNode(value)) {
+      return isArray(value)
+        ? new Fragment(value, node => createElement(node, svg, cb))
+        : value;
     }
-
-    if (!isNode(value)) return value;
 
     const [tag, attrs, children] = fixProps([...value]);
     const isSvg = svg || tag === 'svg';
@@ -281,6 +309,11 @@
     if (i === null) {
       const a = fixProps([...prev]);
       const b = fixProps([...next]);
+
+      if (target instanceof Fragment) {
+        zipMap(a, b, (x, y, z) => updateElement(target.childNodes[z], x, y, svg, cb, null));
+        return;
+      }
 
       if (updateProps(target, a[1], b[1], svg, cb)) {
         if (isFunction(target.onupdate)) target.onupdate(target);
