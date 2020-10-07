@@ -149,8 +149,9 @@
   }
 
   function fixProps(vnode) {
-    if (Array.isArray(vnode) && !isNode(vnode)) return vnode.map(fixProps);
-    if (isScalar(vnode)) return vnode;
+    if (isScalar(vnode) || !isNode(vnode)) {
+      return Array.isArray(vnode) ? vnode.map(fixProps) : vnode;
+    }
 
     if (isArray(vnode[1]) || isScalar(vnode[1])) {
       vnode[2] = vnode[1];

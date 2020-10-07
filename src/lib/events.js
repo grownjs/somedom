@@ -1,6 +1,6 @@
 import { isFunction, isObject } from './util';
 
-export const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
+import { EE_SUPPORTED } from './shared';
 
 export function eventListener(e) {
   return e.currentTarget.events[e.type](e);
