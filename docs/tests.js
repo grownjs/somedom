@@ -1,8 +1,12 @@
 (function () {
   'use strict';
 
+  const XLINK_NS = 'http://www.w3.org/1999/xlink';
+  const ELEM_REGEX = /^(\w*|[.#]\w+)(#[\w-]+)?([\w.-]+)?$/;
+
   const isArray = value => Array.isArray(value);
   const isFunction = value => typeof value === 'function';
+  const isSelector = value => value && ELEM_REGEX.test(value);
   const isUndef = value => typeof value === 'undefined' || value === null;
   const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
   const isScalar = value => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
@@ -32,7 +36,7 @@
     return typeof value === 'undefined' || value === '' || value === null || value === false;
   };
 
-  const isNode = x => isArray(x) && x.length <= 3 && (typeof x[0] === 'string' || typeof x[0] === 'function') && !isEmpty(x[0]);
+  const isNode = x => isArray(x) && x.length <= 3 && ((typeof x[0] === 'string' && isSelector(x[0])) || typeof x[0] === 'function');
 
   const dashCase = value => value.replace(/[A-Z]/g, '-$&').toLowerCase();
   const toArray = value => (!isEmpty(value) && !isArray(value) ? [value] : value) || [];
@@ -72,6 +76,14 @@
     return value.replace(new RegExp(`^ {${depth}}`, 'mg'), '').trim();
   };
 
+  const clone = value => {
+    if (!value || typeof value !== 'object') return value;
+    if (isArray(value)) return value.map(x => clone(x));
+    if (value instanceof Date) return new Date(value.getTime());
+    if (value instanceof RegExp) return new RegExp(value.source, value.flags);
+    return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
+  };
+
   const zipMap = (a, b, cb) => Array.from({ length: Math.max(a.length, b.length) }).map((_, i) => cb(a[i], b[i], i));
   const apply = (cb, length, options = {}) => (...args) => length === args.length && cb(...args, options);
   const raf = cb => ((typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout)(cb);
@@ -81,10 +93,9 @@
   const append = (target, node) => target.appendChild(node);
   const detach = target => remove(target.parentNode, target);
 
-  const XLINK_NS = 'http://www.w3.org/1999/xlink';
-  const ELEM_REGEX = /(\w*)(#[\w-]+)?([\w.-]+)?/;
-
   function fixTree(vnode) {
+    if (!isNode(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
+
     vnode = isNode(vnode) && isFunction(vnode[0])
       ? fixTree(vnode[0](vnode[1], toArray(vnode[2])))
       : vnode;
@@ -101,6 +112,10 @@
   }
 
   function fixProps(vnode) {
+    if (Array.isArray(vnode) && !isNode(vnode)) {
+      return vnode.map(fixProps);
+    }
+
     if (isArray(vnode[1]) || isScalar(vnode[1])) {
       vnode[2] = vnode[1];
       vnode[1] = null;
@@ -194,11 +209,11 @@
     if (isScalar(value)) return document.createTextNode(value);
     if (isUndef(value)) throw new TypeError(`Empty or invalid node, given '${value}'`);
 
-    if (Array.isArray(value) && !isNode(value)) {
-      const fragment = new DocumentFragment();
+    if (isArray(value) && !isNode(value)) {
+      const fragment = document.createDocumentFragment();
 
       value.forEach(node => {
-        fragment.appendChild(createElement(node, svg, cb));
+        append(fragment, createElement(node, svg, cb));
       });
 
       return fragment;
@@ -229,7 +244,7 @@
       .then(() => detach(el));
 
     children.forEach(vnode => {
-      if (!isEmpty(vnode)) el.appendChild(createElement(vnode, isSvg, cb));
+      if (!isEmpty(vnode)) append(el, createElement(vnode, isSvg, cb));
     });
 
     return el;
@@ -255,9 +270,9 @@
       target = document.querySelector(target);
     }
 
-    const el = isScalar(view) || isNode(view) ? cb(view) : view;
+    const el = isArray(view) || isScalar(view) ? cb(view) : view;
 
-    append(target, Array.isArray(el) ? cb(el) : el);
+    append(target, el);
 
     return el;
   }
@@ -287,6 +302,7 @@
 
   function createView(tag, state, actions) {
     return (el, cb = createElement) => {
+      const data = clone(state);
       const fns = [];
 
       let childNode;
@@ -295,17 +311,17 @@
       const $ = Object.keys(actions)
         .reduce((prev, cur) => {
           prev[cur] = (...args) => Promise.resolve()
-            .then(() => actions[cur](...args)(state))
-            .then(result => Object.assign(state, result))
-            .then(() => Promise.all(fns.map(fn => fn(state))))
-            .then(() => updateElement(childNode, vnode, vnode = fixTree(tag(state, $)), null, cb, null)); // eslint-disable-line
+            .then(() => actions[cur](...args)(data))
+            .then(result => Object.assign(data, result))
+            .then(() => Promise.all(fns.map(fn => fn(data))))
+            .then(() => updateElement(childNode, vnode, vnode = fixTree(tag(data, $)), null, cb, null)); // eslint-disable-line
 
           return prev;
         }, {});
 
-      childNode = mountElement(el, vnode = fixTree(tag(state, $)), cb);
+      childNode = mountElement(el, vnode = fixTree(tag(data, $)), cb);
 
-      $.subscribe = fn => Promise.resolve(fn(state)).then(() => fns.push(fn));
+      $.subscribe = fn => Promise.resolve(fn(data)).then(() => fns.push(fn));
       $.unmount = () => destroyElement(childNode);
       $.target = childNode;
 

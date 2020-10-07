@@ -15,7 +15,7 @@
     "watch": "npm test -- -w",
     "watch:unit": "npm run test:unit -- -w",
     "serve": "sirv start docs --dev --quiet --single --port 8080",
-    "test": "npm run test:unit && npm run test:e2e -- ${BROWSER:-chrome:headless} -a 'npm run serve' tests/e2e/cases",
+    "test": "npm run test:unit && npm run test:e2e -- -a 'npm run serve' tests/e2e/cases",
     "test:ci": "npm run coverage && npm run report -- -r lcov && npm run test -- --color",
     "test:unit": "NODE_ENV=test _mocha --exit --colors --recursive -r esm -bR spec tests/unit",
     "coverage": "nyc --silent -x '**/fixtures/**' -x '**/*.test.js' npm run test:unit",
@@ -24,7 +24,7 @@
     "lint": "eslint src tests",
     "pretest": "npm run lint",
     "prepublishOnly": "NODE_ENV=production npm run build",
-    "test:e2e": "BASE_URL=http://localhost:8080 testcafe --color"
+    "test:e2e": "BASE_URL=http://localhost:8080 testcafe --color ${BROWSER:-chrome:headless}"
   },
   "author": "Alvaro Cabrera <pateketrueke@gmail.com>",
   "license": "MIT",
