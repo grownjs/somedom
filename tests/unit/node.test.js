@@ -247,8 +247,8 @@ describe('node', () => {
       updateElement(div, [['some text', ['b', 'OK']]], ['foo ', 'barX']);
       expect(div.outerHTML).to.eql('<div>foo barX</div>');
 
-      updateElement(div, ['foo ', 'barX'], ['a', ' OK']);
-      expect(div.outerHTML).to.eql('<div><a> OK</a>barX</div>');
+      updateElement(div, ['foo ', 'barX'], ['a ', 'OK']);
+      expect(div.outerHTML).to.eql('<div>a OK</div>');
     });
 
     it('can patch node attributes', () => {

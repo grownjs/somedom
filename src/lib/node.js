@@ -80,7 +80,6 @@ export function mountElement(target, view, cb = createElement) {
   return el;
 }
 
-// FIXME: diff on scalars?
 export function updateElement(target, prev, next, svg, cb, i = null) {
   if (i === null) {
     if (isArray(prev) && isArray(next)) {
@@ -108,6 +107,8 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
   } else if (target.childNodes[i]) {
     if (next === null) {
       destroyElement(target.childNodes[i]);
+    } else if (isScalar(prev) && isScalar(next)) {
+      if (prev !== next) target.childNodes[i].nodeValue = next;
     } else {
       replace(target, createElement(next, svg, cb), i);
     }
