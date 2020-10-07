@@ -22,6 +22,10 @@ export const CLOSE_TAGS = [
   'wbr',
 ];
 
+export function raise(vnode) {
+  throw new Error(`Invalid vnode, given '${vnode}'`);
+}
+
 export class Fragment {
   constructor(data, cb) {
     this.childNodes = [];
@@ -33,8 +37,18 @@ export class Fragment {
     }
   }
 
+  replaceChild(node, target) {
+    const i = this.childNodes.indexOf(target);
+
+    if (i !== -1) this.childNodes[i] = node;
+  }
+
   appendChild(node) {
     this.childNodes.push(node);
+  }
+
+  cloneNode()  {
+    return this;
   }
 
   remove() {

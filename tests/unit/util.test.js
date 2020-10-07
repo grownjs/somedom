@@ -26,6 +26,9 @@ import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
 
+beforeEach(doc.enable);
+afterEach(doc.disable);
+
 describe('util', () => {
   describe('apply', () => {
     const opts = {};
@@ -171,9 +174,6 @@ describe('util', () => {
   });
 
   describe('document', () => {
-    beforeEach(doc.enable);
-    afterEach(doc.disable);
-
     describe('raf', () => {
       it('will invoke window.requestAnimationFrame or setTimeout', async () => {
         const a = td.func('raf');
@@ -208,8 +208,6 @@ describe('util', () => {
     let c;
 
     beforeEach(() => {
-      doc.enable();
-
       a = document.createElement('a');
       b = document.createElement('b');
       c = document.createElement('c');
@@ -218,8 +216,6 @@ describe('util', () => {
 
       expect(a.outerHTML).to.eql('<a><b></b></a>');
     });
-
-    afterEach(doc.disable);
 
     describe('replace', () => {
       it('should replace childNodes', () => {

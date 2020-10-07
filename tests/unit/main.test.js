@@ -7,10 +7,13 @@ import {
   h, pre, bind, patch, render, listeners, attributes,
 } from '../../src';
 
-import { format } from '../../src/lib/util';
+import { tick, format } from '../../src/lib/util';
 import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
+
+beforeEach(doc.enable);
+afterEach(doc.disable);
 
 describe('somedom', () => {
   describe('h', () => {
@@ -21,9 +24,6 @@ describe('somedom', () => {
   });
 
   describe('pre', () => {
-    beforeEach(doc.enable);
-    afterEach(doc.disable);
-
     it('should debug and render given vnodes', () => {
       const sample = format('<div><span foo="bar" baz="baz">TEXT</span></div>');
 
@@ -73,9 +73,6 @@ describe('somedom', () => {
   });
 
   describe('patch', () => {
-    beforeEach(doc.enable);
-    afterEach(doc.disable);
-
     it('will sync event-handlers properly', async () => {
       const $ = bind(render, listeners());
       const rm = td.func('removeItem');
@@ -101,12 +98,14 @@ describe('somedom', () => {
       let vnode = view();
       const node = $(vnode);
 
+      node.parentNode = document.createElement('body');
+
       for (let i = 0; i < 2; i += 1) {
-        node.withText(`Item ${i + 1}`)[0].dispatchEvent({ type: 'click' });
-        patch(node, vnode, vnode = view(), null, $, null);
+        await node.withText(`Item ${i + 1}`)[0].dispatchEvent({ type: 'click' });
+        await patch(node, vnode, vnode = view(), null, $, null);
       }
 
-      await new Promise(ok => setTimeout(ok, 100));
+      await tick();
 
       expect(format(node.outerHTML)).to.eql(format(`<ul>
         <li>Item 3</li>

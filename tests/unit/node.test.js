@@ -7,19 +7,16 @@ import {
   createElement, mountElement, destroyElement, updateElement, createView,
 } from '../../src/lib/node';
 
+import { tick } from '../../src/lib/util';
+
 import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
 
-async function tick(cb) {
-  await new Promise(ko => process.nextTick(ko));
-  cb();
-}
+beforeEach(doc.enable);
+afterEach(doc.disable);
 
 describe('node', () => {
-  beforeEach(doc.enable);
-  afterEach(doc.disable);
-
   describe('DocumentFragment', () => {
     it('should flatten arrays as fragments', () => {
       const tree = createElement([
@@ -59,7 +56,7 @@ describe('node', () => {
 
   describe('createElement', () => {
     it('should fail on invalid input', () => {
-      expect(createElement).to.throw(/Empty or invalid node/);
+      expect(createElement).to.throw(/Invalid vnode/);
     });
 
     it('should invoke given factories', () => {
@@ -208,41 +205,62 @@ describe('node', () => {
   });
 
   describe('updateElement', () => {
+    let body;
     let div;
     let a;
 
     beforeEach(() => {
+      body = document.createElement('body');
       div = document.createElement('div');
       a = document.createElement('a');
 
+      body.appendChild(div);
       div.appendChild(a);
 
       expect(a.outerHTML).to.eql('<a></a>');
     });
 
-    it('can patch node attributes', () => {
-      updateElement(a, ['a'], ['a', { href: '#' }], null, undefined, null);
-      expect(a.outerHTML).to.eql('<a href="#"></a>');
+    it('can reconcilliate child nodes', () => {
+      updateElement(div, ['a'], ['b', 'OK']);
+      expect(div.outerHTML).to.eql('<div><b>OK</b></div>');
+
+      updateElement(div, ['a'], [['b', 'OK']]);
+      expect(div.outerHTML).to.eql('<div><b>OK</b></div>');
+
+      updateElement(div, [['a']], ['b', 'OK!']);
+      expect(div.outerHTML).to.eql('<div><b>OK!</b></div>');
+
+      updateElement(div, [['a']], [['b', 'OK']]);
+      expect(div.outerHTML).to.eql('<div><b>OK</b></div>');
+
+      updateElement(div, [['b', 'OK']], [['b', 'NOT']]);
+      expect(div.outerHTML).to.eql('<div><b>NOT</b></div>');
     });
 
-    it('can patch from text nodes', () => {
-      updateElement(a, ['a'], ['foo bar'], null, undefined, null);
+    it('can reconcilliate text nodes', () => {
+      updateElement(div, ['div'], [['foo bar']]);
       expect(div.outerHTML).to.eql('<div>foo bar</div>');
 
-      a = div.childNodes[0] = document.createTextNode('foo bar', div);
-      updateElement(a, [a.nodeValue], ['foo ', 'barX'], null, undefined, null);
+      updateElement(div, [['b', 'OK']], [['some text', ['b', 'OK']]]);
+      expect(div.outerHTML).to.eql('<div>some text<b>OK</b></div>');
+
+      updateElement(div, [['some text', ['b', 'OK']]], ['foo ', 'barX']);
       expect(div.outerHTML).to.eql('<div>foo barX</div>');
 
-      a = div.childNodes[0] = document.createTextNode('foo barX', div);
-      updateElement(a, [a.nodeValue], ['a', ' OK'], null, undefined, null);
-      expect(div.outerHTML).to.eql('<div><a> OK</a></div>');
+      updateElement(div, ['foo ', 'barX'], ['a', ' OK']);
+      expect(div.outerHTML).to.eql('<div><a> OK</a>barX</div>');
+    });
+
+    it('can patch node attributes', () => {
+      updateElement(a, ['a'], ['a', { href: '#' }]);
+      expect(a.outerHTML).to.eql('<a href="#"></a>');
     });
 
     it('will invoke hooks on update', () => {
       a.onupdate = td.func('onupdate');
       a.update = td.func('update');
 
-      updateElement(a, ['a'], ['a', { href: '#' }], null, undefined, null);
+      updateElement(a, ['a'], ['a', { href: '#' }]);
 
       expect(td.explain(a.onupdate).callCount).to.eql(1);
       expect(td.explain(a.update).callCount).to.eql(1);
@@ -254,38 +272,36 @@ describe('node', () => {
     });
 
     it('can append childNodes', () => {
-      updateElement(a, ['a'], ['a', [['c', 'd']]], null, undefined, null);
+      updateElement(a, ['a'], ['a', [['c', 'd']]]);
       expect(div.outerHTML).to.eql('<div><a><c>d</c></a></div>');
     });
 
     it('can remove childNodes', async () => {
       a.appendChild(createElement(['b']));
 
-      await tick(() => updateElement(a, ['a', [['b']]], ['a'], null, undefined, null));
-
-      // FIXME: avoid this...
-      await new Promise(resolve => setTimeout(resolve));
+      updateElement(a, ['a', [['b']]], ['a']);
+      await tick();
 
       expect(div.outerHTML).to.eql('<div><a></a></div>');
     });
 
     it('can update TextNodes', () => {
       a.appendChild(document.createTextNode());
-      updateElement(a, ['a', 'old'], ['a', 'old'], null, undefined, null);
-      updateElement(a, ['a', 'old'], ['a', 'new'], null, undefined, null);
+      updateElement(a, ['a', 'old'], ['a', 'old']);
+      updateElement(a, ['a', 'old'], ['a', 'new']);
       expect(div.outerHTML).to.eql('<div><a>new</a></div>');
     });
 
     it('will iterate recursively', () => {
       a.appendChild(createElement(['b']));
-      updateElement(a, ['a', [['b']]], ['a', [['b']]], null, undefined, null);
+      updateElement(a, ['a', [['b']]], ['a', [['b']]]);
       expect(a.outerHTML).to.eql('<a><b></b></a>');
     });
 
     it('will append given children', () => {
       a.appendChild(createElement(['b']));
       updateElement(a, ['b'], [['i'], ['i'], ['i']]);
-      expect(a.outerHTML).to.eql('<a><b></b><i></i><i></i></a>');
+      expect(a.outerHTML).to.eql('<a><i></i><i></i><i></i></a>');
     });
 
     it('patch over function values', () => {

@@ -11,10 +11,10 @@ import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
 
-describe('attrs', () => {
-  beforeEach(doc.enable);
-  afterEach(doc.disable);
+beforeEach(doc.enable);
+afterEach(doc.disable);
 
+describe('attrs', () => {
   describe('fixTree', () => {
     it('will invoke tag functions recursively', () => {
       const tree = [() => [() => ['span', 'O', [[() => ['em', 'k']], '!']]]];

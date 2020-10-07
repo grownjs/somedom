@@ -2,15 +2,13 @@ import {
   isEmpty, isObject, isFunction, isScalar, isDiff, isNode, isArray, toArray,
 } from './util';
 
-import { XLINK_NS, ELEM_REGEX } from './shared';
+import { XLINK_NS, ELEM_REGEX, raise } from './shared';
 
 export function fixTree(vnode) {
   if (!isNode(vnode)) {
-    if (Array.isArray(vnode)) {
-      return vnode.map(fixTree);
-    }
-
-    throw new Error(`Invalid vnode, given '${vnode}'`);
+    if (!vnode || isScalar(vnode)) return vnode;
+    if (Array.isArray(vnode)) return vnode.map(fixTree);
+    raise(vnode);
   }
 
   vnode = isNode(vnode) && isFunction(vnode[0])
@@ -42,7 +40,7 @@ export function fixProps(vnode) {
     vnode = fixProps(vnode[0](vnode[1], toArray(vnode[2])));
   }
 
-  if (!isNode(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
+  if (!isNode(vnode)) raise(vnode);
 
   const matches = vnode[0].match(ELEM_REGEX);
   const name = matches[1] || 'div';

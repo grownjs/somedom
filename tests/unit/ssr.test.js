@@ -9,7 +9,7 @@ import { trim } from '../../src/lib/util';
 import renderToString from '../../src/ssr';
 import doc from './fixtures/document';
 
-/* global beforeEach, afterEach, describe, it */
+/* global describe, it */
 
 function main() {
   const $actions = {
@@ -63,6 +63,7 @@ describe('SSR', () => {
     const nth = Math.round(Math.random() * 10) + 1;
     const app = renderToString(main());
 
+    doc.enable();
     await app.up(nth);
 
     const html = await app();
@@ -71,9 +72,6 @@ describe('SSR', () => {
   });
 
   describe('document', () => {
-    beforeEach(doc.enable);
-    afterEach(doc.disable);
-
     it('works fine with classList', () => {
       const div = document.createElement('div');
 

@@ -1,13 +1,13 @@
 import {
-  isFunction, isScalar, isArray, isNode, isEmpty, isUndef, isDiff,
-  zipMap, append, replace, detach, clone,
+  isFunction, isScalar, isArray, isNode, isText, isEmpty, isUndef, isDiff,
+  zipMap, append, replace, detach, clone, peek, raf,
 } from './util';
 
 import {
   assignProps, updateProps, fixProps, fixTree,
 } from './attrs';
 
-import { Fragment, SVG_NS } from './shared';
+import { Fragment, SVG_NS, raise } from './shared';
 
 export function destroyElement(target, wait = cb => cb()) {
   return Promise.resolve().then(() => wait(() => target.remove()));
@@ -16,7 +16,7 @@ export function destroyElement(target, wait = cb => cb()) {
 export function createElement(value, svg, cb) {
   if (isFunction(value)) return value(svg, cb);
   if (isScalar(value)) return document.createTextNode(value);
-  if (isUndef(value)) throw new TypeError(`Empty or invalid node, given '${value}'`);
+  if (isUndef(value)) raise(value);
 
   if (!isNode(value)) {
     return isArray(value)
@@ -80,34 +80,40 @@ export function mountElement(target, view, cb = createElement) {
   return el;
 }
 
-export function updateElement(target, prev, next, svg, cb, i = 0) {
+// FIXME: diff on scalars?
+export function updateElement(target, prev, next, svg, cb, i = null) {
   if (i === null) {
-    const a = fixProps([...prev]);
-    const b = fixProps([...next]);
+    if (isArray(prev) && isArray(next)) {
+      const a = fixProps(prev);
+      const b = fixProps(next);
 
-    if (target instanceof Fragment) {
-      zipMap(a, b, (x, y, z) => updateElement(target.childNodes[z], x, y, svg, cb, null));
-      return;
-    }
+      if (isNode(a) && isNode(b)) {
+        if (target.tagName.toLowerCase() === a[0]) {
+          if (updateProps(target, a[1], b[1], svg, cb)) {
+            if (isFunction(target.onupdate)) target.onupdate(target);
+            if (isFunction(target.update)) target.update();
+          }
 
-    if (isNode(a) && isNode(b)) {
-      if (updateProps(target, a[1], b[1], svg, cb)) {
-        if (isFunction(target.onupdate)) target.onupdate(target);
-        if (isFunction(target.update)) target.update();
+          // FIXME: key lookup would start here?
+          zipMap(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
+        } else {
+          detach(target.childNodes[0], createElement(b, svg, cb));
+        }
+      } else if (!isNode(a) && !isNode(b)) {
+        zipMap(a, b, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+      } else {
+        replace(target, createElement(b, svg, cb), 0);
       }
-
-      zipMap(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
-    } else detach(target, createElement(b, svg, cb));
-  } else if (isScalar(prev) && isScalar(next)) {
-    if (isDiff(prev, next)) {
-      target.childNodes[i].nodeValue = next;
     }
-  } else if (!prev && next) append(target, createElement(next, svg, cb));
-  else if (prev && !next) destroyElement(target.childNodes[i]);
-  else if (prev[0] !== next[0]) {
-    if (isNode(prev) && isNode(next)) replace(target, createElement(next, svg, cb), i);
-    else zipMap(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z));
-  } else updateElement(target.childNodes[i], prev, next, svg, cb, null);
+  } else if (target.childNodes[i]) {
+    if (next === null) {
+      destroyElement(target.childNodes[i]);
+    } else {
+      replace(target, createElement(next, svg, cb), i);
+    }
+  } else {
+    append(target, createElement(next, svg, cb));
+  }
 }
 
 export function createView(tag, state, actions) {

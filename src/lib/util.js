@@ -1,5 +1,6 @@
 import { Fragment, ELEM_REGEX } from './shared';
 
+
 export const isArray = value => Array.isArray(value);
 export const isFunction = value => typeof value === 'function';
 export const isSelector = value => value && ELEM_REGEX.test(value);
@@ -33,10 +34,12 @@ export const isEmpty = value => {
 };
 
 export const isNode = x => isArray(x) && x.length <= 3 && ((typeof x[0] === 'string' && isSelector(x[0])) || typeof x[0] === 'function');
+export const isText = (x, y) => x.nodeType === 3 && !isNode(y);
 
 export const dashCase = value => value.replace(/[A-Z]/g, '-$&').toLowerCase();
 export const toArray = value => (!isEmpty(value) && !isArray(value) ? [value] : value) || [];
 export const filter = (value, cb) => value.filter(cb || (x => !isEmpty(x)));
+export const peek = value => isArray(value) ? value.join('') : value;
 
 export const format = value => {
   const xml = String(value)
@@ -80,9 +83,10 @@ export const clone = value => {
   return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
 };
 
-export const zipMap = (a, b, cb) => Array.from({ length: Math.max(a.length, b.length) }).map((_, i) => cb(a[i], b[i], i));
+export const zipMap = (a, b, cb) => Array.from({ length: Math.max(a.length, b.length) }).map((_, i) => cb(a[i], b[i] || null, i));
 export const apply = (cb, length, options = {}) => (...args) => length === args.length && cb(...args, options);
 export const raf = cb => ((typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout)(cb);
+export const tick = cb => new Promise(resolve => raf(() => resolve(cb && cb())));
 
 export const replace = (target, node, i) => target.replaceChild(node, target.childNodes[i]);
 export const remove = (target, node) => target && target.removeChild(node);

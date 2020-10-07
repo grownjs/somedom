@@ -1,13 +1,13 @@
 import { Fragment, CLOSE_TAGS } from '../lib/shared';
+import { filter } from '../lib/util';
 
 export function withText(value) {
   const found = [];
 
   function walk(sub, nodes) {
     nodes.forEach(x => {
-      if (!x.childNodes) {
-        if (x.nodeValue && x.nodeValue.indexOf(value) !== -1) found.push(sub);
-      } else walk(x, x.childNodes);
+      if (x.childNodes) walk(x, x.childNodes);
+      if (x.nodeValue && x.nodeValue.indexOf(value) !== -1) found.push(sub);
     });
   }
 
@@ -55,7 +55,7 @@ export function createElement(name) {
       add: (...value) => {
         const classes = el.className.trim().split(/\W/);
 
-        el.className = classes.concat(value.filter(x => classes.indexOf(x) === -1)).join(' ');
+        el.className = classes.concat(filter(value, x => classes.indexOf(x) === -1)).join(' ');
       },
       remove: (...value) => {
         el.className = el.className.replace(new RegExp(`(\\b|^)\\s*${value.join('|')}\\s*(\\b|$)`), '').trim();
@@ -94,6 +94,8 @@ export function createElement(name) {
       return `<${name}${props.join('')}>${el.innerHTML}</${name}>`;
     },
     replaceChild(n, o) {
+      n.parentNode = el;
+
       const i = el.childNodes.indexOf(o);
 
       if (i !== -1) el.childNodes.splice(i, 1, n);
@@ -104,6 +106,8 @@ export function createElement(name) {
       if (i !== -1) el.childNodes.splice(i, 1);
     },
     insertBefore(n, o) {
+      n.parentNode = el;
+
       const i = el.childNodes.indexOf(o);
 
       if (i !== -1) el.childNodes.splice(i, 0, n);
@@ -142,7 +146,7 @@ export function createElementNS(ns, name) {
 }
 
 export function createTextNode(nodeValue, parentNode) {
-  return { nodeValue, parentNode };
+  return { nodeType: 3, nodeValue, parentNode };
 }
 
 export function patchDocument() {
