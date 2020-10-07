@@ -50,12 +50,6 @@ export class Fragment {
     this.childNodes.push(node);
   }
 
-  remove() {
-    this.childNodes.forEach(node => {
-      node.parentNode.removeChild(node);
-    });
-  }
-
   get outerHTML() {
     return this.childNodes.map(node => node.outerHTML || node.nodeValue).join('');
   }

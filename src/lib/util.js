@@ -1,6 +1,5 @@
 import { Fragment, ELEM_REGEX } from './shared';
 
-
 export const isArray = value => Array.isArray(value);
 export const isFunction = value => typeof value === 'function';
 export const isSelector = value => value && ELEM_REGEX.test(value);
