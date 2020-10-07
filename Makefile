@@ -12,5 +12,8 @@ dev: src deps ## Start dev tasks
 e2e: src deps ## Run E2E tests locally
 	@BROWSER=$(browser) npm run test:e2e -- tests/e2e/cases
 
+test: src deps ## Start dev+testing flow
+	@npm run watch:unit
+
 deps: package*.json
 	@(((ls node_modules | grep .) > /dev/null 2>&1) || npm i) || true

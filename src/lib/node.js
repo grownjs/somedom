@@ -1,13 +1,13 @@
 import {
-  isFunction, isScalar, isArray, isNode, isText, isEmpty, isUndef, isDiff,
-  zipMap, append, replace, detach, clone, peek, raf,
+  isFunction, isScalar, isArray, isNode, isEmpty, isUndef,
+  zipMap, append, replace, detach, clone,
 } from './util';
 
 import {
   assignProps, updateProps, fixProps, fixTree,
 } from './attrs';
 
-import { Fragment, SVG_NS, raise } from './shared';
+import { Fragment, SVG_NS, assert } from './shared';
 
 export function destroyElement(target, wait = cb => cb()) {
   return Promise.resolve().then(() => wait(() => target.remove()));
@@ -16,7 +16,7 @@ export function destroyElement(target, wait = cb => cb()) {
 export function createElement(value, svg, cb) {
   if (isFunction(value)) return value(svg, cb);
   if (isScalar(value)) return document.createTextNode(value);
-  if (isUndef(value)) raise(value);
+  if (isUndef(value)) assert(value);
 
   if (!isNode(value)) {
     return isArray(value)

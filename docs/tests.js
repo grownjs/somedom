@@ -6,6 +6,12 @@
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
   const ELEM_REGEX = /^(\w*|[.#]\w+)(#[\w-]+)?([\w.-]+)?$/;
 
+  const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
+
+  function raise(vnode) {
+    throw new Error(`Invalid vnode, given '${vnode}'`);
+  }
+
   class Fragment {
     constructor(data, cb) {
       this.childNodes = [];
@@ -17,8 +23,18 @@
       }
     }
 
+    replaceChild(node, target) {
+      const i = this.childNodes.indexOf(target);
+
+      if (i !== -1) this.childNodes[i] = node;
+    }
+
     appendChild(node) {
       this.childNodes.push(node);
+    }
+
+    cloneNode()  {
+      return this;
     }
 
     remove() {
@@ -28,7 +44,7 @@
     }
 
     get outerHTML() {
-      return this.childNodes.map(node => node.outerHTML).join('\n');
+      return this.childNodes.map(node => node.outerHTML || node.nodeValue).join('');
     }
   }
 
@@ -112,25 +128,27 @@
     return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
   };
 
-  const zipMap = (a, b, cb) => Array.from({ length: Math.max(a.length, b.length) }).map((_, i) => cb(a[i], b[i], i));
+  const zipMap = (a, b, cb) => Array.from({ length: Math.max(a.length, b.length) }).map((_, i) => cb(a[i], b[i] || null, i));
   const apply = (cb, length, options = {}) => (...args) => length === args.length && cb(...args, options);
   const raf = cb => ((typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout)(cb);
 
   const replace = (target, node, i) => target.replaceChild(node, target.childNodes[i]);
   const remove = (target, node) => target && target.removeChild(node);
-  const detach = target => remove(target.parentNode, target);
 
   const append = (target, node) => (node instanceof Fragment
     ? node.childNodes.map(sub => append(target, sub))
     : target.appendChild(node));
 
+  const detach = (target, node) => {
+    if (node) target.parentNode.insertBefore(node, target);
+    remove(target.parentNode, target);
+  };
+
   function fixTree(vnode) {
     if (!isNode(vnode)) {
-      if (Array.isArray(vnode)) {
-        return vnode.map(fixTree);
-      }
-
-      throw new Error(`Invalid vnode, given '${vnode}'`);
+      if (!vnode || isScalar(vnode)) return vnode;
+      if (Array.isArray(vnode)) return vnode.map(fixTree);
+      raise(vnode);
     }
 
     vnode = isNode(vnode) && isFunction(vnode[0])
@@ -162,7 +180,7 @@
       vnode = fixProps(vnode[0](vnode[1], toArray(vnode[2])));
     }
 
-    if (!isNode(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
+    if (!isNode(vnode)) raise(vnode);
 
     const matches = vnode[0].match(ELEM_REGEX);
     const name = matches[1] || 'div';
@@ -242,7 +260,7 @@
   function createElement(value, svg, cb) {
     if (isFunction(value)) return value(svg, cb);
     if (isScalar(value)) return document.createTextNode(value);
-    if (isUndef(value)) throw new TypeError(`Empty or invalid node, given '${value}'`);
+    if (isUndef(value)) raise(value);
 
     if (!isNode(value)) {
       return isArray(value)
@@ -306,32 +324,40 @@
     return el;
   }
 
-  function updateElement(target, prev, next, svg, cb, i = 0) {
+  // FIXME: diff on scalars?
+  function updateElement(target, prev, next, svg, cb, i = null) {
     if (i === null) {
-      const a = fixProps([...prev]);
-      const b = fixProps([...next]);
+      if (isArray(prev) && isArray(next)) {
+        const a = fixProps(prev);
+        const b = fixProps(next);
 
-      if (target instanceof Fragment) {
-        zipMap(a, b, (x, y, z) => updateElement(target.childNodes[z], x, y, svg, cb, null));
-        return;
-      }
+        if (isNode(a) && isNode(b)) {
+          if (target.tagName.toLowerCase() === a[0]) {
+            if (updateProps(target, a[1], b[1], svg, cb)) {
+              if (isFunction(target.onupdate)) target.onupdate(target);
+              if (isFunction(target.update)) target.update();
+            }
 
-      if (updateProps(target, a[1], b[1], svg, cb)) {
-        if (isFunction(target.onupdate)) target.onupdate(target);
-        if (isFunction(target.update)) target.update();
+            // FIXME: key lookup would start here?
+            zipMap(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
+          } else {
+            detach(target.childNodes[0], createElement(b, svg, cb));
+          }
+        } else if (!isNode(a) && !isNode(b)) {
+          zipMap(a, b, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+        } else {
+          replace(target, createElement(b, svg, cb), 0);
+        }
       }
-
-      zipMap(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
-    } else if (isScalar(prev) && isScalar(next)) {
-      if (isDiff(prev, next)) {
-        target.childNodes[i].nodeValue = next;
+    } else if (target.childNodes[i]) {
+      if (next === null) {
+        destroyElement(target.childNodes[i]);
+      } else {
+        replace(target, createElement(next, svg, cb), i);
       }
-    } else if (!prev && next) append(target, createElement(next, svg, cb));
-    else if (prev && !next) destroyElement(target.childNodes[i]);
-    else if (prev[0] !== next[0]) {
-      if (isNode(prev) && isNode(next)) replace(target, createElement(next, svg, cb), i);
-      else zipMap(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z));
-    } else updateElement(target.childNodes[i], prev, next, svg, cb, null);
+    } else {
+      append(target, createElement(next, svg, cb));
+    }
   }
 
   function createView(tag, state, actions) {
@@ -430,8 +456,6 @@
   const applyStyles = value => styles(value).join('; ');
   const applyClasses = value => classes(value).join(' ');
   const applyAnimations = (value, name, el) => { el[name] = nextProps(el, classes(value)); };
-
-  const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
 
   function eventListener(e) {
     return e.currentTarget.events[e.type](e);

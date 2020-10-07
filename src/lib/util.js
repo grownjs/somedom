@@ -34,12 +34,10 @@ export const isEmpty = value => {
 };
 
 export const isNode = x => isArray(x) && x.length <= 3 && ((typeof x[0] === 'string' && isSelector(x[0])) || typeof x[0] === 'function');
-export const isText = (x, y) => x.nodeType === 3 && !isNode(y);
 
 export const dashCase = value => value.replace(/[A-Z]/g, '-$&').toLowerCase();
 export const toArray = value => (!isEmpty(value) && !isArray(value) ? [value] : value) || [];
 export const filter = (value, cb) => value.filter(cb || (x => !isEmpty(x)));
-export const peek = value => isArray(value) ? value.join('') : value;
 
 export const format = value => {
   const xml = String(value)
