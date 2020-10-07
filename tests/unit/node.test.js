@@ -20,6 +20,20 @@ describe('node', () => {
   beforeEach(doc.enable);
   afterEach(doc.disable);
 
+  describe('DocumentFragment', () => {
+    it('should flatten arrays as fragments', () => {
+      const tree = createElement([
+        ['span', 'foo'],
+        ['span', 'bar'],
+      ]);
+
+      const div = document.createElement('div');
+      div.appendChild(tree);
+
+      expect(div.outerHTML).to.eql('<div><span>foo</span>\n<span>bar</span></div>');
+    });
+  });
+
   describe('destroyElement', () => {
     let parent;
     let div;

@@ -55,6 +55,20 @@ export function removeEventListener(name, callback) {
   }
 }
 
+export class DocumentFragment {
+  constructor() {
+    this.childNodes = [];
+  }
+
+  appendChild(node) {
+    this.childNodes.push(node);
+  }
+
+  get outerHTML() {
+    return this.childNodes.map(node => node.outerHTML).join('\n');
+  }
+}
+
 export function createElement(name) {
   const el = {
     tagName: name.toUpperCase(),
@@ -167,7 +181,9 @@ export function patchWindow() {
     dispatchEvent,
     addEventListener,
     removeEventListener,
+    DocumentFragment,
   };
+  Object.assign(global, global.window);
 }
 
 export function dropDocument() {
@@ -175,5 +191,11 @@ export function dropDocument() {
 }
 
 export function dropWindow() {
+  if (global.window) {
+    Object.keys(global.window).forEach(key => {
+      delete global[key];
+    });
+  }
+
   delete global.window;
 }

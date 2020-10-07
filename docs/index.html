@@ -208,6 +208,27 @@
             appendChild();
           });</script>
         </dd>
+        <dd>
+          <p>Mounting multiple nodes are possible through <code>DocumentFragment</code>, e.g.</p>
+          <small>output:</small>
+          <fieldset id="test6"></fieldset>
+          <script>test(({ mount }, appendChild) => {
+            const style = 'text-decoration:underline';
+
+            mount(test6, [
+              'Some text ',
+              ['strong', 'before DOM'],
+              ': ',
+              [
+                'because',
+                ' ',
+                ['em', 'it is'],
+                [' ', [['strong', { style }, 'possible!']]],
+              ],
+            ]);
+            appendChild();
+          });</script>
+        </dd>
       </dl>
     </details>
 
