@@ -12,6 +12,8 @@ import {
   bind, render, listeners,
 } from '../../src';
 
+import { tick } from '../../src/lib/util';
+
 import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
@@ -32,6 +34,41 @@ describe('thunks', () => {
 
       td.when(tag(td.matchers.isA(Object), td.matchers.isA(Object)))
         .thenReturn(['a']);
+    });
+
+    async function testThunk(value, result, subject, description) {
+      const body = document.createElement('body');
+      const app = createView(subject, { value }, [description]);
+      const $ = app(body, bind(render, listeners()));
+
+      body.withText(description)[0].dispatchEvent({ type: 'click' });
+      await tick();
+
+      expect($.target.outerHTML).to.eql(`<button>${description}</button><span>Got: ${result} (${result * 2})</span>`);
+    }
+
+    it('can create views from plain objects', async () => {
+      const Obj = {
+        state: props => ({
+          value: props.value || 42,
+          result: null,
+        }),
+
+        render: (state, _actions, children) => [[
+          ['button', { onclick: _actions.doStuff }, children],
+          ['span', ['Got: ', state.result || '?', ' (', state.value, ')']],
+        ]],
+
+        doStuff: () => async ({ value }) => ({
+          result: await Promise.resolve(value / 2),
+        }),
+      };
+
+      await testThunk(42, 21, Obj, 'Click me.');
+    });
+
+    it('can create views from regular classes', async () => {
+      await testThunk(16, 8, require('./fixtures/Thunk'), 'Click me.');
     });
 
     it('can be removed from the DOM calling unmount()', async () => {

@@ -1,4 +1,4 @@
-import { Fragment, ELEM_REGEX } from './shared';
+import { Fragment, ELEM_REGEX, SKIP_METHODS } from './shared';
 
 export const isArray = value => Array.isArray(value);
 export const isFunction = value => typeof value === 'function';
@@ -33,6 +33,29 @@ export const isEmpty = value => {
 };
 
 export const isNode = x => isArray(x) && x.length <= 3 && ((typeof x[0] === 'string' && isSelector(x[0])) || typeof x[0] === 'function');
+
+export const getMethods = obj => {
+  const stack = [];
+
+  do {
+    stack.push(obj);
+  } while (obj = Object.getPrototypeOf(obj)); // eslint-disable-line
+
+  stack.pop();
+
+  return stack.reduce((memo, cur) => {
+    const keys = Object.getOwnPropertyNames(cur);
+
+    keys.forEach(key => {
+      if (!SKIP_METHODS.includes(key)
+        && typeof cur[key] === 'function'
+        && !memo.includes(key)
+      ) memo.push(key);
+    });
+
+    return memo;
+  }, []);
+};
 
 export const dashCase = value => value.replace(/[A-Z]/g, '-$&').toLowerCase();
 export const toArray = value => (!isEmpty(value) && !isArray(value) ? [value] : value) || [];

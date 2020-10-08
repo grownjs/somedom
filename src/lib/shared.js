@@ -22,6 +22,14 @@ export const CLOSE_TAGS = [
   'wbr',
 ];
 
+export const SKIP_METHODS = [
+  'constructor',
+  'children',
+  'render',
+  'state',
+  'props',
+];
+
 export function assert(vnode) {
   throw new Error(`Invalid vnode, given '${vnode}'`);
 }
