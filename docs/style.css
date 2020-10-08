@@ -44,6 +44,7 @@ main {
 }
 
 blockquote {
+  margin-bottom: 8px;
   padding: 8px 8px 8px 16px;
   border-left: 4px solid silver;
 }

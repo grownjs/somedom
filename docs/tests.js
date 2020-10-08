@@ -447,14 +447,21 @@
             throw new Error(`Invalid action, given ${method} (${fn})`);
           }
 
-          actions[fn] = (...args) => Promise.resolve()
-            .then(() => method(...args)(data, actions))
-            .then(result => {
-              if (result && !(isScalar(result) || isArray(result))) {
-                return sync(Object.assign(data, result));
-              }
-              return result;
-            });
+          actions[fn] = (...args) => {
+            const retval = method(...args)(data, actions);
+
+            if (typeof retval === 'object' && typeof retval.then === 'function') {
+              return retval.then(result => {
+                if (result && !(isScalar(result) || isArray(result))) {
+                  return sync(Object.assign(data, result));
+                }
+                return result;
+              });
+            } else if (retval && !(isScalar(retval) || isArray(retval))) {
+              sync(Object.assign(data, retval));
+            }
+            return retval;
+          };
         });
 
         actions.subscribe = fn => Promise.resolve(fn(data, actions)).then(() => fns.push(fn));

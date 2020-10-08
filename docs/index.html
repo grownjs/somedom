@@ -190,8 +190,7 @@
           <fieldset id="target2"></fieldset>
           <fieldset id="target3"></fieldset>
           <blockquote>
-            <p>Methods from classes are decorated to behave as regular actions, so they'll return promises instead.</p>
-            <p>Prefix them with an underscore to ignore them during the decoration process.</p>
+            <p>Methods from classes are decorated to behave as regular actions &mdash; prefix them with an underscore to ignore them during the decoration process.</p>
           </blockquote>
           <script>test(({ view, bind, render, listeners }, appendChild) => {
             var heading = view({
@@ -234,7 +233,9 @@
         <dd>
           <p>Thunks are wrappers around mounted views, any given <code>vnode</code> will be used as fallback.</p>
           <p>It also receives an optional <b>tag</b> (<code>cb</code>) to enable custom rendering output.</p>
-          <p>Notice <code>listeners()</code> are required as thunks rely on both <code>oncreate</code> and <code>ondestroy</code> events.</p>
+          <blockquote>
+            <p>Notice <code>listeners()</code> are required as thunks rely on both <code>oncreate</code> and <code>ondestroy</code> events.</p>
+          </blockquote>
           <fieldset id="output"></fieldset>
           <script>test(({ view, bind, thunk, render, listeners }, appendChild) => {
             var $ = thunk(['main'],
