@@ -385,9 +385,7 @@
     }
   }
 
-  function createView(Tag, state, actions = {}) {
-    const children = isArray(actions) ? actions : undefined;
-
+  function getDecorated(Tag, state, actions, children) {
     if (typeof Tag === 'object') {
       const factory = Tag;
 
@@ -402,12 +400,13 @@
       }, {});
     }
 
+    let instance;
     if (
       typeof Tag === 'function'
       && (Tag.prototype && typeof Tag.prototype.render === 'function')
       && (Tag.constructor === Function && Tag.prototype.constructor !== Function)
     ) {
-      const instance = new Tag(state, children);
+      instance = new Tag(state, children);
 
       Tag = _state => (instance.state = _state, instance.render()); // eslint-disable-line
 
@@ -423,61 +422,81 @@
       }, {});
     }
 
+    return {
+      Tag, state, actions, instance,
+    };
+  }
+
+  function createView(Factory, initialState, userActions = {}) {
+    const children = isArray(userActions) ? userActions : undefined;
+
+    const {
+      Tag, state, actions, instance,
+    } = getDecorated(Factory, initialState, userActions, children);
+
     return (el, cb = createElement) => {
       const data = clone(state || {});
       const fns = [];
 
       let childNode;
       let vnode;
+      let $;
 
       function sync(result) {
-        return Promise.all(fns.map(fn => fn(data, actions)))
+        return Promise.all(fns.map(fn => fn(data, $)))
           .then(() => {
-            updateElement(childNode, vnode, vnode = fixTree(Tag(data, actions)), null, cb, null);
+            updateElement(childNode, vnode, vnode = fixTree(Tag(data, $)), null, cb, null);
           })
           .then(() => result);
       }
 
       // decorate given actions
-      if (!actions.state) {
-        Object.keys(actions).forEach(fn => {
-          const method = actions[fn];
+      $ = Object.keys(actions).reduce((memo, fn) => {
+        const method = actions[fn];
 
-          if (typeof method !== 'function') {
-            throw new Error(`Invalid action, given ${method} (${fn})`);
+        if (typeof method !== 'function') {
+          throw new Error(`Invalid action, given ${method} (${fn})`);
+        }
+
+        memo[fn] = (...args) => {
+          const retval = method(...args)(data, $);
+
+          if (typeof retval === 'object' && typeof retval.then === 'function') {
+            return retval.then(result => {
+              if (result && !(isScalar(result) || isArray(result))) {
+                return sync(Object.assign(data, result));
+              }
+              return result;
+            });
           }
 
-          actions[fn] = (...args) => {
-            const retval = method(...args)(data, actions);
+          if (retval && !(isScalar(retval) || isArray(retval))) {
+            sync(Object.assign(data, retval));
+          }
 
-            if (typeof retval === 'object' && typeof retval.then === 'function') {
-              return retval.then(result => {
-                if (result && !(isScalar(result) || isArray(result))) {
-                  return sync(Object.assign(data, result));
-                }
-                return result;
-              });
-            } else if (retval && !(isScalar(retval) || isArray(retval))) {
-              sync(Object.assign(data, retval));
-            }
-            return retval;
-          };
-        });
+          return retval;
+        };
 
-        actions.subscribe = fn => Promise.resolve(fn(data, actions)).then(() => fns.push(fn));
-        actions.unmount = _cb => destroyElement(childNode, _cb);
+        if (instance) {
+          instance[fn] = memo[fn];
+        }
 
-        Object.defineProperty(actions, 'state', {
-          configurable: false,
-          enumerable: true,
-          get: () => data,
-        });
-      }
+        return memo;
+      }, {});
 
-      childNode = mountElement(el, vnode = fixTree(Tag(data, actions)), cb);
-      actions.target = childNode;
+      $.subscribe = fn => Promise.resolve(fn(data, $)).then(() => fns.push(fn));
+      $.unmount = _cb => destroyElement(childNode, _cb);
 
-      return actions;
+      Object.defineProperty($, 'state', {
+        configurable: false,
+        enumerable: true,
+        get: () => data,
+      });
+
+      childNode = mountElement(el, vnode = fixTree(Tag(data, $)), cb);
+      $.target = childNode;
+
+      return $;
     };
   }
 
@@ -487,7 +506,7 @@
       render: cb,
       source: null,
       vnode: vnode || ['div'],
-      thunk: createView(() => ctx.vnode, {}, {}),
+      thunk: createView(() => ctx.vnode),
     };
 
     ctx.unmount = async _cb => {
