@@ -4,7 +4,7 @@ import td from 'testdouble';
 import { expect } from 'chai';
 
 import {
-  createElement, mountElement, destroyElement, updateElement, createView,
+  createElement, mountElement, destroyElement, updateElement,
 } from '../../src/lib/node';
 
 import { tick } from '../../src/lib/util';
@@ -76,9 +76,9 @@ describe('node', () => {
     });
 
     it('should handle children as 2nd argument', () => {
-      expect(createElement(['span', [1, 'foo']]).childNodes.map(x => x.nodeValue)).to.eql([1, 'foo']);
+      expect(createElement(['span', [1, 'foo']]).childNodes.map(x => x.nodeValue)).to.eql(['1', 'foo']);
       expect(createElement(['span', 'TEXT']).childNodes.map(x => x.nodeValue)).to.eql(['TEXT']);
-      expect(createElement(['span', 12.3]).childNodes.map(x => x.nodeValue)).to.eql([12.3]);
+      expect(createElement(['span', 12.3]).childNodes.map(x => x.nodeValue)).to.eql(['12.3']);
       expect(createElement(['span', false]).childNodes).to.eql([]);
     });
 
@@ -106,14 +106,14 @@ describe('node', () => {
 
     it('should append given nodes as childNodes', () => {
       const node = createElement(['ul', [
-        ['li', 1],
-        ['li', 2],
+        ['li', '1'],
+        ['li', '2'],
       ]]);
 
       expect([node.tagName, node.childNodes.map(x => [x.tagName, x.childNodes.map(y => y.nodeValue)])]).to.eql([
         'UL', [
-          ['LI', [1]],
-          ['LI', [2]],
+          ['LI', ['1']],
+          ['LI', ['2']],
         ],
       ]);
     });
@@ -318,48 +318,6 @@ describe('node', () => {
       updateElement(a, $old, $new);
 
       expect(a.outerHTML).to.eql('<a><del><em>OSOM!</em></del></a>');
-    });
-  });
-
-  describe('createView', () => {
-    let tag;
-    let data;
-    let actions;
-
-    beforeEach(() => {
-      tag = td.func('render');
-      data = { foo: 'BAR' };
-      actions = { setFoo: value => () => ({ foo: value }) };
-
-      td.when(tag(td.matchers.isA(Object), td.matchers.isA(Object)))
-        .thenReturn(['a']);
-    });
-
-    it('can be removed from the DOM calling unmount()', async () => {
-      const app = createView(tag, data, actions);
-      const $ = app();
-
-      await $.unmount();
-
-      expect(document.body.innerHTML).to.eql('');
-    });
-
-    it('will render state-driven components', () => {
-      const app = createView(tag, data, actions);
-      const $ = app();
-
-      expect($.target.outerHTML).to.eql('<a></a>');
-    });
-
-    it('should re-render on state changes', async () => {
-      const app = createView(({ foo }) => [['a', foo]], data, actions);
-      const $ = app();
-
-      expect($.target.outerHTML).to.eql('<a>BAR</a>');
-
-      await $.setFoo('OK');
-
-      expect($.target.outerHTML).to.eql('<a>OK</a>');
     });
   });
 });

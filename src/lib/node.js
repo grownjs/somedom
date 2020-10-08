@@ -1,10 +1,10 @@
 import {
   isFunction, isScalar, isArray, isNode, isEmpty, isUndef,
-  zipMap, append, replace, detach, clone,
+  zipMap, append, replace, detach,
 } from './util';
 
 import {
-  assignProps, updateProps, fixProps, fixTree,
+  assignProps, updateProps, fixProps,
 } from './attrs';
 
 import { Fragment, SVG_NS, assert } from './shared';
@@ -115,33 +115,4 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
   } else {
     append(target, createElement(next, svg, cb));
   }
-}
-
-export function createView(tag, state, actions) {
-  return (el, cb = createElement) => {
-    const data = clone(state);
-    const fns = [];
-
-    let childNode;
-    let vnode;
-
-    const $ = Object.keys(actions)
-      .reduce((prev, cur) => {
-        prev[cur] = (...args) => Promise.resolve()
-          .then(() => actions[cur](...args)(data))
-          .then(result => Object.assign(data, result))
-          .then(() => Promise.all(fns.map(fn => fn(data))))
-          .then(() => updateElement(childNode, vnode, vnode = fixTree(tag(data, $)), null, cb, null)); // eslint-disable-line
-
-        return prev;
-      }, {});
-
-    childNode = mountElement(el, vnode = fixTree(tag(data, $)), cb);
-
-    $.subscribe = fn => Promise.resolve(fn(data)).then(() => fns.push(fn));
-    $.unmount = () => destroyElement(childNode);
-    $.target = childNode;
-
-    return $;
-  };
 }

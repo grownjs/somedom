@@ -145,8 +145,8 @@ export function createElementNS(ns, name) {
   };
 }
 
-export function createTextNode(nodeValue, parentNode) {
-  return { nodeType: 3, nodeValue, parentNode };
+export function createTextNode(content, parentNode) {
+  return { nodeType: 3, nodeValue: String(content), parentNode };
 }
 
 export function patchDocument() {

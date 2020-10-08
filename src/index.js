@@ -1,10 +1,14 @@
 import {
-  createView as view,
   mountElement as mount,
   updateElement as patch,
   createElement as render,
   destroyElement as unmount,
 } from './lib/node';
+
+import {
+  createView as view,
+  createThunk as thunk,
+} from './lib/views';
 
 import {
   invokeProps,
@@ -39,12 +43,16 @@ export const listeners = opts => apply(addEvents, 3, opts);
 export const attributes = opts => apply(invokeProps, 3, opts);
 
 export {
-  createView as view,
   mountElement as mount,
   updateElement as patch,
   createElement as render,
   destroyElement as unmount,
 } from './lib/node';
+
+export {
+  createView as view,
+  createThunk as thunk,
+} from './lib/views';
 
 export {
   applyStyles as styles,
@@ -58,6 +66,8 @@ export default {
   bind,
 
   view,
+  thunk,
+
   mount,
   patch,
   render,
