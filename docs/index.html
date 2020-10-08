@@ -136,7 +136,7 @@
     <details>
       <summary><code>view()</code></summary>
       <dl>
-        <dt><code>view(tag, state, actions)</code></dt>
+        <dt><code>view(tag[, state[, actions]])</code></dt>
         <dd>
           <p>Views are higher abstractions over <code>state</code> and <code>actions</code> handling their own updates.</p>
           <p>Both arguments are given to the <b>tag</b> function in order to produce a valid <code>vnode</code>.</p>
@@ -182,6 +182,47 @@
           <p><code>target</code> &mdash; attached DOM node</p>
           <p><code>unmount()</code> &mdash; detaches from the DOM</p>
           <p><code>subscribe()</code> &mdash; listen for any state changes</p>
+        </dd>
+        <dt><code>view(Tag[, props[, children]])</code></dt>
+        <dd>
+          <p>Other shapes for <code>Tag</code> can be provided, they can be plain objects or classes.</p>
+          <p>Actions (methods) and <code>state</code> are derived from the given factory &mdash; then, <code>render()</code> is called to produce a valid <code>vnode</code>.</p>
+          <fieldset id="target2"></fieldset>
+          <fieldset id="target3"></fieldset>
+          <blockquote>
+            <p>Methods from classes are decorated to behave as regular actions, so they'll return promises instead.</p>
+            <p>Prefix them with an underscore to ignore them during the decoration process.</p>
+          </blockquote>
+          <script>test(({ view, bind, render, listeners }, appendChild) => {
+            var heading = view({
+              render: () => ['h1', 'It works?'],
+            });
+
+            var counter = view(class {
+              _num() {
+                return Math.random();
+              }
+
+              update() {
+                return { value: this._num() };
+              }
+
+              render() {
+                const { state: { value }, update } = this;
+
+                return ['div', [
+                  ['button', { onclick: update }, 'Click me.'],
+                  value && ['span', ['Value: ', value]],
+                ]];
+              }
+            });
+
+            var tag = bind(render, listeners());
+
+            heading('#target2', tag);
+            counter('#target3', tag);
+            appendChild();
+          });</script>
         </dd>
       </dl>
     </details>

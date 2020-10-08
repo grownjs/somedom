@@ -8,6 +8,14 @@
 
   const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
 
+  const SKIP_METHODS = [
+    'constructor',
+    'children',
+    'render',
+    'state',
+    'props',
+  ];
+
   function assert(vnode) {
     throw new Error(`Invalid vnode, given '${vnode}'`);
   }
@@ -74,6 +82,29 @@
   };
 
   const isNode = x => isArray(x) && x.length <= 3 && ((typeof x[0] === 'string' && isSelector(x[0])) || typeof x[0] === 'function');
+
+  const getMethods = obj => {
+    const stack = [];
+
+    do {
+      stack.push(obj);
+    } while (obj = Object.getPrototypeOf(obj)); // eslint-disable-line
+
+    stack.pop();
+
+    return stack.reduce((memo, cur) => {
+      const keys = Object.getOwnPropertyNames(cur);
+
+      keys.forEach(key => {
+        if (!SKIP_METHODS.includes(key)
+          && typeof cur[key] === 'function'
+          && !memo.includes(key)
+        ) memo.push(key);
+      });
+
+      return memo;
+    }, []);
+  };
 
   const dashCase = value => value.replace(/[A-Z]/g, '-$&').toLowerCase();
   const toArray = value => (!isEmpty(value) && !isArray(value) ? [value] : value) || [];
@@ -354,7 +385,44 @@
     }
   }
 
-  function createView(tag, state, actions = {}) {
+  function createView(Tag, state, actions = {}) {
+    const children = isArray(actions) ? actions : undefined;
+
+    if (typeof Tag === 'object') {
+      const factory = Tag;
+
+      Tag = (_state, _actions) => factory.render(_state, _actions, children);
+
+      state = (typeof factory.state === 'function' && factory.state(state)) || state;
+      actions = Object.keys(factory).reduce((memo, key) => {
+        if (key !== 'state' && key !== 'render' && typeof factory[key] === 'function') {
+          memo[key] = (...args) => factory[key](...args);
+        }
+        return memo;
+      }, {});
+    }
+
+    if (
+      typeof Tag === 'function'
+      && (Tag.prototype && typeof Tag.prototype.render === 'function')
+      && (Tag.constructor === Function && Tag.prototype.constructor !== Function)
+    ) {
+      const instance = new Tag(state, children);
+
+      Tag = _state => (instance.state = _state, instance.render()); // eslint-disable-line
+
+      state = instance.state || state;
+      actions = getMethods(instance).reduce((memo, key) => {
+        if (key.charAt() !== '_') {
+          const method = instance[key].bind(instance);
+
+          memo[key] = (...args) => () => method(...args);
+          instance[key] = (...args) => memo[key](...args);
+        }
+        return memo;
+      }, {});
+    }
+
     return (el, cb = createElement) => {
       const data = clone(state || {});
       const fns = [];
@@ -362,30 +430,47 @@
       let childNode;
       let vnode;
 
-      const $ = Object.keys(actions)
-        .reduce((prev, cur) => {
-          prev[cur] = (...args) => Promise.resolve()
-            .then(() => actions[cur](...args)(data))
-            .then(result => Object.assign(data, result))
-            .then(() => Promise.all(fns.map(fn => fn(data))))
-            .then(() => updateElement(childNode, vnode, vnode = fixTree(tag(data, $)), null, cb, null)); // eslint-disable-line
+      function sync(result) {
+        return Promise.all(fns.map(fn => fn(data, actions)))
+          .then(() => {
+            updateElement(childNode, vnode, vnode = fixTree(Tag(data, actions)), null, cb, null);
+          })
+          .then(() => result);
+      }
 
-          return prev;
-        }, {});
+      // decorate given actions
+      if (!actions.state) {
+        Object.keys(actions).forEach(fn => {
+          const method = actions[fn];
 
-      childNode = mountElement(el, vnode = fixTree(tag(data, $)), cb);
+          if (typeof method !== 'function') {
+            throw new Error(`Invalid action, given ${method} (${fn})`);
+          }
 
-      $.subscribe = fn => Promise.resolve(fn(data)).then(() => fns.push(fn));
-      $.unmount = _cb => destroyElement(childNode, _cb);
-      $.target = childNode;
+          actions[fn] = (...args) => Promise.resolve()
+            .then(() => method(...args)(data, actions))
+            .then(result => {
+              if (result && !(isScalar(result) || isArray(result))) {
+                return sync(Object.assign(data, result));
+              }
+              return result;
+            });
+        });
 
-      Object.defineProperty($, 'state', {
-        configurable: false,
-        enumerable: true,
-        get: () => data,
-      });
+        actions.subscribe = fn => Promise.resolve(fn(data, actions)).then(() => fns.push(fn));
+        actions.unmount = _cb => destroyElement(childNode, _cb);
 
-      return $;
+        Object.defineProperty(actions, 'state', {
+          configurable: false,
+          enumerable: true,
+          get: () => data,
+        });
+      }
+
+      childNode = mountElement(el, vnode = fixTree(Tag(data, actions)), cb);
+      actions.target = childNode;
+
+      return actions;
     };
   }
 
@@ -395,7 +480,7 @@
       render: cb,
       source: null,
       vnode: vnode || ['div'],
-      thunk: createView(() => ctx.vnode),
+      thunk: createView(() => ctx.vnode, {}, {}),
     };
 
     ctx.unmount = async _cb => {

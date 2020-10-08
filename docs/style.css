@@ -43,6 +43,14 @@ main {
   margin: 420px auto;
 }
 
+blockquote {
+  padding: 8px 8px 8px 16px;
+  border-left: 4px solid silver;
+}
+blockquote p:last-child {
+  margin: 0;
+}
+
 dd + dd {
   border-top: 1px solid silver;
 }
@@ -80,6 +88,13 @@ dt {
   padding-left: 16px;
   padding-bottom: 8px;
   border-bottom: 1px solid silver;
+}
+
+fieldset + blockquote {
+  margin-top: 8px;
+}
+dd + dt {
+  margin-top: 16px;
 }
 
 section > pre,
