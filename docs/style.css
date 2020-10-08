@@ -124,6 +124,7 @@ summary {
   cursor: pointer;
 }
 
+button + span,
 button + button {
   margin-left: 4px;
 }

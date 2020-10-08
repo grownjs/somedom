@@ -8,7 +8,7 @@
 
   const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
 
-  function raise(vnode) {
+  function assert(vnode) {
     throw new Error(`Invalid vnode, given '${vnode}'`);
   }
 
@@ -26,21 +26,14 @@
     replaceChild(node, target) {
       const i = this.childNodes.indexOf(target);
 
-      if (i !== -1) this.childNodes[i] = node;
+      if (i !== -1) {
+        node.parentNode = this;
+        this.childNodes[i] = node;
+      }
     }
 
     appendChild(node) {
       this.childNodes.push(node);
-    }
-
-    cloneNode()  {
-      return this;
-    }
-
-    remove() {
-      this.childNodes.forEach(node => {
-        node.parentNode.removeChild(node);
-      });
     }
 
     get outerHTML() {
@@ -148,7 +141,7 @@
     if (!isNode(vnode)) {
       if (!vnode || isScalar(vnode)) return vnode;
       if (Array.isArray(vnode)) return vnode.map(fixTree);
-      raise(vnode);
+      assert(vnode);
     }
 
     vnode = isNode(vnode) && isFunction(vnode[0])
@@ -180,7 +173,7 @@
       vnode = fixProps(vnode[0](vnode[1], toArray(vnode[2])));
     }
 
-    if (!isNode(vnode)) raise(vnode);
+    if (!isNode(vnode)) assert(vnode);
 
     const matches = vnode[0].match(ELEM_REGEX);
     const name = matches[1] || 'div';
@@ -260,7 +253,7 @@
   function createElement(value, svg, cb) {
     if (isFunction(value)) return value(svg, cb);
     if (isScalar(value)) return document.createTextNode(value);
-    if (isUndef(value)) raise(value);
+    if (isUndef(value)) assert(value);
 
     if (!isNode(value)) {
       return isArray(value)
@@ -324,7 +317,6 @@
     return el;
   }
 
-  // FIXME: diff on scalars?
   function updateElement(target, prev, next, svg, cb, i = null) {
     if (i === null) {
       if (isArray(prev) && isArray(next)) {
@@ -352,6 +344,8 @@
     } else if (target.childNodes[i]) {
       if (next === null) {
         destroyElement(target.childNodes[i]);
+      } else if (isScalar(prev) && isScalar(next)) {
+        if (prev !== next) target.childNodes[i].nodeValue = next;
       } else {
         replace(target, createElement(next, svg, cb), i);
       }
@@ -360,9 +354,9 @@
     }
   }
 
-  function createView(tag, state, actions) {
+  function createView(tag, state, actions = {}) {
     return (el, cb = createElement) => {
-      const data = clone(state);
+      const data = clone(state || {});
       const fns = [];
 
       let childNode;
@@ -382,11 +376,65 @@
       childNode = mountElement(el, vnode = fixTree(tag(data, $)), cb);
 
       $.subscribe = fn => Promise.resolve(fn(data)).then(() => fns.push(fn));
-      $.unmount = () => destroyElement(childNode);
+      $.unmount = _cb => destroyElement(childNode, _cb);
       $.target = childNode;
+
+      Object.defineProperty($, 'state', {
+        configurable: false,
+        enumerable: true,
+        get: () => data,
+      });
 
       return $;
     };
+  }
+
+  function createThunk(vnode, cb = createElement) {
+    const ctx = {
+      refs: {},
+      render: cb,
+      source: null,
+      vnode: vnode || ['div'],
+      thunk: createView(() => ctx.vnode),
+    };
+
+    ctx.unmount = async _cb => {
+      if (ctx.source) {
+        await destroyElement(ctx.source.target, _cb);
+      }
+    };
+
+    ctx.mount = async (el, _vnode) => {
+      await ctx.unmount();
+
+      ctx.vnode = _vnode || ctx.vnode;
+      ctx.source = ctx.thunk(el, ctx.render);
+
+      return ctx;
+    };
+
+    ctx.wrap = (Target, _vnode) => {
+      _vnode = _vnode || ['div'];
+
+      let thunk;
+      return [_vnode[0], {
+        oncreate: ref => {
+          thunk = new Target(_vnode[1] || {})(ref, ctx.render);
+
+          ctx.refs[Target.name] = ctx.refs[Target.name] || [];
+          ctx.refs[Target.name].push(thunk);
+        },
+        ondestroy: () => {
+          ctx.refs[Target.name].splice(ctx.refs[Target.name].indexOf(thunk), 1);
+
+          if (!ctx.refs[Target.name].length) {
+            delete ctx.refs[Target.name];
+          }
+        },
+      }];
+    };
+
+    return ctx;
   }
 
   function values(attrs, cb) {
@@ -495,7 +543,9 @@
     }
   }
 
-  const h = (name, attrs, ...children) => [name, attrs, children];
+  const h = (name, attrs, ...children) => {
+    return typeof attrs === 'object' ? [name, attrs, children] : [name, undefined, [attrs].concat(children)];
+  };
 
   const pre = (vnode, svg, cb = createElement) => {
     return cb(['pre', { class: 'highlight' }, format(cb(vnode, svg).outerHTML)], svg);
@@ -520,6 +570,8 @@
     bind,
 
     view: createView,
+    thunk: createThunk,
+
     mount: mountElement,
     patch: updateElement,
     render: createElement,

@@ -177,6 +177,75 @@
               { onclick: append }, 'Add counter'], tag);
             appendChild();
           });</script>
+          <p><small>Available props and methods:</small></p>
+          <p><code>state</code> &mdash; copy of given state</p>
+          <p><code>target</code> &mdash; attached DOM node</p>
+          <p><code>unmount()</code> &mdash; detaches from the DOM</p>
+          <p><code>subscribe()</code> &mdash; listen for any state changes</p>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>thunk()</code></summary>
+      <dl>
+        <dt><code>thunk([vnode[, cb]])</code></dt>
+        <dd>
+          <p>Thunks are wrappers around mounted views, any given <code>vnode</code> will be used as fallback.</p>
+          <p>It also receives an optional <b>tag</b> (<code>cb</code>) to enable custom rendering output.</p>
+          <p>Notice <code>listeners()</code> are required as thunks rely on both <code>oncreate</code> and <code>ondestroy</code> events.</p>
+          <fieldset id="output"></fieldset>
+          <script>test(({ view, bind, thunk, render, listeners }, appendChild) => {
+            var $ = thunk(['main'],
+              bind(render, listeners()));
+
+            function Counter(props = {}) {
+              return view(({ num }, { dec, inc }) =>
+                ['span', [
+                  ['button', { onclick: dec  }, '--'],
+                  ['button', { onclick: inc }, '++'],
+                  ['span', ['value: ', num]],
+                ]], {
+                  num: props.value || Math.random(),
+                }, {
+                  dec: () => ({ num }) => ({
+                    num: num - Math.random(),
+                  }),
+                  inc: value => ({ num }) => ({
+                    num: num + Math.random(),
+                  }),
+                });
+            }
+
+            function MyCounter(props) {
+              return $.wrap(Counter, ['div', props]);
+            }
+
+            function Main(props) {
+              return [[
+                ['legend', [
+                  'Example(',
+                  ['button', {
+                    style: 'border: 0',
+                    onclick() {
+                      const { state } = $.refs.Counter[0];
+
+                      alert(JSON.stringify(state));
+                    },
+                  }, '?'],
+                  '):',
+                ]],
+                [MyCounter, props],
+              ]];
+            }
+
+            $.mount('#output', [Main, { value: 42 }]);
+            appendChild();
+          });</script>
+          <p><small>Available props and methods:</small></p>
+          <p><code>refs</code> &mdash; registry of attached thunks by name</p>
+          <p><code>wrap(View[, vnode])</code> &mdash; decorates a view to keep track of it</p>
+          <p><code>mount(target[, vnode])</code> &mdash; attaches the given <code>vdom</code> to the DOM target</p>
         </dd>
       </dl>
     </details>
