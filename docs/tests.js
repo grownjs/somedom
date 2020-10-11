@@ -155,24 +155,10 @@
     return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
   };
 
-  function findEqual(cur, list, i, c) {
-    for (; i < c; i += 1) {
-      if (!isDiff(cur, list[i])) return i;
-    }
-    return -1;
-  }
-
   function sortedZip(prev, next, cb) {
     const length = Math.max(prev.length, next.length);
 
     for (let i = 0; i < length; i += 1) {
-      const diff = isDiff(prev[i], next[i]);
-      const offset = findEqual(prev[i], next, i, length);
-
-      if (!diff || offset === -1) {
-        if (!prev[i]) prev.shift();
-      }
-
       if (isDiff(prev[i], next[i])) {
         cb(prev[i] || null, next[i] || null, i);
       }
@@ -530,7 +516,14 @@
         return memo;
       }, {});
 
-      $.subscribe = fn => Promise.resolve(fn(data, $)).then(() => fns.push(fn));
+      $.subscribe = fn => {
+        Promise.resolve(fn(data, $)).then(() => fns.push(fn));
+
+        return () => {
+          fns.splice(fns.indexOf(fn), 1);
+        };
+      };
+
       $.unmount = _cb => destroyElement(childNode, _cb);
 
       Object.defineProperty($, 'state', {
