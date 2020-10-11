@@ -107,7 +107,14 @@ export function createView(Factory, initialState, userActions = {}) {
       return memo;
     }, {});
 
-    $.subscribe = fn => Promise.resolve(fn(data, $)).then(() => fns.push(fn));
+    $.subscribe = fn => {
+      Promise.resolve(fn(data, $)).then(() => fns.push(fn));
+
+      return () => {
+        fns.splice(fns.indexOf(fn), 1);
+      };
+    };
+
     $.unmount = _cb => destroyElement(childNode, _cb);
 
     Object.defineProperty($, 'state', {

@@ -30,7 +30,7 @@ describe('thunks', () => {
     beforeEach(() => {
       tag = td.func('render');
       data = { foo: 'BAR' };
-      actions = { setFoo: value => () => ({ foo: value }) };
+      actions = { setFoo: value => async () => ({ foo: value }) };
 
       td.when(tag(td.matchers.isA(Object), td.matchers.isA(Object)))
         .thenReturn(['a']);
@@ -100,6 +100,32 @@ describe('thunks', () => {
 
       expect($.state).to.eql({ foo: 'OK' });
       expect($.target.outerHTML).to.eql('<a>OK</a>');
+    });
+
+    it('should allow to subscribe/unsubscribe from state', async () => {
+      const app = createView(tag, data, actions);
+      const $ = app();
+
+      let c = 0;
+      let result;
+      const done = $.subscribe(state => {
+        result = state;
+        c += 1;
+      });
+
+      expect(result).to.eql({ foo: 'BAR' });
+
+      result = -1;
+      await $.setFoo('OK');
+
+      done();
+      expect(result).to.eql({ foo: 'OK' });
+
+      result = -1;
+      await $.setFoo('X');
+
+      expect(result).to.eql(-1);
+      expect(c).to.eql(2);
     });
   });
 
