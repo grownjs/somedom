@@ -106,24 +106,10 @@ export const clone = value => {
   return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
 };
 
-export function findEqual(cur, list, i, c) {
-  for (; i < c; i += 1) {
-    if (!isDiff(cur, list[i])) return i;
-  }
-  return -1;
-}
-
 export function sortedZip(prev, next, cb) {
   const length = Math.max(prev.length, next.length);
 
   for (let i = 0; i < length; i += 1) {
-    const diff = isDiff(prev[i], next[i]);
-    const offset = findEqual(prev[i], next, i, length);
-
-    if (!diff || offset === -1) {
-      if (!prev[i]) prev.shift();
-    }
-
     if (isDiff(prev[i], next[i])) {
       cb(prev[i] || null, next[i] || null, i);
     }

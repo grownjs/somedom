@@ -182,8 +182,8 @@ describe('util', () => {
 
       sortedZip(a, b, (x, y, z) => c.push([x, y, z]));
       expect(c).to.eql([
-        [{ a: 1 }, { a: 2 }, 0],
-        [{ a: 2 }, { a: 1 }, 1],
+        [null, { a: 2 }, 0],
+        [{ a: 2 }, null, 2],
       ]);
     });
   });
