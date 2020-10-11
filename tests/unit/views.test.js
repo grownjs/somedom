@@ -121,7 +121,7 @@ describe('thunks', () => {
     }
 
     function MyCounter(props) {
-      return ctx.wrap(CounterView, ['div', props]);
+      return ctx.wrap(CounterView, props);
     }
 
     function Main(props) {
@@ -152,12 +152,11 @@ describe('thunks', () => {
 
       await ctx.refs.CounterView[0].setValue('OSOMS');
       expect(ctx.source.target.innerHTML).to.contains('value: OSOMS');
+      expect(ctx.source.target.innerHTML).to.contains('<legend>Example:</legend><span><button>');
 
       await ctx.refs.CounterView[0].unmount();
-      expect(ctx.source.target.innerHTML).to.eql('<legend>Example:</legend><div></div>');
-
-      await ctx.refs.CounterView[0].target.parentNode.remove();
       expect(ctx.source.target.innerHTML).to.eql('<legend>Example:</legend>');
+      expect(ctx.refs.CounterView).to.be.undefined;
     });
 
     it('should unmount already mounted views', async () => {

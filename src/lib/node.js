@@ -14,7 +14,6 @@ export function destroyElement(target, wait = cb => cb()) {
 }
 
 export function createElement(value, svg, cb) {
-  if (isFunction(value)) return value(svg, cb);
   if (isScalar(value)) return document.createTextNode(value);
   if (isUndef(value)) assert(value);
 
@@ -24,7 +23,23 @@ export function createElement(value, svg, cb) {
       : value;
   }
 
-  const [tag, attrs, children] = fixProps([...value]);
+  let fixedVNode = fixProps(value);
+
+  if (typeof fixedVNode[0] === 'function') {
+    const retval = fixedVNode[0](fixedVNode[1], fixedVNode[2]);
+
+    while (typeof retval[0] === 'function') {
+      retval[0] = retval[0](fixedVNode[1], fixedVNode[2]);
+    }
+
+    if (isNode(retval)) {
+      fixedVNode = fixProps(retval);
+    } else {
+      return retval[0];
+    }
+  }
+
+  const [tag, attrs, children] = fixedVNode;
   const isSvg = svg || tag === 'svg';
 
   let el = isSvg

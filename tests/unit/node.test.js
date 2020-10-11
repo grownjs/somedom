@@ -59,10 +59,6 @@ describe('node', () => {
       expect(createElement).to.throw(/Invalid vnode/);
     });
 
-    it('should invoke given factories', () => {
-      expect(createElement(() => 42)).to.eql(42);
-    });
-
     it('should return scalar values as text', () => {
       expect(createElement('Just text').nodeValue).to.eql('Just text');
     });

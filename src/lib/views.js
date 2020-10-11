@@ -147,24 +147,27 @@ export function createThunk(vnode, cb = createElement) {
     return ctx;
   };
 
-  ctx.wrap = (Target, _vnode) => {
-    _vnode = _vnode || ['div'];
+  ctx.wrap = (Target, props, children) => {
+    return [() => {
+      const target = document.createDocumentFragment();
+      const thunk = new Target(props, children)(target, ctx.render);
 
-    let thunk;
-    return [_vnode[0], {
-      oncreate: ref => {
-        thunk = new Target(_vnode[1] || {})(ref, ctx.render);
+      ctx.refs[Target.name] = ctx.refs[Target.name] || [];
+      ctx.refs[Target.name].push(thunk);
 
-        ctx.refs[Target.name] = ctx.refs[Target.name] || [];
-        ctx.refs[Target.name].push(thunk);
-      },
-      ondestroy: () => {
-        ctx.refs[Target.name].splice(ctx.refs[Target.name].indexOf(thunk), 1);
+      const _remove = thunk.target.remove;
 
-        if (!ctx.refs[Target.name].length) {
-          delete ctx.refs[Target.name];
-        }
-      },
+      thunk.target.remove = target.remove = _cb => Promise.resolve()
+        .then(() => {
+          ctx.refs[Target.name].splice(ctx.refs[Target.name].indexOf(thunk), 1);
+
+          if (!ctx.refs[Target.name].length) {
+            delete ctx.refs[Target.name];
+          }
+        })
+        .then(() => _remove(_cb));
+
+      return target;
     }];
   };
 

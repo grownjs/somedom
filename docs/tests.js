@@ -170,9 +170,7 @@
 
   function fixTree(vnode) {
     if (!isNode(vnode)) {
-      if (!vnode || isScalar(vnode)) return vnode;
-      if (Array.isArray(vnode)) return vnode.map(fixTree);
-      assert(vnode);
+      return isArray(vnode) ? vnode.map(fixTree) : vnode;
     }
 
     vnode = isNode(vnode) && isFunction(vnode[0])
@@ -201,7 +199,7 @@
     }
 
     if (isFunction(vnode[0])) {
-      vnode = fixProps(vnode[0](vnode[1], toArray(vnode[2])));
+      return vnode;
     }
 
     if (!isNode(vnode)) assert(vnode);
@@ -282,7 +280,6 @@
   }
 
   function createElement(value, svg, cb) {
-    if (isFunction(value)) return value(svg, cb);
     if (isScalar(value)) return document.createTextNode(value);
     if (isUndef(value)) assert(value);
 
@@ -292,7 +289,23 @@
         : value;
     }
 
-    const [tag, attrs, children] = fixProps([...value]);
+    let fixedVNode = fixProps(value);
+
+    if (typeof fixedVNode[0] === 'function') {
+      const retval = fixedVNode[0](fixedVNode[1], fixedVNode[2]);
+
+      while (typeof retval[0] === 'function') {
+        retval[0] = retval[0](fixedVNode[1], fixedVNode[2]);
+      }
+
+      if (isNode(retval)) {
+        fixedVNode = fixProps(retval);
+      } else {
+        return retval[0];
+      }
+    }
+
+    const [tag, attrs, children] = fixedVNode;
     const isSvg = svg || tag === 'svg';
 
     let el = isSvg
@@ -524,24 +537,27 @@
       return ctx;
     };
 
-    ctx.wrap = (Target, _vnode) => {
-      _vnode = _vnode || ['div'];
+    ctx.wrap = (Target, props, children) => {
+      return [() => {
+        const target = document.createDocumentFragment();
+        const thunk = new Target(props, children)(target, ctx.render);
 
-      let thunk;
-      return [_vnode[0], {
-        oncreate: ref => {
-          thunk = new Target(_vnode[1] || {})(ref, ctx.render);
+        ctx.refs[Target.name] = ctx.refs[Target.name] || [];
+        ctx.refs[Target.name].push(thunk);
 
-          ctx.refs[Target.name] = ctx.refs[Target.name] || [];
-          ctx.refs[Target.name].push(thunk);
-        },
-        ondestroy: () => {
-          ctx.refs[Target.name].splice(ctx.refs[Target.name].indexOf(thunk), 1);
+        const _remove = thunk.target.remove;
 
-          if (!ctx.refs[Target.name].length) {
-            delete ctx.refs[Target.name];
-          }
-        },
+        thunk.target.remove = target.remove = _cb => Promise.resolve()
+          .then(() => {
+            ctx.refs[Target.name].splice(ctx.refs[Target.name].indexOf(thunk), 1);
+
+            if (!ctx.refs[Target.name].length) {
+              delete ctx.refs[Target.name];
+            }
+          })
+          .then(() => _remove(_cb));
+
+        return target;
       }];
     };
 

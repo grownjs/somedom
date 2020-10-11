@@ -6,9 +6,7 @@ import { XLINK_NS, ELEM_REGEX, assert } from './shared';
 
 export function fixTree(vnode) {
   if (!isNode(vnode)) {
-    if (!vnode || isScalar(vnode)) return vnode;
-    if (Array.isArray(vnode)) return vnode.map(fixTree);
-    assert(vnode);
+    return isArray(vnode) ? vnode.map(fixTree) : vnode;
   }
 
   vnode = isNode(vnode) && isFunction(vnode[0])
@@ -37,7 +35,7 @@ export function fixProps(vnode) {
   }
 
   if (isFunction(vnode[0])) {
-    vnode = fixProps(vnode[0](vnode[1], toArray(vnode[2])));
+    return vnode;
   }
 
   if (!isNode(vnode)) assert(vnode);
