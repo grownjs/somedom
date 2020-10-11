@@ -15,26 +15,21 @@ test('it loads', async t => {
 
 test('counter widget', async t => {
   const target = Selector('#target');
+  const addCounter = target.find('button').withText('Add counter');
 
   await t
     .click(target.parent('details'))
-    .click(target.find('button'))
-    .expect(target.find('div').exists).ok()
-    .expect(target.find('div button').nth(1).exists)
-    .ok();
-
-  await t
-    .click(target.find('div button').nth(1))
-    .expect(target.find('div h1').textContent).contains(1);
-
-  await t
-    .click(target.find('div button').nth(0))
-    .click(target.find('div button').nth(0))
-    .expect(target.find('div h1').textContent).contains(-1);
-
-  await t
-    .click(target.find('div button').nth(2))
-    .expect(target.find('div').count).eql(0);
+    .click(addCounter)
+    .click(addCounter)
+    .click(addCounter)
+    .click(target.find('div:nth-child(2) button').withText('-'))
+    .click(target.find('div:nth-child(4) button').withText('+'))
+    .expect(target.find(' div:nth-child(2) h1').textContent)
+    .eql('-1')
+    .expect(target.find(' div:nth-child(3) h1').textContent)
+    .eql('0')
+    .expect(target.find(' div:nth-child(4) h1').textContent)
+    .eql('1');
 });
 
 test('lifecyle-hooks', async t => {
@@ -64,4 +59,24 @@ test('classes during lifecyle-hooks', async t => {
     .click(test4.find('li').nth(1).find('button'))
     .expect(test4.find('li.animated.slideUp').exists)
     .ok();
+});
+
+test('views and thunks health-checks', async t => {
+  const target2 = Selector('#target2');
+  const target3 = Selector('#target3');
+
+  await t
+    .click(target2.parent('details'))
+    .expect(target2.find('h1').textContent).contains('It works?');
+
+  await t
+    .click(target3.find('button'))
+    .expect(target3.find('span').textContent).contains('Value:');
+
+  const output = Selector('#output');
+
+  await t
+    .click(output.parent('details'))
+    .click(output.find('button').withText('++'))
+    .expect(target3.find('span').textContent).contains('Value:');
 });
