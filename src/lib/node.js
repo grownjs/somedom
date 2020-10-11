@@ -95,7 +95,6 @@ export function mountElement(target, view, cb = createElement) {
   return el;
 }
 
-// FIXME: it lacks of diffing, so is recreating stuff everytime it renders...
 export function updateElement(target, prev, next, svg, cb, i = null) {
   if (i === null) {
     if (isArray(prev) && isArray(next)) {

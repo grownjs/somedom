@@ -60,7 +60,10 @@
     if (isFunction(prev) || isFunction(next) || typeof prev !== typeof next) return true;
     if (isArray(prev)) {
       if (prev.length !== next.length) return true;
-      if (prev.some(x => next.indexOf(x) === -1)) return true;
+
+      for (let i = 0; i < next.length; i += 1) {
+        if (isDiff(prev[i], next[i])) return true;
+      }
     } else if (isObject(prev)) {
       const a = Object.keys(prev).sort();
       const b = Object.keys(next).sort();
@@ -152,7 +155,30 @@
     return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
   };
 
-  const zipMap = (a, b, cb) => Array.from({ length: Math.max(a.length, b.length) }).map((_, i) => cb(a[i], b[i] || null, i));
+  function findEqual(cur, list, i, c) {
+    for (; i < c; i += 1) {
+      if (!isDiff(cur, list[i])) return i;
+    }
+    return -1;
+  }
+
+  function sortedZip(prev, next, cb) {
+    const length = Math.max(prev.length, next.length);
+
+    for (let i = 0; i < length; i += 1) {
+      const diff = isDiff(prev[i], next[i]);
+      const offset = findEqual(prev[i], next, i, length);
+
+      if (!diff || offset === -1) {
+        if (!prev[i]) prev.shift();
+      }
+
+      if (isDiff(prev[i], next[i])) {
+        cb(prev[i] || null, next[i] || null, i);
+      }
+    }
+  }
+
   const apply = (cb, length, options = {}) => (...args) => length === args.length && cb(...args, options);
   const raf = cb => ((typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout)(cb);
 
@@ -291,10 +317,10 @@
 
     let fixedVNode = fixProps(value);
 
-    if (typeof fixedVNode[0] === 'function') {
+    if (isFunction(fixedVNode[0])) {
       const retval = fixedVNode[0](fixedVNode[1], fixedVNode[2]);
 
-      while (typeof retval[0] === 'function') {
+      while (isFunction(retval[0])) {
         retval[0] = retval[0](fixedVNode[1], fixedVNode[2]);
       }
 
@@ -368,19 +394,24 @@
         const b = fixProps(next);
 
         if (isNode(a) && isNode(b)) {
-          if (target.tagName.toLowerCase() === a[0]) {
+          if (target.nodeType === 1 && target.tagName.toLowerCase() === a[0]) {
             if (updateProps(target, a[1], b[1], svg, cb)) {
               if (isFunction(target.onupdate)) target.onupdate(target);
               if (isFunction(target.update)) target.update();
             }
 
-            // FIXME: key lookup would start here?
-            zipMap(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
+            sortedZip(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
+          } else if (target.nodeType === 1) {
+            if (a && b && a[0] === b[0]) {
+              updateElement(target.childNodes[0], a, b, svg, cb, null);
+            } else {
+              detach(target.childNodes[0], createElement(b, svg, cb));
+            }
           } else {
-            detach(target.childNodes[0], createElement(b, svg, cb));
+            detach(target, createElement(b, svg, cb));
           }
         } else if (!isNode(a) && !isNode(b)) {
-          zipMap(a, b, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+          sortedZip(a, b, (x, y, z) => updateElement(target, x, y, svg, cb, z));
         } else {
           replace(target, createElement(b, svg, cb), 0);
         }
@@ -390,6 +421,8 @@
         destroyElement(target.childNodes[i]);
       } else if (isScalar(prev) && isScalar(next)) {
         if (prev !== next) target.childNodes[i].nodeValue = next;
+      } else if (prev && next && prev[0] === next[0] && target.nodeType === 1) {
+        updateElement(target.childNodes[i], prev, next, svg, cb, null);
       } else {
         replace(target, createElement(next, svg, cb), i);
       }
