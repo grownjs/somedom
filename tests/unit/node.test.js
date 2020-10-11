@@ -307,8 +307,8 @@ describe('node', () => {
         return ['del', [[Em, props, children]]];
       }
 
-      const $old = [Del, 'OK'];
-      const $new = [Del, 'OSOM!'];
+      const $old = [[Del, 'OK']];
+      const $new = [[Del, 'OSOM!']];
 
       a.appendChild(createElement($old));
       updateElement(a, $old, $new);

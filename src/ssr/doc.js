@@ -42,6 +42,7 @@ export function removeEventListener(name, callback) {
 
 export function createElement(name) {
   const el = {
+    nodeType: 1,
     tagName: name.toUpperCase(),
     eventListeners: {},
     className: '',

@@ -11,7 +11,10 @@ export const isDiff = (prev, next) => {
   if (isFunction(prev) || isFunction(next) || typeof prev !== typeof next) return true;
   if (isArray(prev)) {
     if (prev.length !== next.length) return true;
-    if (prev.some(x => next.indexOf(x) === -1)) return true;
+
+    for (let i = 0; i < next.length; i += 1) {
+      if (isDiff(prev[i], next[i])) return true;
+    }
   } else if (isObject(prev)) {
     const a = Object.keys(prev).sort();
     const b = Object.keys(next).sort();
@@ -103,7 +106,30 @@ export const clone = value => {
   return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
 };
 
-export const zipMap = (a, b, cb) => Array.from({ length: Math.max(a.length, b.length) }).map((_, i) => cb(a[i], b[i] || null, i));
+export function findEqual(cur, list, i, c) {
+  for (; i < c; i += 1) {
+    if (!isDiff(cur, list[i])) return i;
+  }
+  return -1;
+}
+
+export function sortedZip(prev, next, cb) {
+  const length = Math.max(prev.length, next.length);
+
+  for (let i = 0; i < length; i += 1) {
+    const diff = isDiff(prev[i], next[i]);
+    const offset = findEqual(prev[i], next, i, length);
+
+    if (!diff || offset === -1) {
+      if (!prev[i]) prev.shift();
+    }
+
+    if (isDiff(prev[i], next[i])) {
+      cb(prev[i] || null, next[i] || null, i);
+    }
+  }
+}
+
 export const apply = (cb, length, options = {}) => (...args) => length === args.length && cb(...args, options);
 export const raf = cb => ((typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout)(cb);
 export const tick = cb => new Promise(resolve => raf(() => resolve(cb && cb())));

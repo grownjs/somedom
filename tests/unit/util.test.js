@@ -20,6 +20,7 @@ import {
   remove,
   append,
   detach,
+  sortedZip,
 } from '../../src/lib/util';
 
 import doc from './fixtures/document';
@@ -170,6 +171,20 @@ describe('util', () => {
       expect(toArray(null)).to.eql([]);
       expect(toArray(false)).to.eql([]);
       expect(toArray(undefined)).to.eql([]);
+    });
+  });
+
+  describe('sortedZip', () => {
+    it('it should drop items from head', () => {
+      const a = [null, { a: 1 }, { a: 2 }];
+      const b = [{ a: 2 }, { a: 1 }];
+      const c = [];
+
+      sortedZip(a, b, (x, y, z) => c.push([x, y, z]));
+      expect(c).to.eql([
+        [{ a: 1 }, { a: 2 }, 0],
+        [{ a: 2 }, { a: 1 }, 1],
+      ]);
     });
   });
 

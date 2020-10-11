@@ -1,6 +1,6 @@
 import {
   isFunction, isScalar, isArray, isNode, isEmpty, isUndef,
-  zipMap, append, replace, detach,
+  sortedZip, append, replace, detach,
 } from './util';
 
 import {
@@ -25,10 +25,10 @@ export function createElement(value, svg, cb) {
 
   let fixedVNode = fixProps(value);
 
-  if (typeof fixedVNode[0] === 'function') {
+  if (isFunction(fixedVNode[0])) {
     const retval = fixedVNode[0](fixedVNode[1], fixedVNode[2]);
 
-    while (typeof retval[0] === 'function') {
+    while (isFunction(retval[0])) {
       retval[0] = retval[0](fixedVNode[1], fixedVNode[2]);
     }
 
@@ -95,6 +95,7 @@ export function mountElement(target, view, cb = createElement) {
   return el;
 }
 
+// FIXME: it lacks of diffing, so is recreating stuff everytime it renders...
 export function updateElement(target, prev, next, svg, cb, i = null) {
   if (i === null) {
     if (isArray(prev) && isArray(next)) {
@@ -102,19 +103,24 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
       const b = fixProps(next);
 
       if (isNode(a) && isNode(b)) {
-        if (target.tagName.toLowerCase() === a[0]) {
+        if (target.nodeType === 1 && target.tagName.toLowerCase() === a[0]) {
           if (updateProps(target, a[1], b[1], svg, cb)) {
             if (isFunction(target.onupdate)) target.onupdate(target);
             if (isFunction(target.update)) target.update();
           }
 
-          // FIXME: key lookup would start here?
-          zipMap(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
+          sortedZip(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
+        } else if (target.nodeType === 1) {
+          if (a && b && a[0] === b[0]) {
+            updateElement(target.childNodes[0], a, b, svg, cb, null);
+          } else {
+            detach(target.childNodes[0], createElement(b, svg, cb));
+          }
         } else {
-          detach(target.childNodes[0], createElement(b, svg, cb));
+          detach(target, createElement(b, svg, cb));
         }
       } else if (!isNode(a) && !isNode(b)) {
-        zipMap(a, b, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+        sortedZip(a, b, (x, y, z) => updateElement(target, x, y, svg, cb, z));
       } else {
         replace(target, createElement(b, svg, cb), 0);
       }
@@ -124,6 +130,8 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
       destroyElement(target.childNodes[i]);
     } else if (isScalar(prev) && isScalar(next)) {
       if (prev !== next) target.childNodes[i].nodeValue = next;
+    } else if (prev && next && prev[0] === next[0] && target.nodeType === 1) {
+      updateElement(target.childNodes[i], prev, next, svg, cb, null);
     } else {
       replace(target, createElement(next, svg, cb), i);
     }
