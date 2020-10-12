@@ -1,6 +1,8 @@
 (function () {
   'use strict';
 
+  const CTX = [];
+
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -202,7 +204,7 @@
 
   function fixProps(vnode) {
     if (isScalar(vnode) || !isNode(vnode)) {
-      return Array.isArray(vnode) ? vnode.map(fixProps) : vnode;
+      return isArray(vnode) ? vnode.map(fixProps) : vnode;
     }
 
     if (isArray(vnode[1]) || isScalar(vnode[1])) {
@@ -417,6 +419,96 @@
     }
   }
 
+  function onError(callback) {
+    const scope = CTX[CTX.length - 1];
+
+    if (!scope) {
+      throw new Error('Cannot call onError() outside views');
+    }
+
+    scope.onError = callback;
+  }
+
+  function useState(fallback) {
+    const scope = CTX[CTX.length - 1];
+
+    if (!scope) {
+      throw new Error('Cannot call useState() outside views');
+    }
+
+    const key = scope.key;
+
+    scope.key += 1;
+    scope.val = scope.val || [];
+    scope.val[key] = scope.val[key] || fallback;
+
+    return [scope.val[key], v => {
+      scope.val[key] = v;
+      scope.sync();
+    }];
+  }
+
+  function useEffect(callback, inputs) {
+    const scope = CTX[CTX.length - 1];
+
+    if (!scope) {
+      throw new Error('Cannot call useEffect() outside views');
+    }
+
+    scope.in = scope.in || [];
+    scope.fx = scope.fx || [];
+
+    const key = scope.fx.length;
+    const prev = scope.in[key];
+    const enabled = inputs ? isDiff(prev, inputs) : true;
+
+    scope.in[key] = inputs;
+    scope.fx.push({ callback, enabled });
+  }
+
+  function createContext(tag, createView) {
+    return (props, children) => {
+      const key = CTX.length - 1;
+      const scope = {
+        sync: () => scope.set().then(() => {
+          if (scope.fx) {
+            return Promise.all(scope.fx.map(x => x.enabled && x.callback()));
+          }
+        }).catch(e => {
+          if (scope.onError) {
+            scope.onError(e);
+          } else {
+            throw e;
+          }
+        }),
+      };
+
+      let length;
+      return createView(() => {
+        CTX.push(scope);
+
+        scope.key = 0;
+        scope.fx = [];
+
+        try {
+          const retval = tag(props, children);
+
+          if (!scope.attached) {
+            CTX.splice(key, 1);
+            length = scope.key;
+            scope.attached = true;
+          } else if (length !== scope.key) {
+            throw new Error('Calls to useState() must be predictable');
+          }
+
+          return retval;
+        } catch (e) {
+          throw new Error(`${tag.name}: ${e.message}`);
+        }
+      }, sync => { scope.set = sync; });
+    };
+  }
+
   function getDecorated(Tag, state, actions, children) {
     if (typeof Tag === 'object') {
       const factory = Tag;
@@ -459,14 +551,23 @@
     };
   }
 
-  function createView(Factory, initialState, userActions = {}) {
+  function createView(Factory, initialState, userActions, refreshCallback) {
     const children = isArray(userActions) ? userActions : undefined;
+
+    if (typeof initialState === 'function') {
+      refreshCallback = initialState;
+      initialState = null;
+    }
 
     const {
       Tag, state, actions, instance,
-    } = getDecorated(Factory, initialState, userActions, children);
+    } = getDecorated(Factory, initialState, userActions || {}, children);
 
-    return (el, cb = createElement) => {
+    if (!instance && isFunction(Factory) && arguments.length === 1) {
+      return createContext(Factory, createView);
+    }
+
+    return (el, cb = createElement, hook = refreshCallback) => {
       const data = clone(state || {});
       const fns = [];
 
@@ -480,6 +581,10 @@
             updateElement(childNode, vnode, vnode = fixTree(Tag(data, $)), null, cb, null);
           })
           .then(() => result);
+      }
+
+      if (hook) {
+        hook(payload => sync(Object.assign(data, payload)));
       }
 
       // decorate given actions
@@ -545,7 +650,7 @@
       render: cb,
       source: null,
       vnode: vnode || ['div'],
-      thunk: createView(() => ctx.vnode),
+      thunk: createView(() => ctx.vnode, null),
     };
 
     ctx.unmount = async _cb => {
@@ -736,6 +841,10 @@
     styles: applyStyles,
     classes: applyClasses,
     animation: applyAnimations,
+
+    onError,
+    useState,
+    useEffect,
   };
 
   function summarize(script) {

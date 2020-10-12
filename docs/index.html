@@ -223,6 +223,46 @@
             appendChild();
           });</script>
         </dd>
+        <dt><code>view(Tag)</code></dt>
+        <dd>
+          <p>When <code>Tag</code> is a plain function (not a class) and no more arguments are given, then a hook-able view is created.</p>
+          <p>You can use the <code>onError(cb)</code>, <code>useState(v)</code> and <code>useEffect(cb[, i])</code> hooks for composing state and actions.</p>
+          <fieldset id="hooks"></fieldset>
+          <script>test(({ view, bind, render, listeners, onError, useState, useEffect }, appendChild) => {
+            function CounterView(props = {}) {
+              const [val, set] = useState(props.value);
+              const [fun, check] = useState('FIXME');
+
+              onError(e => {
+                if (confirm('Are you OK?')) {
+                  check('Thank you!');
+                } else {
+                  check(':(');
+                }
+              });
+
+              useEffect(() => {
+                if (fun == 'D:') throw new Error(fun);
+                if (fun === '42') alert('You won!');
+              }, [fun]);
+
+              return ['div', [
+                ['button', { onclick: () => set(val - Math.random()) }, '--'],
+                ['button', { onclick: () => set(val + Math.random()) }, '++'],
+                ['button', { onclick: () => check(prompt('Value?')) }, 'ask'],
+                ['button', { onclick: () => check('OSOM') }, 'truth'],
+                ['p', ['Your answer: ', val, ', ', fun]],
+              ]];
+            }
+
+            const Counter = view(CounterView);
+            const counter = Counter({ value: 42 });
+
+            const tag = bind(render, listeners());
+            const app = counter('#hooks', tag);
+            appendChild();
+          });</script>
+        </dd>
       </dl>
     </details>
 
