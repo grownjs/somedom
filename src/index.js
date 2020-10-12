@@ -11,6 +11,12 @@ import {
 } from './lib/views';
 
 import {
+  onError,
+  useState,
+  useEffect,
+} from './lib/hooks';
+
+import {
   invokeProps,
   applyStyles as styles,
   applyClasses as classes,
@@ -57,6 +63,12 @@ export {
 } from './lib/views';
 
 export {
+  onError,
+  useState,
+  useEffect,
+} from './lib/hooks';
+
+export {
   applyStyles as styles,
   applyClasses as classes,
   applyAnimations as animation,
@@ -81,4 +93,8 @@ export default {
   styles,
   classes,
   animation,
+
+  onError,
+  useState,
+  useEffect,
 };

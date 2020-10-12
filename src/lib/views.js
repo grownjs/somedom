@@ -3,10 +3,11 @@ import {
 } from './node';
 
 import {
-  getMethods, isScalar, isArray, clone,
+  getMethods, isFunction, isScalar, isArray, clone,
 } from './util';
 
 import { fixTree } from './attrs';
+import { createContext } from './hooks';
 
 export function getDecorated(Tag, state, actions, children) {
   if (typeof Tag === 'object') {
@@ -50,14 +51,23 @@ export function getDecorated(Tag, state, actions, children) {
   };
 }
 
-export function createView(Factory, initialState, userActions = {}) {
+export function createView(Factory, initialState, userActions, refreshCallback) {
   const children = isArray(userActions) ? userActions : undefined;
+
+  if (typeof initialState === 'function') {
+    refreshCallback = initialState;
+    initialState = null;
+  }
 
   const {
     Tag, state, actions, instance,
-  } = getDecorated(Factory, initialState, userActions, children);
+  } = getDecorated(Factory, initialState, userActions || {}, children);
 
-  return (el, cb = createElement) => {
+  if (!instance && isFunction(Factory) && arguments.length === 1) {
+    return createContext(Factory, createView);
+  }
+
+  return (el, cb = createElement, hook = refreshCallback) => {
     const data = clone(state || {});
     const fns = [];
 
@@ -71,6 +81,10 @@ export function createView(Factory, initialState, userActions = {}) {
           updateElement(childNode, vnode, vnode = fixTree(Tag(data, $)), null, cb, null);
         })
         .then(() => result);
+    }
+
+    if (hook) {
+      hook(payload => sync(Object.assign(data, payload)));
     }
 
     // decorate given actions
@@ -136,7 +150,7 @@ export function createThunk(vnode, cb = createElement) {
     render: cb,
     source: null,
     vnode: vnode || ['div'],
-    thunk: createView(() => ctx.vnode),
+    thunk: createView(() => ctx.vnode, null),
   };
 
   ctx.unmount = async _cb => {

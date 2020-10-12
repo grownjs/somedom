@@ -32,7 +32,7 @@ test('counter widget', async t => {
     .eql('1');
 });
 
-test('lifecyle-hooks', async t => {
+test('element lifecycle-hooks', async t => {
   const test5 = Selector('#test5');
   const info = Selector('#info');
 

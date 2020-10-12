@@ -9,6 +9,12 @@ import {
 } from '../../src/lib/views';
 
 import {
+  onError,
+  useState,
+  useEffect,
+} from '../../src/lib/hooks';
+
+import {
   bind, render, listeners,
 } from '../../src';
 
@@ -126,6 +132,62 @@ describe('thunks', () => {
 
       expect(result).to.eql(-1);
       expect(c).to.eql(2);
+    });
+
+    it('should allow to capture state/actions through hooks', async () => {
+      const stack = [];
+
+      let broke;
+      function CounterView(props = {}) {
+        const [value, setValue] = useState(props.value || Math.random());
+
+        if (broke) useState();
+
+        const [other, setOther] = useState('FIXME');
+
+        useEffect(() => {
+          stack.push(Math.random());
+        }, [other]);
+
+        return ['div', [
+          ['button', { onclick: () => setValue(value - Math.random()) }, '--'],
+          ['button', { onclick: () => setValue(value + Math.random()) }, '++'],
+          ['button', { onclick: () => setOther(prompt('Value?')) }, 'ask'], // eslint-disable-line
+          ['button', { onclick: () => setOther('OSOM') }, 'truth'],
+          ['span', ['value: ', value, ', ', other]],
+        ]];
+      }
+
+      const Counter = createView(CounterView);
+      const counter = Counter({ value: 42 });
+
+      const $ = bind(render, listeners());
+      const app = counter(null, $);
+
+      await app.target.withText('truth')[0].dispatchEvent({ type: 'click' });
+
+      expect(app.target.outerHTML).to.contains('<span>value: 42, OSOM</span>');
+
+      await tick();
+      expect(stack.length).to.eql(1);
+
+      global.prompt = () => 'WAT';
+      await app.target.withText('ask')[0].dispatchEvent({ type: 'click' });
+
+      expect(app.target.outerHTML).to.contains('<span>value: 42, WAT</span>');
+
+      await tick();
+      expect(stack.length).to.eql(2);
+
+      broke = true;
+      await app.target.withText('++')[0].dispatchEvent({ type: 'click' });
+
+      let error;
+      onError(e => { error = e; });
+      await tick();
+
+      expect(stack.length).to.eql(2);
+      expect(error.message).to.contains('useState() must be predictable');
     });
   });
 
