@@ -168,22 +168,22 @@ export function createThunk(vnode, cb = createElement) {
     return ctx;
   };
 
-  ctx.wrap = (Target, props, children) => {
+  ctx.wrap = (factory, props, children) => {
     return [() => {
       const target = document.createDocumentFragment();
-      const thunk = new Target(props, children)(target, ctx.render);
+      const thunk = factory(props, children)(target, ctx.render);
 
-      ctx.refs[Target.name] = ctx.refs[Target.name] || [];
-      ctx.refs[Target.name].push(thunk);
+      ctx.refs[factory.name] = ctx.refs[factory.name] || [];
+      ctx.refs[factory.name].push(thunk);
 
       const _remove = thunk.target.remove;
 
       thunk.target.remove = target.remove = _cb => Promise.resolve()
         .then(() => {
-          ctx.refs[Target.name].splice(ctx.refs[Target.name].indexOf(thunk), 1);
+          ctx.refs[factory.name].splice(ctx.refs[factory.name].indexOf(thunk), 1);
 
-          if (!ctx.refs[Target.name].length) {
-            delete ctx.refs[Target.name];
+          if (!ctx.refs[factory.name].length) {
+            delete ctx.refs[factory.name];
           }
         })
         .then(() => _remove(_cb));

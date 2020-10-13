@@ -5,39 +5,31 @@ import {
 import { XLINK_NS, ELEM_REGEX, assert } from './shared';
 
 export function fixTree(vnode) {
-  if (!isNode(vnode)) {
-    return isArray(vnode) ? vnode.map(fixTree) : vnode;
-  }
+  if (isArray(vnode)) {
+    if (!(isNode(vnode) || vnode.some(isNode))) {
+      return vnode.reduce((memo, cur) => memo.concat(fixTree(cur)), []);
+    }
 
-  vnode = isNode(vnode) && isFunction(vnode[0])
-    ? fixTree(vnode[0](vnode[1], toArray(vnode[2])))
-    : vnode;
+    if (isFunction(vnode[0])) {
+      return fixTree(vnode[0](vnode[1], toArray(vnode[2])));
+    }
 
-  if (isArray(vnode[2])) {
-    vnode[2].forEach((sub, i) => {
-      if (isNode(sub)) {
-        vnode[2][i] = fixTree(sub);
-      }
-    });
+    return vnode.map(fixTree);
   }
 
   return vnode;
 }
 
 export function fixProps(vnode) {
-  if (isScalar(vnode) || !isNode(vnode)) {
-    return isArray(vnode) ? vnode.map(fixProps) : vnode;
-  }
-
+  if (isScalar(vnode) || !isNode(vnode)) return vnode;
   if (isArray(vnode[1]) || isScalar(vnode[1])) {
     vnode[2] = vnode[1];
     vnode[1] = null;
   }
 
-  if (isFunction(vnode[0])) {
-    return vnode;
-  }
+  vnode[2] = fixTree(toArray(vnode[2]));
 
+  if (isFunction(vnode[0])) return vnode;
   if (!isNode(vnode)) assert(vnode);
 
   const matches = vnode[0].match(ELEM_REGEX);
@@ -64,7 +56,7 @@ export function fixProps(vnode) {
     }
   }
 
-  return [name, attrs, toArray(vnode[2])];
+  return [name, attrs, vnode[2]];
 }
 
 export function assignProps(target, attrs, svg, cb) {

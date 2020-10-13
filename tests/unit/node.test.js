@@ -78,6 +78,22 @@ describe('node', () => {
       expect(createElement(['span', false]).childNodes).to.eql([]);
     });
 
+    it('should wrap trees as DocumentFragment nodes', () => {
+      const tree = [[[[['p', 'OK']]]]];
+      const node = createElement(tree);
+
+      let depth = 0;
+      let obj = node;
+
+      while (obj.childNodes) {
+        depth += 1;
+        obj = obj.childNodes[0];
+      }
+
+      expect(depth).to.eql(5);
+      expect(node.outerHTML).to.eql('<p>OK</p>');
+    });
+
     it('should pass created element to given callback', () => {
       const spy = td.func('callback');
 
@@ -226,10 +242,10 @@ describe('node', () => {
       updateElement(div, [['a']], ['b', 'OK!']);
       expect(div.outerHTML).to.eql('<div><b>OK!</b></div>');
 
-      updateElement(div, [['a']], [['b', 'OK']]);
+      updateElement(div, [['a']], [[[['b', 'OK']]]]);
       expect(div.outerHTML).to.eql('<div><b>OK</b></div>');
 
-      updateElement(div, [['b', 'OK']], [['b', 'NOT']]);
+      updateElement(div, [[['b', 'OK']]], [['b', 'NOT']]);
       expect(div.outerHTML).to.eql('<div><b>NOT</b></div>');
     });
 
@@ -237,7 +253,7 @@ describe('node', () => {
       updateElement(div, ['div'], [['foo bar']]);
       expect(div.outerHTML).to.eql('<div>foo bar</div>');
 
-      updateElement(div, [['b', 'OK']], [['some text', ['b', 'OK']]]);
+      updateElement(div, [[[['b', 'OK']]]], [['some text', [[['b', 'OK']]]]]);
       expect(div.outerHTML).to.eql('<div>some text<b>OK</b></div>');
 
       updateElement(div, [['some text', ['b', 'OK']]], ['foo ', 'barX']);
@@ -268,14 +284,14 @@ describe('node', () => {
     });
 
     it('can append childNodes', () => {
-      updateElement(a, ['a'], ['a', [['c', 'd']]]);
+      updateElement(a, ['a'], ['a', [[[['c', 'd']]]]]);
       expect(div.outerHTML).to.eql('<div><a><c>d</c></a></div>');
     });
 
     it('can remove childNodes', async () => {
       a.appendChild(createElement(['b']));
 
-      updateElement(a, ['a', [['b']]], ['a']);
+      updateElement(a, ['a', [[[['b']]]]], ['a']);
       await tick();
 
       expect(div.outerHTML).to.eql('<div><a></a></div>');
@@ -290,13 +306,13 @@ describe('node', () => {
 
     it('will iterate recursively', () => {
       a.appendChild(createElement(['b']));
-      updateElement(a, ['a', [['b']]], ['a', [['b']]]);
+      updateElement(a, ['a', [['b']]], ['a', [[[[['b']]]]]]);
       expect(a.outerHTML).to.eql('<a><b></b></a>');
     });
 
     it('will append given children', () => {
       a.appendChild(createElement(['b']));
-      updateElement(a, ['b'], [['i'], ['i'], ['i']]);
+      updateElement(a, ['b'], [['i'], [[[['i']]]], [[[[['i']]]]]]);
       expect(a.outerHTML).to.eql('<a><i></i><i></i><i></i></a>');
     });
 
@@ -307,8 +323,8 @@ describe('node', () => {
         return ['del', [[Em, props, children]]];
       }
 
-      const $old = [[Del, 'OK']];
-      const $new = [[Del, 'OSOM!']];
+      const $old = [[[Del, 'OK']]];
+      const $new = [[[[[Del, [[['OSOM!']]]]]]]];
 
       a.appendChild(createElement($old));
       updateElement(a, $old, $new);

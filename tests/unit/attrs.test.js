@@ -16,10 +16,22 @@ afterEach(doc.disable);
 
 describe('attrs', () => {
   describe('fixTree', () => {
+    it('should flatten values from nested trees', () => {
+      expect(fixTree([[[1, 2, 3]]])).to.eql([1, 2, 3]);
+      expect(fixTree([[[1, [2], 3]]])).to.eql([1, 2, 3]);
+      expect(fixTree([[[1, [2], [[3]]]]])).to.eql([1, 2, 3]);
+    });
+
     it('will invoke tag functions recursively', () => {
       const tree = [() => [() => ['span', 'O', [[() => ['em', 'k']], '!']]]];
 
       expect(fixTree(tree)).to.eql(['span', 'O', [['em', 'k'], '!']]);
+    });
+
+    it('should unflatten nested children', () => {
+      const tree = [[[['span', 'O', [[['em', 'k']], '!']]]]];
+
+      expect(fixTree(tree)).to.eql([['span', 'O', [['em', 'k'], '!']]]);
     });
   });
 

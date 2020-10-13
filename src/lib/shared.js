@@ -51,13 +51,22 @@ export class Fragment {
     const i = this.childNodes.indexOf(target);
 
     if (i !== -1) {
-      node.parentNode = this;
       this.childNodes[i] = node;
     }
   }
 
   appendChild(node) {
     this.childNodes.push(node);
+  }
+
+  mount(target) {
+    this.childNodes.forEach(node => {
+      if (!(node instanceof Fragment)) {
+        target.appendChild(node);
+      } else {
+        node.mount(target);
+      }
+    });
   }
 
   get outerHTML() {

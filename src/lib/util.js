@@ -4,6 +4,7 @@ export const isArray = value => Array.isArray(value);
 export const isFunction = value => typeof value === 'function';
 export const isSelector = value => value && ELEM_REGEX.test(value);
 export const isUndef = value => typeof value === 'undefined' || value === null;
+export const isPlain = value => value !== null && Object.prototype.toString.call(value) === '[object Object]';
 export const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
 export const isScalar = value => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
 
@@ -15,7 +16,7 @@ export const isDiff = (prev, next) => {
     for (let i = 0; i < next.length; i += 1) {
       if (isDiff(prev[i], next[i])) return true;
     }
-  } else if (isObject(prev)) {
+  } else if (isPlain(prev)) {
     const a = Object.keys(prev).sort();
     const b = Object.keys(next).sort();
 
@@ -30,12 +31,12 @@ export const isDiff = (prev, next) => {
 export const isEmpty = value => {
   if (isFunction(value)) return false;
   if (isArray(value)) return value.length === 0;
-  if (isObject(value)) return Object.keys(value).length === 0;
+  if (isPlain(value)) return Object.keys(value).length === 0;
 
   return typeof value === 'undefined' || value === '' || value === null || value === false;
 };
 
-export const isNode = x => isArray(x) && x.length <= 3 && ((typeof x[0] === 'string' && isSelector(x[0])) || typeof x[0] === 'function');
+export const isNode = x => isArray(x) && x.length <= 3 && ((typeof x[0] === 'string' && isSelector(x[0])) || isFunction(x[0]));
 
 export const getMethods = obj => {
   const stack = [];
@@ -120,12 +121,9 @@ export const apply = (cb, length, options = {}) => (...args) => length === args.
 export const raf = cb => ((typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout)(cb);
 export const tick = cb => new Promise(resolve => raf(() => resolve(cb && cb())));
 
+export const append = (target, node) => (node instanceof Fragment ? node.mount(target) : target.appendChild(node));
 export const replace = (target, node, i) => target.replaceChild(node, target.childNodes[i]);
 export const remove = (target, node) => target && target.removeChild(node);
-
-export const append = (target, node) => (node instanceof Fragment
-  ? node.childNodes.map(sub => append(target, sub))
-  : target.appendChild(node));
 
 export const detach = (target, node) => {
   if (node) target.parentNode.insertBefore(node, target);

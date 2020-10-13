@@ -213,7 +213,7 @@ describe('thunks', () => {
     }
 
     function Main(props) {
-      return ['fieldset', [['legend', 'Example:'], [MyCounter, props]]];
+      return ['fieldset', [[[['legend', 'Example:']], [[[[[MyCounter, props]]]]]]]];
     }
 
     beforeEach(() => {
@@ -232,7 +232,23 @@ describe('thunks', () => {
     });
 
     it('should render wrapped views', () => {
-      expect(ctx.render(ctx.vnode).outerHTML).to.contains('value: 42');
+      const node = ctx.render(ctx.vnode);
+
+      expect(node.outerHTML).to.eql(`
+        <fieldset><legend>Example:</legend><span><button>--</button><button>++</button><span>value: 42</span></span></fieldset>
+      `.trim());
+
+      let depth = 0;
+      let obj = node.withText('++')[0];
+
+      while (obj.parentNode) {
+        depth += 1;
+        obj = obj.parentNode;
+      }
+
+      expect(depth).to.eql(2);
+      expect(node.childNodes.length).to.eql(2);
+      expect(node.childNodes[1].childNodes.length).to.eql(3);
     });
 
     it('should reference mounted views', async () => {
