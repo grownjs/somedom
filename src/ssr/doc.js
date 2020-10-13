@@ -1,7 +1,15 @@
 import { Fragment, CLOSE_TAGS } from '../lib/shared';
 import { filter } from '../lib/util';
 
-export function withText(value) {
+export function dispatch(type, params) {
+  this.dispatchEvent({ type, ...params });
+}
+
+export function withText(value, key) {
+  return this.findText(value)[key || 0];
+}
+
+export function findText(value) {
   const found = [];
 
   function walk(sub, nodes) {
@@ -48,6 +56,8 @@ export function createElement(name) {
     className: '',
     attributes: {},
     childNodes: [],
+    dispatch,
+    findText,
     withText,
     dispatchEvent,
     addEventListener,

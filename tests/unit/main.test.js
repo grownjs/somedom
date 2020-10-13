@@ -101,7 +101,7 @@ describe('somedom', () => {
       node.parentNode = document.createElement('body');
 
       for (let i = 0; i < 2; i += 1) {
-        node.withText(`Item ${i + 1}`)[0].dispatchEvent({ type: 'click' });
+        node.withText(`Item ${i + 1}`).dispatch('click');
         patch(node, vnode, vnode = view(), null, $, null);
       }
 
