@@ -12,6 +12,8 @@ import {
 
 import {
   onError,
+  useRef,
+  useMemo,
   useState,
   useEffect,
 } from './lib/hooks';
@@ -64,6 +66,8 @@ export {
 
 export {
   onError,
+  useRef,
+  useMemo,
   useState,
   useEffect,
 } from './lib/hooks';
@@ -95,6 +99,8 @@ export default {
   animation,
 
   onError,
+  useRef,
+  useMemo,
   useState,
   useEffect,
 };

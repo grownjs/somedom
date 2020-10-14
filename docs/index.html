@@ -226,14 +226,15 @@
         <dt><code>view(Tag)</code></dt>
         <dd>
           <p>When <code>Tag</code> is a plain function (not a class) and no more arguments are given, then a hook-able view is created.</p>
-          <p>You can use the <code>onError(cb)</code>, <code>useState(v)</code> and <code>useEffect(cb[, i])</code> hooks for composing state and actions.</p>
+          <p>You can use the <code>onError(cb)</code>, <code>useRef()</code>, <code>useState(v)</code>, <code>useMemo(cb[, i])</code> and <code>useEffect(cb[, i])</code> hooks for composing state and actions.</p>
           <blockquote>
             <p>Notice views MUST be mounted manually, however, with <code>thunk()</code> you can wrap and compose them together.</p>
           </blockquote>
           <fieldset id="hooks"></fieldset>
-          <script>test(({ view, bind, thunk, mount, render, listeners, onError, useState, useEffect }, appendChild) => {
+          <script>test(({ view, bind, thunk, mount, render, listeners, onError, useRef, useState, useEffect }, appendChild) => {
             function PrompterView() {
               var [fun, check] = useState('FIXME');
+              var ref = useRef();
 
               onError(e => {
                 if (confirm('Are you OK?')) {
@@ -245,13 +246,13 @@
 
               useEffect(() => {
                 if (fun === 'D:') throw new Error(fun);
-                if (fun === '42') alert('You won!');
+                if (fun === '42') alert(ref.current.outerHTML);
               }, [fun]);
 
               return ['div', [
-                ['button', { onclick: () => check(prompt('Value?')) }, 'ask'],
+                ['button', { onclick: () => check(prompt('Value?')) }, 'insight'],
                 ['button', { onclick: () => check('OSOM') }, 'truth'],
-                ['p', [['Your answer: ', fun]]],
+                ['p', { ref }, [['Your answer: ', fun]]],
               ]];
             }
 

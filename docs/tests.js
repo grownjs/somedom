@@ -243,10 +243,21 @@
 
   function assignProps(target, attrs, svg, cb) {
     Object.keys(attrs).forEach(prop => {
-      if (prop === 'key' || isObject(attrs[prop])) {
-        attrs[prop] = (isFunction(cb) && cb(target, prop, attrs[prop])) || null;
+      if (prop === 'key') return;
 
-        if (prop === 'key') return;
+      if (prop === 'ref') {
+        const oncreate = target.oncreate;
+
+        target.oncreate = el => {
+          attrs[prop].current = el;
+
+          if (oncreate) return oncreate(el);
+        };
+        return;
+      }
+
+      if (isObject(attrs[prop])) {
+        attrs[prop] = (isFunction(cb) && cb(target, prop, attrs[prop])) || null;
       }
 
       const removed = isEmpty(attrs[prop]);
@@ -426,26 +437,52 @@
   }
 
   function getContext() {
-    return STACK[STACK.length - 1];
+    const scope = STACK[STACK.length - 1];
+
+    if (!scope) {
+      throw new Error('Cannot call getContext() outside views');
+    }
+
+    return scope;
   }
 
   function onError(callback) {
-    const scope = getContext();
+    getContext().onError = callback;
+  }
 
-    if (!scope) {
-      throw new Error('Cannot call onError() outside views');
+  function useMemo(callback, inputs) {
+    const scope = getContext();
+    const key = scope.m;
+
+    scope.m += 1;
+    scope.v = scope.v || [];
+    scope.d = scope.d || [];
+
+    const prev = scope.d[key];
+
+    if (!prev || isDiff(prev, inputs)) {
+      scope.v[key] = callback();
+      scope.d[key] = inputs;
     }
 
-    scope.onError = callback;
+    return scope.v[key];
+  }
+
+  function useRef() {
+    return useMemo(() => {
+      let value;
+
+      return Object.defineProperty({}, 'current', {
+        configurable: false,
+        enumerable: true,
+        set: ref => { value = ref; },
+        get: () => value,
+      });
+    }, []);
   }
 
   function useState(fallback) {
     const scope = getContext();
-
-    if (!scope) {
-      throw new Error('Cannot call useState() outside views');
-    }
-
     const key = scope.key;
 
     scope.key += 1;
@@ -460,11 +497,6 @@
 
   function useEffect(callback, inputs) {
     const scope = getContext();
-
-    if (!scope) {
-      throw new Error('Cannot call useEffect() outside views');
-    }
-
     const key = scope.fx;
 
     scope.fx += 1;
@@ -505,6 +537,7 @@
       return createView(() => {
         scope.key = 0;
         scope.fx = 0;
+        scope.m = 0;
 
         push(scope);
 
@@ -861,6 +894,8 @@
     animation: applyAnimations,
 
     onError,
+    useRef,
+    useMemo,
     useState,
     useEffect,
   };

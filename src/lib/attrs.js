@@ -61,10 +61,21 @@ export function fixProps(vnode) {
 
 export function assignProps(target, attrs, svg, cb) {
   Object.keys(attrs).forEach(prop => {
-    if (prop === 'key' || isObject(attrs[prop])) {
-      attrs[prop] = (isFunction(cb) && cb(target, prop, attrs[prop])) || null;
+    if (prop === 'key') return;
 
-      if (prop === 'key') return;
+    if (prop === 'ref') {
+      const oncreate = target.oncreate;
+
+      target.oncreate = el => {
+        attrs[prop].current = el;
+
+        if (oncreate) return oncreate(el);
+      };
+      return;
+    }
+
+    if (isObject(attrs[prop])) {
+      attrs[prop] = (isFunction(cb) && cb(target, prop, attrs[prop])) || null;
     }
 
     const removed = isEmpty(attrs[prop]);

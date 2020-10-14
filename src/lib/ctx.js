@@ -9,5 +9,11 @@ export function push(scope) {
 }
 
 export function getContext() {
-  return STACK[STACK.length - 1];
+  const scope = STACK[STACK.length - 1];
+
+  if (!scope) {
+    throw new Error('Cannot call getContext() outside views');
+  }
+
+  return scope;
 }

@@ -2,22 +2,42 @@ import { isDiff, isFunction } from './util';
 import { pop, push, getContext } from './ctx';
 
 export function onError(callback) {
-  const scope = getContext();
+  getContext().onError = callback;
+}
 
-  if (!scope) {
-    throw new Error('Cannot call onError() outside views');
+export function useMemo(callback, inputs) {
+  const scope = getContext();
+  const key = scope.m;
+
+  scope.m += 1;
+  scope.v = scope.v || [];
+  scope.d = scope.d || [];
+
+  const prev = scope.d[key];
+
+  if (!prev || isDiff(prev, inputs)) {
+    scope.v[key] = callback();
+    scope.d[key] = inputs;
   }
 
-  scope.onError = callback;
+  return scope.v[key];
+}
+
+export function useRef() {
+  return useMemo(() => {
+    let value;
+
+    return Object.defineProperty({}, 'current', {
+      configurable: false,
+      enumerable: true,
+      set: ref => { value = ref; },
+      get: () => value,
+    });
+  }, []);
 }
 
 export function useState(fallback) {
   const scope = getContext();
-
-  if (!scope) {
-    throw new Error('Cannot call useState() outside views');
-  }
-
   const key = scope.key;
 
   scope.key += 1;
@@ -32,11 +52,6 @@ export function useState(fallback) {
 
 export function useEffect(callback, inputs) {
   const scope = getContext();
-
-  if (!scope) {
-    throw new Error('Cannot call useEffect() outside views');
-  }
-
   const key = scope.fx;
 
   scope.fx += 1;
@@ -77,6 +92,7 @@ export function createContext(tag, createView) {
     return createView(() => {
       scope.key = 0;
       scope.fx = 0;
+      scope.m = 0;
 
       push(scope);
 

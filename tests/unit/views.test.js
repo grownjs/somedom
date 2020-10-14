@@ -10,6 +10,8 @@ import {
 
 import {
   onError,
+  useRef,
+  useMemo,
   useState,
   useEffect,
 } from '../../src/lib/hooks';
@@ -135,7 +137,8 @@ describe('thunks', () => {
       expect(c).to.eql(2);
     });
 
-    it('should allow to capture state/actions through hooks', async () => {
+    it('should allow to capture context through hooks', async () => {
+      const values = [1, 2, 3];
       const stack = [];
 
       let broke;
@@ -145,16 +148,22 @@ describe('thunks', () => {
         if (broke) useState();
 
         const [other, setOther] = useState('FIXME');
+        const fixedValues = useMemo(() => values.slice(), []);
+        const myValue = useMemo(() => fixedValues.pop(), [other]);
+        const myRef = useRef();
+
+        stack.push(myValue);
 
         useEffect(() => {
-          stack.push(Math.random());
+          stack.push('AFTER');
 
           return () => {
-            stack.push(-1);
+            stack.push('CLEAN');
+            stack.push(myRef.current.tagName);
           };
         }, [other]);
 
-        return [[['div', [[
+        return [[['div', { ref: myRef }, [[
           ['button', { onclick: () => setValue(value - Math.random()) }, '--'],
           ['button', { onclick: () => setValue(value + Math.random()) }, '++'],
           ['button', { onclick: () => setOther(prompt('Value?')) }, 'ask'], // eslint-disable-line
@@ -171,10 +180,11 @@ describe('thunks', () => {
 
       await $$(app.target).withText('truth').dispatch('click');
 
+      expect(stack).to.eql([3, 2]);
       expect(app.target.outerHTML).to.contains('<span>value: 42, OSOM</span>');
 
       await tick();
-      expect(stack.length).to.eql(1);
+      expect(stack).to.eql([3, 2, 'AFTER']);
 
       global.prompt = () => 'WAT';
       await $$(app.target).withText('ask').dispatch('click');
@@ -182,7 +192,7 @@ describe('thunks', () => {
       expect(app.target.outerHTML).to.contains('<span>value: 42, WAT</span>');
 
       await tick();
-      expect(stack.length).to.eql(3);
+      expect(stack).to.eql([3, 2, 'AFTER', 1, 'CLEAN', 'DIV', 'AFTER']);
 
       broke = true;
       await $$(app.target).withText('++').dispatch('click');
@@ -191,7 +201,7 @@ describe('thunks', () => {
       onError(e => { error = e; });
       await tick();
 
-      expect(stack.length).to.eql(3);
+      expect(stack).to.eql([3, 2, 'AFTER', 1, 'CLEAN', 'DIV', 'AFTER', undefined]);
       expect(error.message).to.contains('useState() must be predictable');
     });
   });
