@@ -1,7 +1,7 @@
 export const CTX = [];
 
 export const RE_XML_SPLIT = /(>)(<)(\/*)/g;
-export const RE_XML_OPEN = /^<\w([^>]*[^\/])?>.*$/;
+export const RE_XML_OPEN = /^<\w([^>]*[^/])?>.*$/;
 export const RE_XML_CLOSE_END = /.+<\/\w[^>]*>$/;
 export const RE_XML_CLOSE_BEGIN = /^<\/\w/;
 

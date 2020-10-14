@@ -74,31 +74,31 @@ export const toArray = value => (!isEmpty(value) && !isArray(value) ? [value] : 
 export const filter = (value, cb) => value.filter(cb || (x => !isEmpty(x)));
 
 export const format = markup => {
-    let formatted = '';
-    let pad = 0;
+  let formatted = '';
+  let pad = 0;
 
-    markup = markup.replace(RE_XML_SPLIT, '$1\n$2$3');
-    markup.split('\n').forEach(line => {
-      let indent = 0;
-      if (RE_XML_CLOSE_END.test(line)) {
-        indent = 0;
-      } else if (RE_XML_CLOSE_BEGIN.test(line)) {
-        if (pad != 0) {
-          pad -= 1;
-        }
-      } else if (RE_XML_OPEN.test(line)) {
-        indent = 1;
-      } else {
-        indent = 0;
+  markup = markup.replace(RE_XML_SPLIT, '$1\n$2$3');
+  markup.split('\n').forEach(line => {
+    let indent = 0;
+    if (RE_XML_CLOSE_END.test(line)) {
+      indent = 0;
+    } else if (RE_XML_CLOSE_BEGIN.test(line)) {
+      if (pad !== 0) {
+        pad -= 1;
       }
+    } else if (RE_XML_OPEN.test(line)) {
+      indent = 1;
+    } else {
+      indent = 0;
+    }
 
-      const padding = Array.from({ length: pad + 1 }).join('  ');
+    const padding = Array.from({ length: pad + 1 }).join('  ');
 
-      formatted += `${padding + line}\n`;
-      pad += indent;
-    });
+    formatted += `${padding + line}\n`;
+    pad += indent;
+  });
 
-    return formatted.trim();
+  return formatted.trim();
 };
 
 export const trim = value => {
