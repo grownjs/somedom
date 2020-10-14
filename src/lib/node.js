@@ -4,7 +4,7 @@ import {
 } from './util';
 
 import {
-  assignProps, updateProps, fixProps,
+  assignProps, updateProps, fixProps, fixTree,
 } from './attrs';
 
 import { Fragment, SVG_NS, assert } from './shared';
@@ -19,7 +19,7 @@ export function createElement(value, svg, cb) {
 
   if (!isNode(value)) {
     return isArray(value)
-      ? new Fragment(value, node => createElement(node, svg, cb))
+      ? new Fragment(fixTree(value), node => createElement(node, svg, cb))
       : value;
   }
 

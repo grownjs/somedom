@@ -79,19 +79,19 @@ describe('node', () => {
     });
 
     it('should wrap trees as DocumentFragment nodes', () => {
-      const tree = [[[[['p', 'OK']]]]];
+      const tree = [[[[['p', [[[[['i']]]]]]]]]];
       const node = createElement(tree);
 
       let depth = 0;
       let obj = node;
 
-      while (obj.childNodes) {
+      while (obj && obj.childNodes) {
         depth += 1;
         obj = obj.childNodes[0];
       }
 
-      expect(depth).to.eql(5);
-      expect(node.outerHTML).to.eql('<p>OK</p>');
+      expect(depth).to.eql(3);
+      expect(node.outerHTML).to.eql('<p><i></i></p>');
     });
 
     it('should pass created element to given callback', () => {
