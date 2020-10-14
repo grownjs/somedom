@@ -103,7 +103,7 @@ export function createContext(tag, createView) {
           length = scope.key;
           scope.length = scope.key;
         } else if (length !== scope.key) {
-          throw new Error('Calls to useState() must be predictable');
+          throw new Error('Hooks must be called in a predictable way');
         }
 
         pop(scope);

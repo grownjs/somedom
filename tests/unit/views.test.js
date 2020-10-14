@@ -201,7 +201,7 @@ describe('thunks', () => {
 
       await tick();
       expect(stack).to.eql([3, 2, 'AFTER', 1, 'CLEAN', 'DIV', 'AFTER', undefined]);
-      expect(error.message).to.contains('useState() must be predictable');
+      expect(error.message).to.contains('Hooks must be called in a predictable way');
     });
   });
 
