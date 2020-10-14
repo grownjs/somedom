@@ -4,7 +4,7 @@ import { terser } from 'rollup-plugin-terser';
 
 const pkg = require('./package.json');
 
-const isDev = process.env.ROLLUP_WATCH;
+const isDev = process.env.ROLLUP_WATCH || process.env.NODE_ENV === 'test';
 const isProd = process.env.NODE_ENV === 'production';
 
 function bundle(file, format, customName) {
