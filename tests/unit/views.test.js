@@ -18,7 +18,7 @@ import {
   bind, render, listeners,
 } from '../../src';
 
-import { tick } from '../../src/lib/util';
+import { tick, format, deindent } from '../../src/lib/util';
 
 import doc from './fixtures/document';
 
@@ -234,9 +234,16 @@ describe('thunks', () => {
     it('should render wrapped views', () => {
       const node = ctx.render(ctx.vnode);
 
-      expect(node.outerHTML).to.eql(`
-        <fieldset><legend>Example:</legend><span><button>--</button><button>++</button><span>value: 42</span></span></fieldset>
-      `.trim());
+      expect(format(node.outerHTML)).to.eql(deindent(`
+        <fieldset>
+          <legend>Example:</legend>
+          <span>
+            <button>--</button>
+            <button>++</button>
+            <span>value: 42</span>
+          </span>
+        </fieldset>
+      `));
 
       let depth = 0;
       let obj = node.withText('++');

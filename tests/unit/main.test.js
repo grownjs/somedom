@@ -7,7 +7,7 @@ import {
   h, pre, bind, patch, render, listeners, attributes,
 } from '../../src';
 
-import { tick, format } from '../../src/lib/util';
+import { tick, format, deindent } from '../../src/lib/util';
 import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
@@ -107,11 +107,13 @@ describe('somedom', () => {
 
       await tick();
 
-      expect(format(node.outerHTML)).to.eql(format(`<ul>
-        <li>Item 3</li>
-        <li>Item 4</li>
-        <li>Item 5</li>
-      </ul>`));
+      expect(format(node.outerHTML)).to.eql(deindent(`
+        <ul>
+          <li>Item 3</li>
+          <li>Item 4</li>
+          <li>Item 5</li>
+        </ul>
+      `));
     });
   });
 });

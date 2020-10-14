@@ -1,5 +1,4 @@
 import { Fragment, CLOSE_TAGS } from '../lib/shared';
-import { filter } from '../lib/util';
 
 export function dispatch(type, params) {
   this.dispatchEvent({ type, ...params });
@@ -66,7 +65,7 @@ export function createElement(name) {
       add: (...value) => {
         const classes = el.className.trim().split(/\W/);
 
-        el.className = classes.concat(filter(value, x => classes.indexOf(x) === -1)).join(' ');
+        el.className = classes.concat(value.filter(x => classes.indexOf(x) === -1)).join(' ');
       },
       remove: (...value) => {
         el.className = el.className.replace(new RegExp(`(\\b|^)\\s*${value.join('|')}\\s*(\\b|$)`), '').trim();
