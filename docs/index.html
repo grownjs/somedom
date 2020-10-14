@@ -187,11 +187,11 @@
         <dd>
           <p>Other shapes for <code>Tag</code> can be provided, they can be plain objects or classes.</p>
           <p>Actions (methods) and <code>state</code> are derived from the given factory &mdash; then, <code>render()</code> is called to produce a valid <code>vnode</code>.</p>
-          <fieldset id="target2"></fieldset>
-          <fieldset id="target3"></fieldset>
           <blockquote>
             <p>Methods from classes are decorated to behave as regular actions &mdash; prefix them with an underscore to ignore them during the decoration process.</p>
           </blockquote>
+          <fieldset id="target2"></fieldset>
+          <fieldset id="target3"></fieldset>
           <script>test(({ view, bind, render, listeners }, appendChild) => {
             var heading = view({
               render: () => ['h1', 'It works?'],
@@ -207,7 +207,7 @@
               }
 
               render() {
-                const { state: { value }, update } = this;
+                var { state: { value }, update } = this;
 
                 return ['div', [
                   ['button', { onclick: update }, 'Click me.'],
@@ -230,10 +230,9 @@
           <fieldset id="hooks"></fieldset>
           <script>test(({ view, bind, thunk, mount, render, listeners, onError, useState, useEffect }, appendChild) => {
             function PrompterView() {
-              const [fun, check] = useState('FIXME');
+              var [fun, check] = useState('FIXME');
 
               onError(e => {
-                console.log(e);
                 if (confirm('Are you OK?')) {
                   check('Thank you!');
                 } else {
@@ -263,15 +262,16 @@
               ]];
             }
 
-            var Counter = view(CounterView);
-            var Prompter = view(PrompterView);
+            var $ = thunk(['main'],
+              bind(render, listeners()));
 
-            var tag = bind(render, listeners());
-            var counter = Counter();
-            var prompter = Prompter();
+            var Counter = $.wrap(view(CounterView));
+            var Prompter = $.wrap(view(PrompterView));
 
-            counter('#hooks', tag);
-            prompter('#hooks', tag);
+            $.mount('#hooks', [
+              [Counter, { value: 42 }],
+              [Prompter],
+            ]);
             appendChild();
           });</script>
         </dd>
@@ -311,9 +311,7 @@
                 });
             }
 
-            function MyCounter(props) {
-              return $.wrap(Counter, props);
-            }
+            var MyCounter = $.wrap(Counter);
 
             function Main(props) {
               return [[
@@ -322,7 +320,7 @@
                   ['button', {
                     style: 'border: 0',
                     onclick() {
-                      const { state } = $.refs.Counter[0];
+                      var { state } = $.refs.Counter[0];
 
                       alert(JSON.stringify(state));
                     },
@@ -338,7 +336,7 @@
           });</script>
           <p><small>Available props and methods:</small></p>
           <p><code>refs</code> &mdash; registry of attached thunks by name</p>
-          <p><code>wrap(View[, vnode])</code> &mdash; decorates a view to keep track of it</p>
+          <p><code>wrap(View[, name])</code> &mdash; decorates a view to keep track of it</p>
           <p><code>mount(target[, vnode])</code> &mdash; attaches the given <code>vdom</code> to the DOM target</p>
         </dd>
       </dl>
@@ -376,7 +374,7 @@
           <small>output:</small>
           <fieldset id="test6"></fieldset>
           <script>test(({ mount }, appendChild) => {
-            const style = 'text-decoration:underline';
+            var style = 'text-decoration:underline';
 
             mount(test6, [
               'Some text ',

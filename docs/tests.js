@@ -4,7 +4,7 @@
   const CTX = [];
 
   const RE_XML_SPLIT = /(>)(<)(\/*)/g;
-  const RE_XML_OPEN = /^<\w([^>]*[^\/])?>.*$/;
+  const RE_XML_OPEN = /^<\w([^>]*[^/])?>.*$/;
   const RE_XML_CLOSE_END = /.+<\/\w[^>]*>$/;
   const RE_XML_CLOSE_BEGIN = /^<\/\w/;
 
@@ -131,31 +131,31 @@
   const filter = (value, cb) => value.filter(cb || (x => !isEmpty(x)));
 
   const format = markup => {
-      let formatted = '';
-      let pad = 0;
+    let formatted = '';
+    let pad = 0;
 
-      markup = markup.replace(RE_XML_SPLIT, '$1\n$2$3');
-      markup.split('\n').forEach(line => {
-        let indent = 0;
-        if (RE_XML_CLOSE_END.test(line)) {
-          indent = 0;
-        } else if (RE_XML_CLOSE_BEGIN.test(line)) {
-          if (pad != 0) {
-            pad -= 1;
-          }
-        } else if (RE_XML_OPEN.test(line)) {
-          indent = 1;
-        } else {
-          indent = 0;
+    markup = markup.replace(RE_XML_SPLIT, '$1\n$2$3');
+    markup.split('\n').forEach(line => {
+      let indent = 0;
+      if (RE_XML_CLOSE_END.test(line)) {
+        indent = 0;
+      } else if (RE_XML_CLOSE_BEGIN.test(line)) {
+        if (pad !== 0) {
+          pad -= 1;
         }
+      } else if (RE_XML_OPEN.test(line)) {
+        indent = 1;
+      } else {
+        indent = 0;
+      }
 
-        const padding = Array.from({ length: pad + 1 }).join('  ');
+      const padding = Array.from({ length: pad + 1 }).join('  ');
 
-        formatted += `${padding + line}\n`;
-        pad += indent;
-      });
+      formatted += `${padding + line}\n`;
+      pad += indent;
+    });
 
-      return formatted.trim();
+    return formatted.trim();
   };
 
   const trim = value => {
@@ -502,8 +502,8 @@
       return createView(() => {
         CTX.push(scope);
 
-        scope.key = 1;
-        scope.fx = 1;
+        scope.key = 0;
+        scope.fx = 0;
 
         try {
           const retval = tag(props, children);
@@ -683,28 +683,27 @@
       return ctx;
     };
 
-    ctx.wrap = (factory, props, children) => {
-      return [() => {
-        const target = document.createDocumentFragment();
-        const thunk = factory(props, children)(target, ctx.render);
+    ctx.wrap = (tag, name) => (props, children) => {
+      const identity = name || tag.name || 'Thunk';
+      const target = document.createDocumentFragment();
+      const thunk = tag(props, children)(target, ctx.render);
 
-        ctx.refs[factory.name] = ctx.refs[factory.name] || [];
-        ctx.refs[factory.name].push(thunk);
+      ctx.refs[identity] = ctx.refs[identity] || [];
+      ctx.refs[identity].push(thunk);
 
-        const _remove = thunk.target.remove;
+      const _remove = thunk.target.remove;
 
-        thunk.target.remove = target.remove = _cb => Promise.resolve()
-          .then(() => {
-            ctx.refs[factory.name].splice(ctx.refs[factory.name].indexOf(thunk), 1);
+      thunk.target.remove = target.remove = _cb => Promise.resolve()
+        .then(() => {
+          ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);
 
-            if (!ctx.refs[factory.name].length) {
-              delete ctx.refs[factory.name];
-            }
-          })
-          .then(() => _remove(_cb));
+          if (!ctx.refs[identity].length) {
+            delete ctx.refs[identity];
+          }
+        })
+        .then(() => _remove(_cb));
 
-        return target;
-      }];
+      return target;
     };
 
     return ctx;
