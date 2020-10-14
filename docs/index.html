@@ -244,7 +244,7 @@
               });
 
               useEffect(() => {
-                if (fun == 'D:') throw new Error(fun);
+                if (fun === 'D:') throw new Error(fun);
                 if (fun === '42') alert('You won!');
               }, [fun]);
 
