@@ -1,5 +1,7 @@
-import { Fragment, CLOSE_TAGS } from '../lib/shared';
+import { CLOSE_TAGS } from '../lib/shared';
 import { tick } from '../lib/util';
+
+import Fragment from '../lib/fragment';
 
 export function withText(value, key) {
   return this.findText(value)[key || 0];
@@ -106,22 +108,14 @@ export function createElement(name) {
     },
     replaceChild(n, o) {
       n.parentNode = el;
-
-      const i = el.childNodes.indexOf(o);
-
-      if (i !== -1) el.childNodes.splice(i, 1, n);
+      el.childNodes.splice(el.childNodes.indexOf(o), 1, n);
     },
     removeChild(n) {
-      const i = el.childNodes.indexOf(n);
-
-      if (i !== -1) el.childNodes.splice(i, 1);
+      el.childNodes.splice(el.childNodes.indexOf(n), 1);
     },
     insertBefore(n, o) {
       n.parentNode = el;
-
-      const i = el.childNodes.indexOf(o);
-
-      if (i !== -1) el.childNodes.splice(i, 0, n);
+      el.childNodes.splice(el.childNodes.indexOf(o), 0, n);
     },
     appendChild(n) {
       n.parentNode = el;

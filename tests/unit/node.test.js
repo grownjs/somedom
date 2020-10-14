@@ -254,34 +254,60 @@ describe('node', () => {
     });
 
     it('can reconcilliate child nodes', () => {
-      updateElement(div, ['a'], ['b', 'OK']);
-      expect(div.outerHTML).to.eql('<div><b>OK</b></div>');
-
-      updateElement(div, ['a'], [['b', 'OK']]);
-      expect(div.outerHTML).to.eql('<div><b>OK</b></div>');
-
       updateElement(div, [['a']], ['b', 'OK!']);
-      expect(div.outerHTML).to.eql('<div><b>OK!</b></div>');
-
-      updateElement(div, [['a']], [[[['b', 'OK']]]]);
-      expect(div.outerHTML).to.eql('<div><b>OK</b></div>');
+      expect(div.innerHTML).to.eql('<b>OK!</b>');
 
       updateElement(div, [[['b', 'OK']]], [['b', 'NOT']]);
-      expect(div.outerHTML).to.eql('<div><b>NOT</b></div>');
+      expect(div.innerHTML).to.eql('<b>NOT</b>');
+    });
+
+    it('can reconcilliate root nodes', () => {
+      updateElement(div, ['a'], ['b', 'OK']);
+      expect(body.innerHTML).to.eql('<b>OK</b>');
+
+      updateElement(div, ['a'], [['b', 'OK']]);
+      expect(body.innerHTML).to.eql('<b>OK</b>');
+
+      updateElement(div, [['a']], [[[['b', 'OK']]]]);
+      expect(body.innerHTML).to.eql('<b>OK</b>');
+
+      updateElement(div, 'foo', 'bar');
+      expect(body.innerHTML).to.eql('bar');
     });
 
     it('can reconcilliate text nodes', () => {
       updateElement(div, ['div'], [['foo bar']]);
-      expect(div.outerHTML).to.eql('<div>foo bar</div>');
+      expect(body.innerHTML).to.eql('<div>foo bar</div>');
 
       updateElement(div, [[[['b', 'OK']]]], [['some text', [[['b', 'OK']]]]]);
-      expect(div.outerHTML).to.eql('<div>some text<b>OK</b></div>');
+      expect(body.innerHTML).to.eql('<div>some text<b>OK</b></div>');
 
       updateElement(div, [['some text', ['b', 'OK']]], ['foo ', 'barX']);
-      expect(div.outerHTML).to.eql('<div>foo barX</div>');
+      expect(body.innerHTML).to.eql('<div>foo barX</div>');
 
       updateElement(div, ['foo ', 'barX'], ['a ', 'OK']);
-      expect(div.outerHTML).to.eql('<div>a OK</div>');
+      expect(body.innerHTML).to.eql('<div>a OK</div>');
+
+      updateElement(div, ['a', 'OK'], ['a', 'OK']);
+      expect(body.innerHTML).to.eql('<a>OK</a>');
+    });
+
+    it('can reconcilliate between both text/nodes', () => {
+      updateElement(div, 'OLD', ['b', 'NEW']);
+      expect(body.outerHTML).to.eql('<body><b>NEW</b></body>');
+
+      updateElement(div, ['a'], 'FIXME');
+      expect(body.outerHTML).to.eql('<body>FIXME</body>');
+    });
+
+    it('can update nodes if they are the same', () => {
+      updateElement(div, ['div'], ['div', 'NEW']);
+      expect(body.outerHTML).to.eql('<body><div>NEW</div></body>');
+    });
+
+    it('can replace nodes if they are different', () => {
+      updateElement(div, ['div'], ['b', 'NEW']);
+      expect(body.outerHTML).to.eql('<body><b>NEW</b></body>');
     });
 
     it('can patch node attributes', () => {
@@ -297,11 +323,6 @@ describe('node', () => {
 
       expect(td.explain(a.onupdate).callCount).to.eql(1);
       expect(td.explain(a.update).callCount).to.eql(1);
-    });
-
-    it('can replace childNodes', () => {
-      updateElement(div, ['a'], ['b']);
-      expect(div.outerHTML).to.eql('<div><b></b></div>');
     });
 
     it('can append childNodes', () => {

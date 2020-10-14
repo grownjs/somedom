@@ -1,12 +1,12 @@
 import {
-  Fragment,
   ELEM_REGEX,
   SKIP_METHODS,
   RE_XML_SPLIT,
-  RE_XML_OPEN,
   RE_XML_CLOSE_END,
   RE_XML_CLOSE_BEGIN,
 } from './shared';
+
+import Fragment from './fragment';
 
 export const isArray = value => Array.isArray(value);
 export const isFunction = value => typeof value === 'function';
@@ -86,7 +86,7 @@ export const format = markup => {
       if (pad !== 0) {
         pad -= 1;
       }
-    } else if (RE_XML_OPEN.test(line)) {
+    } else {
       indent = 1;
     }
 

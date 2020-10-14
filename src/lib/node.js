@@ -7,7 +7,9 @@ import {
   assignProps, updateProps, fixProps, fixTree,
 } from './attrs';
 
-import { Fragment, SVG_NS } from './shared';
+import { SVG_NS } from './shared';
+
+import Fragment from './fragment';
 
 export function destroyElement(target, wait = cb => cb()) {
   return Promise.resolve().then(() => wait(() => target.remove()));
@@ -102,34 +104,30 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
       const b = fixProps(next);
 
       if (isNode(a) && isNode(b)) {
-        if (target.nodeType === 1 && target.tagName.toLowerCase() === a[0]) {
+        if (target.nodeType === 1 && target.tagName.toLowerCase() === b[0]) {
           if (updateProps(target, a[1], b[1], svg, cb)) {
             if (isFunction(target.onupdate)) target.onupdate(target);
             if (isFunction(target.update)) target.update();
           }
 
           sortedZip(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
-        } else if (target.nodeType === 1) {
-          if (a && b && a[0] === b[0]) {
-            updateElement(target.childNodes[0], a, b, svg, cb, null);
-          } else {
-            detach(target.childNodes[0], createElement(b, svg, cb));
-          }
         } else {
           detach(target, createElement(b, svg, cb));
         }
       } else if (!isNode(a) && !isNode(b)) {
-        sortedZip(a, b, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+        sortedZip(fixTree(a), fixTree(b), (x, y, z) => updateElement(target, x, y, svg, cb, z));
       } else {
         replace(target, createElement(b, svg, cb), 0);
       }
+    } else {
+      detach(target, createElement(next, svg, cb));
     }
   } else if (target.childNodes[i]) {
     if (next === null) {
       destroyElement(target.childNodes[i]);
     } else if (isScalar(prev) && isScalar(next)) {
-      if (prev !== next) target.childNodes[i].nodeValue = next;
-    } else if (prev && next && prev[0] === next[0] && target.nodeType === 1) {
+      target.childNodes[i].nodeValue = next;
+    } else if (prev && next && prev[0] === next[0]) {
       updateElement(target.childNodes[i], prev, next, svg, cb, null);
     } else {
       replace(target, createElement(next, svg, cb), i);

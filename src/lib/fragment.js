@@ -1,16 +1,6 @@
 export default class Fragment {
   constructor(data, cb) {
-    this.childNodes = [];
-
-    if (data) {
-      data.forEach(node => {
-        this.appendChild(cb(node));
-      });
-    }
-  }
-
-  replaceChild(node, target) {
-    this.childNodes[this.childNodes.indexOf(target)] = node;
+    this.childNodes = (data && data.map(cb)) || [];
   }
 
   appendChild(node) {
