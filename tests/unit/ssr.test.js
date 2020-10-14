@@ -72,6 +72,10 @@ describe('SSR', () => {
   });
 
   describe('document', () => {
+    it('does not support querySelector', () => {
+      expect(document.querySelector()).to.be.undefined;
+    });
+
     it('works fine with classList', () => {
       const div = document.createElement('div');
 
@@ -84,6 +88,7 @@ describe('SSR', () => {
       div.classList.toggle('test', true);
       div.classList.toggle('test', false);
 
+      expect(div.classList.item(-1)).to.be.null;
       expect(div.classList.item(0)).to.eql('bar');
       expect(div.classList.item(1)).to.eql('buzz');
       expect(div.classList.contains('foo')).to.be.false;
@@ -106,6 +111,7 @@ describe('SSR', () => {
       a.removeEventListener('undef');
 
       a.dispatchEvent({ type: 'test' });
+      a.dispatchEvent({ type: 'undef' });
 
       expect(td.explain(fn).callCount).to.eql(1);
 

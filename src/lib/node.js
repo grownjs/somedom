@@ -34,11 +34,11 @@ export function createElement(value, svg, cb) {
       retval[0] = retval[0](fixedVNode[1], fixedVNode[2]);
     }
 
-    if (isNode(retval)) {
-      fixedVNode = fixProps(retval);
-    } else {
-      return retval[0];
+    if (!isNode(retval)) {
+      return createElement(retval[0]);
     }
+
+    fixedVNode = fixProps(retval);
   }
 
   const [tag, attrs, children] = fixedVNode;

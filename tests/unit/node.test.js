@@ -71,6 +71,29 @@ describe('node', () => {
       expect(createElement(['svg']).isSvg).to.be.true;
     });
 
+    it('should call factories recursively', () => {
+      let count = null;
+
+      function Tag(props, children) {
+        if (count === null) {
+          count = props.count;
+          return [Tag, props, children];
+        }
+
+        if (count > 3) {
+          return ['stop', props, children];
+        }
+
+        count += 1;
+
+        return [Tag, { ...props, count }, children];
+      }
+
+      const target = createElement([Tag, { count: 0 }, 42]);
+
+      expect(target.outerHTML).to.eql('<stop count="3">42</stop>');
+    });
+
     it('should handle children as 2nd argument', () => {
       expect(createElement(['span', [1, 'foo']]).childNodes.map(x => x.nodeValue)).to.eql(['1', 'foo']);
       expect(createElement(['span', 'TEXT']).childNodes.map(x => x.nodeValue)).to.eql(['TEXT']);

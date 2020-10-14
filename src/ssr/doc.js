@@ -73,7 +73,7 @@ export function createElement(name) {
       replace: (oldC, newC) => {
         el.className = el.className.replace(new RegExp(`(\\b|^)\\s*${oldC}\\s*(\\b|$)`), ` ${newC} `).trim();
       },
-      item: nth => el.className.split(/\W/)[nth] || null,
+      item: nth => el.className.split(/[^\w-]/)[nth] || null,
       toggle: (value, force) => {
         if (force === true) el.classList.add(value);
         else if (force === false) el.classList.remove(value);
