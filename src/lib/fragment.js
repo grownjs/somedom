@@ -23,11 +23,7 @@ export default class Fragment {
 
   mount(target) {
     this.childNodes.forEach(node => {
-      if (!(node instanceof Fragment)) {
-        target.appendChild(node);
-      } else {
-        node.mount(target);
-      }
+      target.appendChild(node);
     });
   }
 
