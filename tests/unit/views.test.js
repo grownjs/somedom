@@ -199,6 +199,7 @@ describe('thunks', () => {
   describe('createThunk', () => {
     const $ = bind(render, listeners());
 
+    let MyCounter;
     let ctx;
 
     function CounterView(props = {}) {
@@ -213,16 +214,13 @@ describe('thunks', () => {
       });
     }
 
-    function MyCounter(props) {
-      return ctx.wrap(CounterView, props);
-    }
-
     function Main(props) {
       return ['fieldset', [[[['legend', 'Example:']], [[[[[MyCounter, props]]]]]]]];
     }
 
     beforeEach(() => {
       ctx = createThunk([Main, { value: 42 }], $);
+      MyCounter = ctx.wrap(CounterView);
     });
 
     it('should render plain views', async () => {

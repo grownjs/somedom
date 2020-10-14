@@ -78,8 +78,8 @@ export function createContext(tag, createView) {
     return createView(() => {
       CTX.push(scope);
 
-      scope.key = 1;
-      scope.fx = 1;
+      scope.key = 0;
+      scope.fx = 0;
 
       try {
         const retval = tag(props, children);

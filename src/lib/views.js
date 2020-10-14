@@ -168,28 +168,26 @@ export function createThunk(vnode, cb = createElement) {
     return ctx;
   };
 
-  ctx.wrap = (factory, props, children) => {
-    return [() => {
-      const target = document.createDocumentFragment();
-      const thunk = factory(props, children)(target, ctx.render);
+  ctx.wrap = tag => (props, children) => {
+    const target = document.createDocumentFragment();
+    const thunk = tag(props, children)(target, ctx.render);
 
-      ctx.refs[factory.name] = ctx.refs[factory.name] || [];
-      ctx.refs[factory.name].push(thunk);
+    ctx.refs[tag.name] = ctx.refs[tag.name] || [];
+    ctx.refs[tag.name].push(thunk);
 
-      const _remove = thunk.target.remove;
+    const _remove = thunk.target.remove;
 
-      thunk.target.remove = target.remove = _cb => Promise.resolve()
-        .then(() => {
-          ctx.refs[factory.name].splice(ctx.refs[factory.name].indexOf(thunk), 1);
+    thunk.target.remove = target.remove = _cb => Promise.resolve()
+      .then(() => {
+        ctx.refs[tag.name].splice(ctx.refs[tag.name].indexOf(thunk), 1);
 
-          if (!ctx.refs[factory.name].length) {
-            delete ctx.refs[factory.name];
-          }
-        })
-        .then(() => _remove(_cb));
+        if (!ctx.refs[tag.name].length) {
+          delete ctx.refs[tag.name];
+        }
+      })
+      .then(() => _remove(_cb));
 
-      return target;
-    }];
+    return target;
   };
 
   return ctx;
