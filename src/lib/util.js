@@ -129,7 +129,7 @@ export function sortedZip(prev, next, cb) {
 
 export const apply = (cb, length, options = {}) => (...args) => length === args.length && cb(...args, options);
 export const raf = cb => ((typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout)(cb);
-export const tick = cb => new Promise(resolve => raf(() => resolve(cb && cb())));
+export const tick = cb => Promise.resolve(cb && cb()).then(() => new Promise(done => raf(done)));
 
 export const append = (target, node) => (node instanceof Fragment ? node.mount(target) : target.appendChild(node));
 export const replace = (target, node, i) => target.replaceChild(node, target.childNodes[i]);

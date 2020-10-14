@@ -1,4 +1,5 @@
 import { Fragment, CLOSE_TAGS } from '../lib/shared';
+import { tick } from '../lib/util';
 
 export function withText(value, key) {
   return this.findText(value)[key || 0];
@@ -101,7 +102,7 @@ export function createElement(name) {
       return `<${name}${props.join('')}>${el.innerHTML}</${name}>`;
     },
     dispatch(type, params) {
-      this.dispatchEvent({ type, ...params });
+      return tick(() => this.dispatchEvent({ type, ...params }));
     },
     replaceChild(n, o) {
       n.parentNode = el;
