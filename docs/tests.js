@@ -1,32 +1,6 @@
 (function () {
   'use strict';
 
-  const CTX = [];
-
-  const RE_XML_SPLIT = /(>)(<)(\/*)/g;
-  const RE_XML_OPEN = /^<\w([^>]*[^/])?>.*$/;
-  const RE_XML_CLOSE_END = /.+<\/\w[^>]*>$/;
-  const RE_XML_CLOSE_BEGIN = /^<\/\w/;
-
-  const SVG_NS = 'http://www.w3.org/2000/svg';
-
-  const XLINK_NS = 'http://www.w3.org/1999/xlink';
-  const ELEM_REGEX = /^(\w*|[.#]\w+)(#[\w-]+)?([\w.-]+)?$/;
-
-  const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
-
-  const SKIP_METHODS = [
-    'constructor',
-    'children',
-    'render',
-    'state',
-    'props',
-  ];
-
-  function assert(vnode) {
-    throw new Error(`Invalid vnode, given '${vnode}'`);
-  }
-
   class Fragment {
     constructor(data, cb) {
       this.childNodes = [];
@@ -52,11 +26,7 @@
 
     mount(target) {
       this.childNodes.forEach(node => {
-        if (!(node instanceof Fragment)) {
-          target.appendChild(node);
-        } else {
-          node.mount(target);
-        }
+        target.appendChild(node);
       });
     }
 
@@ -64,6 +34,26 @@
       return this.childNodes.map(node => node.outerHTML || node.nodeValue).join('');
     }
   }
+
+  const RE_XML_SPLIT = /(>)(<)(\/*)/g;
+  const RE_XML_OPEN = /^<\w([^>]*[^/])?>.*$/;
+  const RE_XML_CLOSE_END = /.+<\/\w[^>]*>$/;
+  const RE_XML_CLOSE_BEGIN = /^<\/\w/;
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  const XLINK_NS = 'http://www.w3.org/1999/xlink';
+  const ELEM_REGEX = /^(\w*|[.#]\w+)(#[\w-]+)?([\w.-]+)?$/;
+
+  const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
+
+  const SKIP_METHODS = [
+    'constructor',
+    'children',
+    'render',
+    'state',
+    'props',
+  ];
 
   const isArray = value => Array.isArray(value);
   const isFunction = value => typeof value === 'function';
@@ -222,7 +212,7 @@
     vnode[2] = fixTree(toArray(vnode[2]));
 
     if (isFunction(vnode[0])) return vnode;
-    if (!isNode(vnode)) assert(vnode);
+    if (!isNode(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
 
     const matches = vnode[0].match(ELEM_REGEX);
     const name = matches[1] || 'div';
@@ -301,7 +291,7 @@
 
   function createElement(value, svg, cb) {
     if (isScalar(value)) return document.createTextNode(value);
-    if (isUndef(value)) assert(value);
+    if (isUndef(value)) throw new Error(`Invalid vnode, given '${value}'`);
 
     if (!isNode(value)) {
       return isArray(value)
@@ -425,8 +415,22 @@
     }
   }
 
+  const STACK = [];
+
+  function pop(scope) {
+    STACK.splice(STACK.indexOf(scope), 1);
+  }
+
+  function push(scope) {
+    STACK.push(scope);
+  }
+
+  function getContext() {
+    return STACK[STACK.length - 1];
+  }
+
   function onError(callback) {
-    const scope = CTX[CTX.length - 1];
+    const scope = getContext();
 
     if (!scope) {
       throw new Error('Cannot call onError() outside views');
@@ -436,7 +440,7 @@
   }
 
   function useState(fallback) {
-    const scope = CTX[CTX.length - 1];
+    const scope = getContext();
 
     if (!scope) {
       throw new Error('Cannot call useState() outside views');
@@ -455,7 +459,7 @@
   }
 
   function useEffect(callback, inputs) {
-    const scope = CTX[CTX.length - 1];
+    const scope = getContext();
 
     if (!scope) {
       throw new Error('Cannot call useEffect() outside views');
@@ -478,15 +482,14 @@
 
   function createContext(tag, createView) {
     return (props, children) => {
-      const key = CTX.length - 1;
       const scope = {
         sync: () => scope.set().then(() => {
           if (scope.get) {
-            return Promise.all(scope.get.map(x => {
+            return Promise.all(scope.get.map(fx => {
               return Promise.resolve()
-                .then(() => x.on && isFunction(x.off) && x.off())
-                .then(() => x.on && x.cb())
-                .then(y => { x.off = y; });
+                .then(() => fx.on && isFunction(fx.off) && fx.off())
+                .then(() => fx.on && fx.cb())
+                .then(x => { fx.off = x; });
             }));
           }
         }).catch(e => {
@@ -500,25 +503,26 @@
 
       let length;
       return createView(() => {
-        CTX.push(scope);
-
         scope.key = 0;
         scope.fx = 0;
+
+        push(scope);
 
         try {
           const retval = tag(props, children);
 
           if (!scope.length) {
-            CTX.splice(key, 1);
             length = scope.key;
             scope.length = scope.key;
           } else if (length !== scope.key) {
             throw new Error('Calls to useState() must be predictable');
           }
 
+          pop(scope);
+
           return retval;
         } catch (e) {
-          throw new Error(`${tag.name}: ${e.message}`);
+          throw new Error(`${tag.name || 'View'}: ${e.message}`);
         }
       }, sync => { scope.set = sync; });
     };
