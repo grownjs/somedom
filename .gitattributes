@@ -1,4 +1,5 @@
-package-lock.json binary
-sandbox.iife.* binary
-vendor binary
-dist binary
+package-lock.json -diff
+sandbox.iife.* -diff
+docs/test.js -diff
+vendor -diff
+dist -diff

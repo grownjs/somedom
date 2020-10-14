@@ -217,22 +217,21 @@ describe('node', () => {
 
     it('can mount fragments recursively', () => {
       const div = document.createElement('div');
-      const style = { color: 'red' };
 
       mountElement(div, [
         'Some text ',
-        ['strong', 'before DOM'],
+        ['strong', 'before HTML'],
         ': ',
         [
           'because',
           ' ',
           ['em', 'it is'],
-          [' ', [['strong', { style }, 'possible!']]],
+          [' ', [['strong', 'possible!']]],
         ],
       ]);
 
       expect(format(div.outerHTML)).to.eql(trim(`
-        <div>Some text <strong>before DOM</strong>: because <em>it is</em> <strong>possible!</strong>
+        <div>Some text <strong>before HTML</strong>: because <em>it is</em> <strong>possible!</strong>
         </div>
       `));
     });
