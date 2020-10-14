@@ -491,7 +491,7 @@
 
     return [scope.val[key], v => {
       scope.val[key] = v;
-      scope.sync();
+      raf(scope.sync);
     }];
   }
 

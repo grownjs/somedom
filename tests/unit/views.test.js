@@ -179,6 +179,7 @@ describe('thunks', () => {
       const app = counter(null, $);
 
       await $$(app.target).withText('truth').dispatch('click');
+      await tick();
 
       expect(stack).to.eql([3, 2]);
       expect(app.target.outerHTML).to.contains('<span>value: 42, OSOM</span>');
@@ -188,6 +189,7 @@ describe('thunks', () => {
 
       global.prompt = () => 'WAT';
       await $$(app.target).withText('ask').dispatch('click');
+      await tick();
 
       expect(app.target.outerHTML).to.contains('<span>value: 42, WAT</span>');
 
@@ -196,6 +198,7 @@ describe('thunks', () => {
 
       broke = true;
       await $$(app.target).withText('++').dispatch('click');
+      await tick();
 
       let error;
       onError(e => { error = e; });

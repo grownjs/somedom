@@ -1,4 +1,4 @@
-import { isDiff, isFunction } from './util';
+import { raf, isDiff, isFunction } from './util';
 import { pop, push, getContext } from './ctx';
 
 export function onError(callback) {
@@ -46,7 +46,7 @@ export function useState(fallback) {
 
   return [scope.val[key], v => {
     scope.val[key] = v;
-    scope.sync();
+    raf(scope.sync);
   }];
 }
 
