@@ -26,7 +26,11 @@
 
     mount(target) {
       this.childNodes.forEach(node => {
-        target.appendChild(node);
+        if (!(node instanceof Fragment)) {
+          target.appendChild(node);
+        } else {
+          node.mount(target);
+        }
       });
     }
 

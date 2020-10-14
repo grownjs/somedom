@@ -7,7 +7,7 @@ import {
   createElement, mountElement, destroyElement, updateElement,
 } from '../../src/lib/node';
 
-import { tick } from '../../src/lib/util';
+import { tick, trim, format } from '../../src/lib/util';
 
 import doc from './fixtures/document';
 
@@ -213,6 +213,28 @@ describe('node', () => {
       ok(document.body);
 
       td.reset();
+    });
+
+    it('can mount fragments recursively', () => {
+      const div = document.createElement('div');
+      const style = { color: 'red' };
+
+      mountElement(div, [
+        'Some text ',
+        ['strong', 'before DOM'],
+        ': ',
+        [
+          'because',
+          ' ',
+          ['em', 'it is'],
+          [' ', [['strong', { style }, 'possible!']]],
+        ],
+      ]);
+
+      expect(format(div.outerHTML)).to.eql(trim(`
+        <div>Some text <strong>before DOM</strong>: because <em>it is</em> <strong>possible!</strong>
+        </div>
+      `));
     });
   });
 
