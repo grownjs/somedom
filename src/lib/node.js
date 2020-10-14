@@ -7,7 +7,7 @@ import {
   assignProps, updateProps, fixProps, fixTree,
 } from './attrs';
 
-import { Fragment, SVG_NS, assert } from './shared';
+import { Fragment, SVG_NS } from './shared';
 
 export function destroyElement(target, wait = cb => cb()) {
   return Promise.resolve().then(() => wait(() => target.remove()));
@@ -15,7 +15,7 @@ export function destroyElement(target, wait = cb => cb()) {
 
 export function createElement(value, svg, cb) {
   if (isScalar(value)) return document.createTextNode(value);
-  if (isUndef(value)) assert(value);
+  if (isUndef(value)) throw new Error(`Invalid vnode, given '${value}'`);
 
   if (!isNode(value)) {
     return isArray(value)

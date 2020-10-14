@@ -1,3 +1,5 @@
+export { default as Fragment } from './fragment';
+
 export const RE_XML_SPLIT = /(>)(<)(\/*)/g;
 export const RE_XML_OPEN = /^<\w([^>]*[^/])?>.*$/;
 export const RE_XML_CLOSE_END = /.+<\/\w[^>]*>$/;
@@ -34,59 +36,3 @@ export const SKIP_METHODS = [
   'state',
   'props',
 ];
-
-const CTX = [];
-
-export function pop(scope) {
-  CTX.splice(CTX.indexOf(scope), 1);
-}
-
-export function push(scope) {
-  CTX.push(scope);
-}
-
-export function getContext() {
-  return CTX[CTX.length - 1];
-}
-
-export function assert(vnode) {
-  throw new Error(`Invalid vnode, given '${vnode}'`);
-}
-
-export class Fragment {
-  constructor(data, cb) {
-    this.childNodes = [];
-
-    if (data) {
-      data.forEach(node => {
-        this.appendChild(cb(node));
-      });
-    }
-  }
-
-  replaceChild(node, target) {
-    const i = this.childNodes.indexOf(target);
-
-    if (i !== -1) {
-      this.childNodes[i] = node;
-    }
-  }
-
-  appendChild(node) {
-    this.childNodes.push(node);
-  }
-
-  mount(target) {
-    this.childNodes.forEach(node => {
-      if (!(node instanceof Fragment)) {
-        target.appendChild(node);
-      } else {
-        node.mount(target);
-      }
-    });
-  }
-
-  get outerHTML() {
-    return this.childNodes.map(node => node.outerHTML || node.nodeValue).join('');
-  }
-}

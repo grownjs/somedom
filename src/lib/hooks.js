@@ -1,5 +1,5 @@
 import { isDiff, isFunction } from './util';
-import { pop, push, getContext } from './shared';
+import { pop, push, getContext } from './ctx';
 
 export function onError(callback) {
   const scope = getContext();
