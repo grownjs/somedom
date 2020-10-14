@@ -1,9 +1,5 @@
 import { Fragment, CLOSE_TAGS } from '../lib/shared';
 
-export function dispatch(type, params) {
-  this.dispatchEvent({ type, ...params });
-}
-
 export function withText(value, key) {
   return this.findText(value)[key || 0];
 }
@@ -21,6 +17,10 @@ export function findText(value) {
   walk(this, this.childNodes);
 
   return found;
+}
+
+export function bindHelpers(target) {
+  return { ...target, withText, findText };
 }
 
 export function encodeText(value) {
@@ -55,9 +55,6 @@ export function createElement(name) {
     className: '',
     attributes: {},
     childNodes: [],
-    dispatch,
-    findText,
-    withText,
     dispatchEvent,
     addEventListener,
     removeEventListener,
@@ -102,6 +99,9 @@ export function createElement(name) {
       }
 
       return `<${name}${props.join('')}>${el.innerHTML}</${name}>`;
+    },
+    dispatch(type, params) {
+      this.dispatchEvent({ type, ...params });
     },
     replaceChild(n, o) {
       n.parentNode = el;

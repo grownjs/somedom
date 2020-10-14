@@ -8,7 +8,9 @@ import {
   dropWindow,
 } from './doc';
 
-export default function renderToString(vnode, cb = createElement) {
+export { bindHelpers } from './doc';
+
+export function renderToString(vnode, cb = createElement) {
   patchDocument();
   patchWindow();
 

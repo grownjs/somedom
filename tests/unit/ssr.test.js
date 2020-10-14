@@ -5,8 +5,8 @@ import { expect } from 'chai';
 
 import { view } from '../../src';
 import { trim } from '../../src/lib/util';
+import { renderToString } from '../../src/ssr';
 
-import renderToString from '../../src/ssr';
 import doc from './fixtures/document';
 
 /* global describe, it */

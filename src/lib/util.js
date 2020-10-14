@@ -73,21 +73,6 @@ export const dashCase = value => value.replace(/[A-Z]/g, '-$&').toLowerCase();
 export const toArray = value => (!isEmpty(value) && !isArray(value) ? [value] : value) || [];
 export const filter = (value, cb) => value.filter(cb || (x => !isEmpty(x)));
 
-export const deindent = source => {
-  const matches = source.match(/\n(\s+)/m);
-
-  if (matches) {
-    return source.split('\n').map(line => {
-      if (line.indexOf(matches[1]) === 0) {
-        return line.substr(matches[1].length);
-      }
-      return line;
-    }).join('\n').trim();
-  }
-
-  return source;
-};
-
 export const format = markup => {
     let formatted = '';
     let pad = 0;

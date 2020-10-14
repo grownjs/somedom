@@ -7,7 +7,8 @@ import {
   h, pre, bind, patch, render, listeners, attributes,
 } from '../../src';
 
-import { tick, format, deindent } from '../../src/lib/util';
+import { tick, trim, format } from '../../src/lib/util';
+import { bindHelpers as $$ } from '../../src/ssr';
 import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
@@ -101,13 +102,13 @@ describe('somedom', () => {
       node.parentNode = document.createElement('body');
 
       for (let i = 0; i < 2; i += 1) {
-        node.withText(`Item ${i + 1}`).dispatch('click');
+        $$(node).withText(`Item ${i + 1}`).dispatch('click');
         patch(node, vnode, vnode = view(), null, $, null);
       }
 
       await tick();
 
-      expect(format(node.outerHTML)).to.eql(deindent(`
+      expect(format(node.outerHTML)).to.eql(trim(`
         <ul>
           <li>Item 3</li>
           <li>Item 4</li>

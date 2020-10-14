@@ -18,7 +18,8 @@ import {
   bind, render, listeners,
 } from '../../src';
 
-import { tick, format, deindent } from '../../src/lib/util';
+import { tick, trim, format } from '../../src/lib/util';
+import { bindHelpers as $$ } from '../../src/ssr';
 
 import doc from './fixtures/document';
 
@@ -47,7 +48,7 @@ describe('thunks', () => {
       const app = createView(subject, { value }, [description]);
       const $ = app(body, bind(render, listeners()));
 
-      body.withText(description).dispatch('click');
+      $$(body).withText(description).dispatch('click');
       await tick();
 
       expect($.target.outerHTML).to.eql(`<button>${description}</button><span>Got: ${result} (${result * 2})</span>`);
@@ -153,13 +154,13 @@ describe('thunks', () => {
           };
         }, [other]);
 
-        return ['div', [
+        return [[['div', [[
           ['button', { onclick: () => setValue(value - Math.random()) }, '--'],
           ['button', { onclick: () => setValue(value + Math.random()) }, '++'],
           ['button', { onclick: () => setOther(prompt('Value?')) }, 'ask'], // eslint-disable-line
           ['button', { onclick: () => setOther('OSOM') }, 'truth'],
-          ['span', ['value: ', value, ', ', other]],
-        ]];
+          ['span', [['value: ', value, ', ', other]]],
+        ]]]]];
       }
 
       const Counter = createView(CounterView);
@@ -168,7 +169,7 @@ describe('thunks', () => {
       const $ = bind(render, listeners());
       const app = counter(null, $);
 
-      await app.target.withText('truth').dispatch('click');
+      await $$(app.target).withText('truth').dispatch('click');
 
       expect(app.target.outerHTML).to.contains('<span>value: 42, OSOM</span>');
 
@@ -176,7 +177,7 @@ describe('thunks', () => {
       expect(stack.length).to.eql(1);
 
       global.prompt = () => 'WAT';
-      await app.target.withText('ask').dispatch('click');
+      await $$(app.target).withText('ask').dispatch('click');
 
       expect(app.target.outerHTML).to.contains('<span>value: 42, WAT</span>');
 
@@ -184,7 +185,7 @@ describe('thunks', () => {
       expect(stack.length).to.eql(3);
 
       broke = true;
-      await app.target.withText('++').dispatch('click');
+      await $$(app.target).withText('++').dispatch('click');
 
       let error;
       onError(e => { error = e; });
@@ -238,7 +239,7 @@ describe('thunks', () => {
     it('should render wrapped views', () => {
       const node = ctx.render(ctx.vnode);
 
-      expect(format(node.outerHTML)).to.eql(deindent(`
+      expect(format(node.outerHTML)).to.eql(trim(`
         <fieldset>
           <legend>Example:</legend>
           <span>
@@ -250,7 +251,7 @@ describe('thunks', () => {
       `));
 
       let depth = 0;
-      let obj = node.withText('++');
+      let obj = $$(node).withText('++');
 
       while (obj.parentNode) {
         depth += 1;
