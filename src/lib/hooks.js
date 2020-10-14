@@ -1,4 +1,4 @@
-import { isDiff } from './util';
+import { isDiff, isFunction } from './util';
 import { CTX } from './shared';
 
 export function onError(callback) {
@@ -21,11 +21,10 @@ export function useState(fallback) {
   const key = scope.key;
 
   scope.key += 1;
-  scope.val = scope.val || [];
-  scope.val[key] = scope.val[key] || fallback;
+  scope[key] = scope[key] || fallback;
 
-  return [scope.val[key], v => {
-    scope.val[key] = v;
+  return [scope[key], v => {
+    scope[key] = v;
     scope.sync();
   }];
 }
@@ -37,24 +36,26 @@ export function useEffect(callback, inputs) {
     throw new Error('Cannot call useEffect() outside views');
   }
 
-  scope.in = scope.in || [];
-  scope.fx = scope.fx || [];
+  const [run] = useState({ in: inputs, cb: callback });
 
-  const key = scope.fx.length;
-  const prev = scope.in[key];
-  const enabled = inputs ? isDiff(prev, inputs) : true;
+  run.on = inputs ? isDiff(run.in, inputs) : true;
+  run.in = inputs;
 
-  scope.in[key] = inputs;
-  scope.fx.push({ callback, enabled });
+  scope.fx.push(run);
 }
 
 export function createContext(tag, createView) {
   return (props, children) => {
     const key = CTX.length - 1;
-    const scope = {
+    const scope = Object.assign([], {
       sync: () => scope.set().then(() => {
         if (scope.fx) {
-          return Promise.all(scope.fx.map(x => x.enabled && x.callback()));
+          return Promise.all(scope.fx.map(x => {
+            return Promise.resolve()
+              .then(() => x.on && isFunction(x.off) && x.off())
+              .then(() => x.on && x.cb())
+              .then(y => { x.off = y; });
+          }));
         }
       }).catch(e => {
         if (scope.onError) {
@@ -63,22 +64,22 @@ export function createContext(tag, createView) {
           throw e;
         }
       }),
-    };
+    });
 
     let length;
     return createView(() => {
       CTX.push(scope);
 
-      scope.key = 0;
+      scope.key = 1;
       scope.fx = [];
 
       try {
         const retval = tag(props, children);
 
-        if (!scope.attached) {
+        if (!scope[0]) {
           CTX.splice(key, 1);
           length = scope.key;
-          scope.attached = true;
+          scope[0] = scope.length;
         } else if (length !== scope.key) {
           throw new Error('Calls to useState() must be predictable');
         }

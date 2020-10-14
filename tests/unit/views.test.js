@@ -147,6 +147,10 @@ describe('thunks', () => {
 
         useEffect(() => {
           stack.push(Math.random());
+
+          return () => {
+            stack.push(-1);
+          };
         }, [other]);
 
         return ['div', [
@@ -177,7 +181,7 @@ describe('thunks', () => {
       expect(app.target.outerHTML).to.contains('<span>value: 42, WAT</span>');
 
       await tick();
-      expect(stack.length).to.eql(2);
+      expect(stack.length).to.eql(3);
 
       broke = true;
       await app.target.withText('++').dispatch('click');
@@ -186,7 +190,7 @@ describe('thunks', () => {
       onError(e => { error = e; });
       await tick();
 
-      expect(stack.length).to.eql(2);
+      expect(stack.length).to.eql(3);
       expect(error.message).to.contains('useState() must be predictable');
     });
   });
