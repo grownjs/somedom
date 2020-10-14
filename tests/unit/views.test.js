@@ -136,6 +136,17 @@ describe('thunks', () => {
       expect(c).to.eql(2);
     });
 
+    it('should fail on calling hooks outside views', () => {
+      let error;
+      try {
+        useRef();
+      } catch (e) {
+        error = e;
+      }
+
+      expect(error.message).to.eql('Cannot call getContext() outside views');
+    });
+
     it('should allow to capture context through hooks', async () => {
       const values = [1, 2, 3];
       const stack = [];

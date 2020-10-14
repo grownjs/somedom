@@ -3,7 +3,7 @@ import {
 } from './node';
 
 import {
-  getMethods, isFunction, isScalar, isArray, clone,
+  getMethods, isFunction, isPlain, isArray, clone,
 } from './util';
 
 import { fixTree } from './attrs';
@@ -100,14 +100,14 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
 
         if (typeof retval === 'object' && typeof retval.then === 'function') {
           return retval.then(result => {
-            if (result && !(isScalar(result) || isArray(result))) {
+            if (isPlain(result)) {
               return sync(Object.assign(data, result));
             }
             return result;
           });
         }
 
-        if (retval && !(isScalar(retval) || isArray(retval))) {
+        if (isPlain(retval)) {
           sync(Object.assign(data, retval));
         }
 

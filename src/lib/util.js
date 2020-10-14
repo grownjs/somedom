@@ -88,8 +88,6 @@ export const format = markup => {
       }
     } else if (RE_XML_OPEN.test(line)) {
       indent = 1;
-    } else {
-      indent = 0;
     }
 
     const padding = Array.from({ length: pad + 1 }).join('  ');
