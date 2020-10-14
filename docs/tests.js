@@ -3,6 +3,11 @@
 
   const CTX = [];
 
+  const RE_XML_SPLIT = /(>)(<)(\/*)/g;
+  const RE_XML_OPEN = /^<\w([^>]*[^\/])?>.*$/;
+  const RE_XML_CLOSE_END = /.+<\/\w[^>]*>$/;
+  const RE_XML_CLOSE_BEGIN = /^<\/\w/;
+
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -37,13 +42,22 @@
       const i = this.childNodes.indexOf(target);
 
       if (i !== -1) {
-        node.parentNode = this;
         this.childNodes[i] = node;
       }
     }
 
     appendChild(node) {
       this.childNodes.push(node);
+    }
+
+    mount(target) {
+      this.childNodes.forEach(node => {
+        if (!(node instanceof Fragment)) {
+          target.appendChild(node);
+        } else {
+          node.mount(target);
+        }
+      });
     }
 
     get outerHTML() {
@@ -55,6 +69,7 @@
   const isFunction = value => typeof value === 'function';
   const isSelector = value => value && ELEM_REGEX.test(value);
   const isUndef = value => typeof value === 'undefined' || value === null;
+  const isPlain = value => value !== null && Object.prototype.toString.call(value) === '[object Object]';
   const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
   const isScalar = value => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
 
@@ -66,7 +81,7 @@
       for (let i = 0; i < next.length; i += 1) {
         if (isDiff(prev[i], next[i])) return true;
       }
-    } else if (isObject(prev)) {
+    } else if (isPlain(prev)) {
       const a = Object.keys(prev).sort();
       const b = Object.keys(next).sort();
 
@@ -81,12 +96,12 @@
   const isEmpty = value => {
     if (isFunction(value)) return false;
     if (isArray(value)) return value.length === 0;
-    if (isObject(value)) return Object.keys(value).length === 0;
+    if (isPlain(value)) return Object.keys(value).length === 0;
 
     return typeof value === 'undefined' || value === '' || value === null || value === false;
   };
 
-  const isNode = x => isArray(x) && x.length <= 3 && ((typeof x[0] === 'string' && isSelector(x[0])) || typeof x[0] === 'function');
+  const isNode = x => isArray(x) && x.length <= 3 && ((typeof x[0] === 'string' && isSelector(x[0])) || isFunction(x[0]));
 
   const getMethods = obj => {
     const stack = [];
@@ -115,30 +130,32 @@
   const toArray = value => (!isEmpty(value) && !isArray(value) ? [value] : value) || [];
   const filter = (value, cb) => value.filter(cb || (x => !isEmpty(x)));
 
-  const format = value => {
-    const xml = String(value)
-      .replace(/^\s+|\s+$/g, '')
-      .replace(/></g, '>\n<')
-      .replace(/\/(\w+)></g, '/$1>\n<')
-      .replace(/>(.+?)<([a-zA-Z])/g, '>\n$1\n<$2');
+  const format = markup => {
+      let formatted = '';
+      let pad = 0;
 
-    const output = xml.split('\n');
+      markup = markup.replace(RE_XML_SPLIT, '$1\n$2$3');
+      markup.split('\n').forEach(line => {
+        let indent = 0;
+        if (RE_XML_CLOSE_END.test(line)) {
+          indent = 0;
+        } else if (RE_XML_CLOSE_BEGIN.test(line)) {
+          if (pad != 0) {
+            pad -= 1;
+          }
+        } else if (RE_XML_OPEN.test(line)) {
+          indent = 1;
+        } else {
+          indent = 0;
+        }
 
-    for (let i = 0, tabs = ''; i < output.length; i += 1) {
-      const line = output[i].replace(/^\s+|\s+$/g, '');
+        const padding = Array.from({ length: pad + 1 }).join('  ');
 
-      if (/^<[/]/.test(line)) {
-        tabs = tabs.replace('  ', '');
-        output[i] = tabs + line;
-      } else if (/<.*>.*<\/.*>|<.*[^>]\/>/.test(line)) {
-        output[i] = tabs + line;
-      } else {
-        output[i] = tabs + line;
-        tabs += '  ';
-      }
-    }
+        formatted += `${padding + line}\n`;
+        pad += indent;
+      });
 
-    return output.join('\n');
+      return formatted.trim();
   };
 
   const trim = value => {
@@ -170,12 +187,9 @@
   const apply = (cb, length, options = {}) => (...args) => length === args.length && cb(...args, options);
   const raf = cb => ((typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout)(cb);
 
+  const append = (target, node) => (node instanceof Fragment ? node.mount(target) : target.appendChild(node));
   const replace = (target, node, i) => target.replaceChild(node, target.childNodes[i]);
   const remove = (target, node) => target && target.removeChild(node);
-
-  const append = (target, node) => (node instanceof Fragment
-    ? node.childNodes.map(sub => append(target, sub))
-    : target.appendChild(node));
 
   const detach = (target, node) => {
     if (node) target.parentNode.insertBefore(node, target);
@@ -183,39 +197,31 @@
   };
 
   function fixTree(vnode) {
-    if (!isNode(vnode)) {
-      return isArray(vnode) ? vnode.map(fixTree) : vnode;
-    }
+    if (isArray(vnode)) {
+      if (!(isNode(vnode) || vnode.some(isNode))) {
+        return vnode.reduce((memo, cur) => memo.concat(fixTree(cur)), []);
+      }
 
-    vnode = isNode(vnode) && isFunction(vnode[0])
-      ? fixTree(vnode[0](vnode[1], toArray(vnode[2])))
-      : vnode;
+      if (isFunction(vnode[0])) {
+        return fixTree(vnode[0](vnode[1], toArray(vnode[2])));
+      }
 
-    if (isArray(vnode[2])) {
-      vnode[2].forEach((sub, i) => {
-        if (isNode(sub)) {
-          vnode[2][i] = fixTree(sub);
-        }
-      });
+      return vnode.map(fixTree);
     }
 
     return vnode;
   }
 
   function fixProps(vnode) {
-    if (isScalar(vnode) || !isNode(vnode)) {
-      return isArray(vnode) ? vnode.map(fixProps) : vnode;
-    }
-
+    if (isScalar(vnode) || !isNode(vnode)) return vnode;
     if (isArray(vnode[1]) || isScalar(vnode[1])) {
       vnode[2] = vnode[1];
       vnode[1] = null;
     }
 
-    if (isFunction(vnode[0])) {
-      return vnode;
-    }
+    vnode[2] = fixTree(toArray(vnode[2]));
 
+    if (isFunction(vnode[0])) return vnode;
     if (!isNode(vnode)) assert(vnode);
 
     const matches = vnode[0].match(ELEM_REGEX);
@@ -242,7 +248,7 @@
       }
     }
 
-    return [name, attrs, toArray(vnode[2])];
+    return [name, attrs, vnode[2]];
   }
 
   function assignProps(target, attrs, svg, cb) {
@@ -299,7 +305,7 @@
 
     if (!isNode(value)) {
       return isArray(value)
-        ? new Fragment(value, node => createElement(node, svg, cb))
+        ? new Fragment(fixTree(value), node => createElement(node, svg, cb))
         : value;
     }
 
@@ -455,15 +461,19 @@
       throw new Error('Cannot call useEffect() outside views');
     }
 
-    scope.in = scope.in || [];
-    scope.fx = scope.fx || [];
+    const key = scope.fx;
 
-    const key = scope.fx.length;
+    scope.fx += 1;
+    scope.in = scope.in || [];
+    scope.get = scope.get || [];
+
     const prev = scope.in[key];
     const enabled = inputs ? isDiff(prev, inputs) : true;
 
     scope.in[key] = inputs;
-    scope.fx.push({ callback, enabled });
+    scope.get[key] = scope.get[key] || {};
+
+    Object.assign(scope.get[key], { cb: callback, on: enabled });
   }
 
   function createContext(tag, createView) {
@@ -471,8 +481,13 @@
       const key = CTX.length - 1;
       const scope = {
         sync: () => scope.set().then(() => {
-          if (scope.fx) {
-            return Promise.all(scope.fx.map(x => x.enabled && x.callback()));
+          if (scope.get) {
+            return Promise.all(scope.get.map(x => {
+              return Promise.resolve()
+                .then(() => x.on && isFunction(x.off) && x.off())
+                .then(() => x.on && x.cb())
+                .then(y => { x.off = y; });
+            }));
           }
         }).catch(e => {
           if (scope.onError) {
@@ -487,16 +502,16 @@
       return createView(() => {
         CTX.push(scope);
 
-        scope.key = 0;
-        scope.fx = [];
+        scope.key = 1;
+        scope.fx = 1;
 
         try {
           const retval = tag(props, children);
 
-          if (!scope.attached) {
+          if (!scope.length) {
             CTX.splice(key, 1);
             length = scope.key;
-            scope.attached = true;
+            scope.length = scope.key;
           } else if (length !== scope.key) {
             throw new Error('Calls to useState() must be predictable');
           }
@@ -668,22 +683,22 @@
       return ctx;
     };
 
-    ctx.wrap = (Target, props, children) => {
+    ctx.wrap = (factory, props, children) => {
       return [() => {
         const target = document.createDocumentFragment();
-        const thunk = new Target(props, children)(target, ctx.render);
+        const thunk = factory(props, children)(target, ctx.render);
 
-        ctx.refs[Target.name] = ctx.refs[Target.name] || [];
-        ctx.refs[Target.name].push(thunk);
+        ctx.refs[factory.name] = ctx.refs[factory.name] || [];
+        ctx.refs[factory.name].push(thunk);
 
         const _remove = thunk.target.remove;
 
         thunk.target.remove = target.remove = _cb => Promise.resolve()
           .then(() => {
-            ctx.refs[Target.name].splice(ctx.refs[Target.name].indexOf(thunk), 1);
+            ctx.refs[factory.name].splice(ctx.refs[factory.name].indexOf(thunk), 1);
 
-            if (!ctx.refs[Target.name].length) {
-              delete ctx.refs[Target.name];
+            if (!ctx.refs[factory.name].length) {
+              delete ctx.refs[factory.name];
             }
           })
           .then(() => _remove(_cb));

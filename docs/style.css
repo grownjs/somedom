@@ -91,6 +91,9 @@ dt {
   border-bottom: 1px solid silver;
 }
 
+fieldset > div:last-child > p:last-child {
+  margin-bottom: 0;
+}
 fieldset + blockquote {
   margin-top: 8px;
 }

@@ -228,12 +228,12 @@
           <p>When <code>Tag</code> is a plain function (not a class) and no more arguments are given, then a hook-able view is created.</p>
           <p>You can use the <code>onError(cb)</code>, <code>useState(v)</code> and <code>useEffect(cb[, i])</code> hooks for composing state and actions.</p>
           <fieldset id="hooks"></fieldset>
-          <script>test(({ view, bind, render, listeners, onError, useState, useEffect }, appendChild) => {
-            function CounterView(props = {}) {
-              const [val, set] = useState(props.value);
+          <script>test(({ view, bind, thunk, mount, render, listeners, onError, useState, useEffect }, appendChild) => {
+            function PrompterView() {
               const [fun, check] = useState('FIXME');
 
               onError(e => {
+                console.log(e);
                 if (confirm('Are you OK?')) {
                   check('Thank you!');
                 } else {
@@ -247,19 +247,31 @@
               }, [fun]);
 
               return ['div', [
-                ['button', { onclick: () => set(val - Math.random()) }, '--'],
-                ['button', { onclick: () => set(val + Math.random()) }, '++'],
                 ['button', { onclick: () => check(prompt('Value?')) }, 'ask'],
                 ['button', { onclick: () => check('OSOM') }, 'truth'],
-                ['p', ['Your answer: ', val, ', ', fun]],
+                ['p', [['Your answer: ', fun]]],
               ]];
             }
 
-            const Counter = view(CounterView);
-            const counter = Counter({ value: 42 });
+            function CounterView(props = {}) {
+              var [val, set] = useState(props.value || -1);
 
-            const tag = bind(render, listeners());
-            const app = counter('#hooks', tag);
+              return ['div', [
+                ['button', { onclick: () => set(val - Math.random()) }, '--'],
+                ['button', { onclick: () => set(val + Math.random()) }, '++'],
+                ['p', ['Value: ', val]],
+              ]];
+            }
+
+            var Counter = view(CounterView);
+            var Prompter = view(PrompterView);
+
+            var tag = bind(render, listeners());
+            var counter = Counter();
+            var prompter = Prompter();
+
+            counter('#hooks', tag);
+            prompter('#hooks', tag);
             appendChild();
           });</script>
         </dd>
@@ -811,7 +823,7 @@
 
     <h3>Server Side Rendering</h3>
     <p>To render entire <i>vnode</i> trees on the back-end use:</p>
-    <p><code>import <b>renderToString</b> from 'somedom/ssr';</code></p>
+    <p><code>import { <b>renderToString</b> } from 'somedom/ssr';</code></p>
     <details>
       <summary><code>renderToString()</code></summary>
       <dl>
