@@ -10,11 +10,7 @@ export default class Fragment {
   }
 
   replaceChild(node, target) {
-    const i = this.childNodes.indexOf(target);
-
-    if (i !== -1) {
-      this.childNodes[i] = node;
-    }
+    this.childNodes[this.childNodes.indexOf(target)] = node;
   }
 
   appendChild(node) {
