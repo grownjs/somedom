@@ -3,6 +3,7 @@
 import td from 'testdouble';
 import { expect } from 'chai';
 import {
+  clone,
   apply,
   filter,
   isUndef,
@@ -31,6 +32,17 @@ beforeEach(doc.enable);
 afterEach(doc.disable);
 
 describe('util', () => {
+  describe('clone', () => {
+    it('should copy most common values', () => {
+      const a = [{ d: new Date() }, { r: /x/ }];
+      const b = clone(a);
+
+      a[0].d.setTime(0);
+
+      expect(a).not.eql(b);
+    });
+  });
+
   describe('apply', () => {
     const opts = {};
     const cbTag = td.func('tag');
