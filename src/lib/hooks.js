@@ -21,10 +21,11 @@ export function useState(fallback) {
   const key = scope.key;
 
   scope.key += 1;
-  scope[key] = scope[key] || fallback;
+  scope.val = scope.val || [];
+  scope.val[key] = scope.val[key] || fallback;
 
-  return [scope[key], v => {
-    scope[key] = v;
+  return [scope.val[key], v => {
+    scope.val[key] = v;
     scope.sync();
   }];
 }
@@ -36,21 +37,28 @@ export function useEffect(callback, inputs) {
     throw new Error('Cannot call useEffect() outside views');
   }
 
-  const [run] = useState({ in: inputs, cb: callback });
+  const key = scope.fx;
 
-  run.on = inputs ? isDiff(run.in, inputs) : true;
-  run.in = inputs;
+  scope.fx += 1;
+  scope.in = scope.in || [];
+  scope.get = scope.get || [];
 
-  scope.fx.push(run);
+  const prev = scope.in[key];
+  const enabled = inputs ? isDiff(prev, inputs) : true;
+
+  scope.in[key] = inputs;
+  scope.get[key] = scope.get[key] || {};
+
+  Object.assign(scope.get[key], { cb: callback, on: enabled });
 }
 
 export function createContext(tag, createView) {
   return (props, children) => {
     const key = CTX.length - 1;
-    const scope = Object.assign([], {
+    const scope = {
       sync: () => scope.set().then(() => {
-        if (scope.fx) {
-          return Promise.all(scope.fx.map(x => {
+        if (scope.get) {
+          return Promise.all(scope.get.map(x => {
             return Promise.resolve()
               .then(() => x.on && isFunction(x.off) && x.off())
               .then(() => x.on && x.cb())
@@ -64,22 +72,22 @@ export function createContext(tag, createView) {
           throw e;
         }
       }),
-    });
+    };
 
     let length;
     return createView(() => {
       CTX.push(scope);
 
       scope.key = 1;
-      scope.fx = [];
+      scope.fx = 1;
 
       try {
         const retval = tag(props, children);
 
-        if (!scope[0]) {
+        if (!scope.length) {
           CTX.splice(key, 1);
           length = scope.key;
-          scope[0] = scope.length;
+          scope.length = scope.key;
         } else if (length !== scope.key) {
           throw new Error('Calls to useState() must be predictable');
         }
