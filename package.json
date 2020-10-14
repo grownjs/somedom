@@ -20,7 +20,7 @@
     "coverage": "nyc --silent -x '**/fixtures/**' -x '**/*.test.js' npm run test:unit",
     "report": "nyc report",
     "lint": "eslint src tests",
-    "pretest": "npm run lint",
+    "precoverage": "npm run lint",
     "prepublishOnly": "NODE_ENV=production npm run build",
     "test:e2e": "BASE_URL=http://localhost:8080 testcafe --color ${BROWSER:-chrome:headless}"
   },
