@@ -1,5 +1,5 @@
 package-lock.json -diff
 sandbox.iife.* -diff
-docs/test.js -diff
+docs/tests.js -diff
 vendor -diff
 dist -diff
