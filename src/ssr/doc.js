@@ -21,7 +21,7 @@ export function findText(value) {
 }
 
 export function bindHelpers(target) {
-  return { ...target, withText, findText };
+  return Object.assign(target, { withText, findText });
 }
 
 export function encodeText(value) {
