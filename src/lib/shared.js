@@ -1,5 +1,3 @@
-export const CTX = [];
-
 export const RE_XML_SPLIT = /(>)(<)(\/*)/g;
 export const RE_XML_OPEN = /^<\w([^>]*[^/])?>.*$/;
 export const RE_XML_CLOSE_END = /.+<\/\w[^>]*>$/;
@@ -36,6 +34,20 @@ export const SKIP_METHODS = [
   'state',
   'props',
 ];
+
+const CTX = [];
+
+export function pop(scope) {
+  CTX.splice(CTX.indexOf(scope), 1);
+}
+
+export function push(scope) {
+  CTX.push(scope);
+}
+
+export function getContext() {
+  return CTX[CTX.length - 1];
+}
 
 export function assert(vnode) {
   throw new Error(`Invalid vnode, given '${vnode}'`);

@@ -1,8 +1,8 @@
 import { isDiff, isFunction } from './util';
-import { CTX } from './shared';
+import { pop, push, getContext } from './shared';
 
 export function onError(callback) {
-  const scope = CTX[CTX.length - 1];
+  const scope = getContext();
 
   if (!scope) {
     throw new Error('Cannot call onError() outside views');
@@ -12,7 +12,7 @@ export function onError(callback) {
 }
 
 export function useState(fallback) {
-  const scope = CTX[CTX.length - 1];
+  const scope = getContext();
 
   if (!scope) {
     throw new Error('Cannot call useState() outside views');
@@ -31,7 +31,7 @@ export function useState(fallback) {
 }
 
 export function useEffect(callback, inputs) {
-  const scope = CTX[CTX.length - 1];
+  const scope = getContext();
 
   if (!scope) {
     throw new Error('Cannot call useEffect() outside views');
@@ -54,7 +54,6 @@ export function useEffect(callback, inputs) {
 
 export function createContext(tag, createView) {
   return (props, children) => {
-    const key = CTX.length - 1;
     const scope = {
       sync: () => scope.set().then(() => {
         if (scope.get) {
@@ -76,25 +75,26 @@ export function createContext(tag, createView) {
 
     let length;
     return createView(() => {
-      CTX.push(scope);
-
       scope.key = 0;
       scope.fx = 0;
+
+      push(scope);
 
       try {
         const retval = tag(props, children);
 
         if (!scope.length) {
-          CTX.splice(key, 1);
           length = scope.key;
           scope.length = scope.key;
         } else if (length !== scope.key) {
           throw new Error('Calls to useState() must be predictable');
         }
 
+        pop(scope);
+
         return retval;
       } catch (e) {
-        throw new Error(`${tag.name}: ${e.message}`);
+        throw new Error(`${tag.name || 'View'}: ${e.message}`);
       }
     }, sync => { scope.set = sync; });
   };
