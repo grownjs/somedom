@@ -58,11 +58,11 @@ export function createContext(tag, createView) {
     const scope = {
       sync: () => scope.set().then(() => {
         if (scope.get) {
-          return Promise.all(scope.get.map(x => {
+          return Promise.all(scope.get.map(fx => {
             return Promise.resolve()
-              .then(() => x.on && isFunction(x.off) && x.off())
-              .then(() => x.on && x.cb())
-              .then(y => { x.off = y; });
+              .then(() => fx.on && isFunction(fx.off) && fx.off())
+              .then(() => fx.on && fx.cb())
+              .then(x => { fx.off = x; });
           }));
         }
       }).catch(e => {
