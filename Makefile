@@ -15,5 +15,9 @@ e2e: src deps ## Run E2E tests locally
 test: src deps ## Start dev+testing flow
 	@npm run watch
 
+check: src deps ## Run coverage checks locally
+	@npm run coverage
+	@npm run report -- -r html
+
 deps: package*.json
 	@(((ls node_modules | grep .) > /dev/null 2>&1) || npm i) || true
