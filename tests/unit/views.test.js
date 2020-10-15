@@ -13,7 +13,7 @@ import {
 } from '../../src';
 
 import { trim, format } from '../../src/lib/util';
-import { bindHelpers as $$ } from '../../src/ssr';
+import { bindHelpers as $ } from '../../src/ssr';
 
 import doc from './fixtures/document';
 
@@ -23,8 +23,9 @@ beforeEach(doc.enable);
 afterEach(doc.disable);
 
 describe('views', () => {
+  let tag;
+
   describe('createView', () => {
-    let tag;
     let data;
     let actions;
 
@@ -40,11 +41,11 @@ describe('views', () => {
     async function testThunk(value, result, subject, description) {
       const body = document.createElement('body');
       const app = createView(subject, { value }, [description]);
-      const $ = app(body, bind(render, listeners()));
+      const el = app(body, bind(render, listeners()));
 
-      await $$(body).withText(description).dispatch('click');
+      await $(body).withText(description).dispatch('click');
 
-      expect($.target.outerHTML).to.eql(`<button>${description}</button><span>Got: ${result} (${result * 2})</span>`);
+      expect(el.target.outerHTML).to.eql(`<button>${description}</button><span>Got: ${result} (${result * 2})</span>`);
     }
 
     it('can create views from plain objects', async () => {
@@ -73,9 +74,9 @@ describe('views', () => {
 
     it('can be removed from the DOM calling unmount()', async () => {
       const app = createView(tag, data, actions);
-      const $ = app();
+      const el = app();
 
-      await $.unmount();
+      await el.unmount();
 
       expect(document.body.innerHTML).to.eql('');
       expect(td.explain(tag).callCount).to.eql(1);
@@ -83,32 +84,32 @@ describe('views', () => {
 
     it('will render state-driven components', () => {
       const app = createView(tag, data, actions);
-      const $ = app();
+      const el = app();
 
-      expect($.target.outerHTML).to.eql('<a></a>');
+      expect(el.target.outerHTML).to.eql('<a></a>');
       expect(td.explain(tag).callCount).to.eql(1);
     });
 
     it('should re-render on state changes', async () => {
       const app = createView(({ foo }) => [['a', foo]], data, actions);
-      const $ = app();
+      const el = app();
 
-      expect($.state).to.eql({ foo: 'BAR' });
-      expect($.target.outerHTML).to.eql('<a>BAR</a>');
+      expect(el.state).to.eql({ foo: 'BAR' });
+      expect(el.target.outerHTML).to.eql('<a>BAR</a>');
 
-      await $.setFoo('OK');
+      await el.setFoo('OK');
 
-      expect($.state).to.eql({ foo: 'OK' });
-      expect($.target.outerHTML).to.eql('<a>OK</a>');
+      expect(el.state).to.eql({ foo: 'OK' });
+      expect(el.target.outerHTML).to.eql('<a>OK</a>');
     });
 
     it('should allow to subscribe/unsubscribe from state', async () => {
       const app = createView(tag, data, actions);
-      const $ = app();
+      const el = app();
 
       let c = 0;
       let result;
-      const done = $.subscribe(state => {
+      const done = el.subscribe(state => {
         result = state;
         c += 1;
       });
@@ -116,13 +117,13 @@ describe('views', () => {
       expect(result).to.eql({ foo: 'BAR' });
 
       result = -1;
-      await $.setFoo('OK');
+      await el.setFoo('OK');
 
       done();
       expect(result).to.eql({ foo: 'OK' });
 
       result = -1;
-      await $.setFoo('X');
+      await el.setFoo('X');
 
       expect(result).to.eql(-1);
       expect(c).to.eql(2);
@@ -130,8 +131,6 @@ describe('views', () => {
   });
 
   describe('createThunk', () => {
-    const $ = bind(render, listeners());
-
     let MyCounter;
     let ctx;
 
@@ -152,7 +151,8 @@ describe('views', () => {
     }
 
     beforeEach(() => {
-      ctx = createThunk([Main, { value: 42 }], $);
+      tag = bind(render, listeners());
+      ctx = createThunk([Main, { value: 42 }], tag);
       MyCounter = ctx.wrap(CounterView);
     });
 
@@ -182,7 +182,7 @@ describe('views', () => {
       `));
 
       let depth = 0;
-      let obj = $$(node).withText('++');
+      let obj = $(node).withText('++');
 
       while (obj.parentNode) {
         depth += 1;

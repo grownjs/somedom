@@ -8,7 +8,7 @@ import {
 } from '../../src';
 
 import { tick, trim, format } from '../../src/lib/util';
-import { bindHelpers as $$ } from '../../src/ssr';
+import { bindHelpers as $ } from '../../src/ssr';
 import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
@@ -17,6 +17,8 @@ beforeEach(doc.enable);
 afterEach(doc.disable);
 
 describe('somedom', () => {
+  let tag;
+
   describe('h', () => {
     it('should return whatever you pass to', () => {
       expect(h()).to.eql([undefined, undefined, [undefined]]);
@@ -37,7 +39,6 @@ describe('somedom', () => {
   });
 
   describe('bind', () => {
-    let tag;
     let test1;
     let test2;
 
@@ -48,9 +49,9 @@ describe('somedom', () => {
     });
 
     it('should call tag function if arity is <= 2', () => {
-      const $ = bind(tag, test1, test2);
+      const cb = bind(tag, test1, test2);
 
-      expect($(1, 2)).to.be.undefined;
+      expect(cb(1, 2)).to.be.undefined;
 
       expect(td.explain(tag).callCount).to.eql(1);
       expect(td.explain(test1).callCount).to.eql(0);
@@ -58,9 +59,9 @@ describe('somedom', () => {
     });
 
     it('should apply given [...callbacks] if arity >= 3', () => {
-      const $ = bind(tag, test1, test2);
+      const cb = bind(tag, test1, test2);
 
-      expect($(1, 2, 3)).to.be.undefined;
+      expect(cb(1, 2, 3)).to.be.undefined;
 
       expect(td.explain(tag).callCount).to.eql(0);
       expect(td.explain(test1).callCount).to.eql(1);
@@ -77,7 +78,8 @@ describe('somedom', () => {
 
   describe('patch', () => {
     it('will sync event-handlers properly', async () => {
-      const $ = bind(render, listeners());
+      tag = bind(render, listeners());
+
       const rm = td.func('removeItem');
 
       let data = [
@@ -99,13 +101,13 @@ describe('somedom', () => {
       }
 
       let vnode = view();
-      const node = $(vnode);
+      const node = tag(vnode);
 
       node.parentNode = document.createElement('body');
 
       for (let i = 0; i < 2; i += 1) {
-        $$(node).withText(`Item ${i + 1}`).dispatch('click');
-        patch(node, vnode, vnode = view(), null, $, null);
+        $(node).withText(`Item ${i + 1}`).dispatch('click');
+        patch(node, vnode, vnode = view(), null, tag, null);
       }
 
       await tick();

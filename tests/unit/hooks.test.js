@@ -25,7 +25,7 @@ import {
 } from '../../src/lib/ctx';
 
 import { tick } from '../../src/lib/util';
-import { bindHelpers as $$ } from '../../src/ssr';
+import { bindHelpers as $ } from '../../src/ssr';
 
 import doc from './fixtures/document';
 
@@ -333,17 +333,17 @@ describe('hooks', () => {
       const Counter = createView(CounterView);
       const counter = Counter({ value: 42 });
 
-      const $ = bind(render, listeners());
-      const app = counter(null, $);
+      const tag = bind(render, listeners());
+      const app = counter(null, tag);
 
-      await $$(app.target).withText('truth').dispatch('click');
+      await $(app.target).withText('truth').dispatch('click');
 
       expect(stack.join('.')).to.eql('3.AFTER.2.CLEAN.DIV.AFTER');
       expect(app.target.outerHTML).to.contains('<span>value: 42, OSOM</span>');
 
       global.prompt = () => 'WAT';
 
-      await $$(app.target).withText('ask').dispatch('click');
+      await $(app.target).withText('ask').dispatch('click');
 
       expect(stack.join('.')).to.eql('3.AFTER.2.CLEAN.DIV.AFTER.1.CLEAN.DIV.AFTER');
       expect(app.target.outerHTML).to.contains('<span>value: 42, WAT</span>');
