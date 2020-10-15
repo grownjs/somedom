@@ -1,19 +1,29 @@
 (function () {
   'use strict';
 
+  const RE_XML_SPLIT = /(>)(<)(\/*)/g;
+  const RE_XML_CLOSE_END = /.+<\/\w[^>]*>$/;
+  const RE_XML_CLOSE_BEGIN = /^<\/\w/;
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  const XLINK_NS = 'http://www.w3.org/1999/xlink';
+  const ELEM_REGEX = /^(\w*|[.#]\w+)(#[\w-]+)?([\w.-]+)?$/;
+
+  const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
+
+  const SKIP_METHODS = [
+    'constructor',
+    'children',
+    'render',
+    'state',
+    'props',
+  ];
+
   class Fragment {
     constructor(data, cb) {
-      this.childNodes = [];
-
-      if (data) {
-        data.forEach(node => {
-          this.appendChild(cb(node));
-        });
-      }
-    }
-
-    replaceChild(node, target) {
-      this.childNodes[this.childNodes.indexOf(target)] = node;
+      this.childNodes = (data && data.map(cb)) || [];
+      this.nodeType = 11;
     }
 
     appendChild(node) {
@@ -34,26 +44,6 @@
       return this.childNodes.map(node => node.outerHTML || node.nodeValue).join('');
     }
   }
-
-  const RE_XML_SPLIT = /(>)(<)(\/*)/g;
-  const RE_XML_OPEN = /^<\w([^>]*[^/])?>.*$/;
-  const RE_XML_CLOSE_END = /.+<\/\w[^>]*>$/;
-  const RE_XML_CLOSE_BEGIN = /^<\/\w/;
-
-  const SVG_NS = 'http://www.w3.org/2000/svg';
-
-  const XLINK_NS = 'http://www.w3.org/1999/xlink';
-  const ELEM_REGEX = /^(\w*|[.#]\w+)(#[\w-]+)?([\w.-]+)?$/;
-
-  const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
-
-  const SKIP_METHODS = [
-    'constructor',
-    'children',
-    'render',
-    'state',
-    'props',
-  ];
 
   const isArray = value => Array.isArray(value);
   const isFunction = value => typeof value === 'function';
@@ -133,10 +123,8 @@
         if (pad !== 0) {
           pad -= 1;
         }
-      } else if (RE_XML_OPEN.test(line)) {
-        indent = 1;
       } else {
-        indent = 0;
+        indent = 1;
       }
 
       const padding = Array.from({ length: pad + 1 }).join('  ');
@@ -211,8 +199,7 @@
 
     vnode[2] = fixTree(toArray(vnode[2]));
 
-    if (isFunction(vnode[0])) return vnode;
-    if (!isNode(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
+    if (!isNode(vnode) || isFunction(vnode[0])) return vnode;
 
     const matches = vnode[0].match(ELEM_REGEX);
     const name = matches[1] || 'div';
@@ -246,12 +233,8 @@
       if (prop === 'key') return;
 
       if (prop === 'ref') {
-        const oncreate = target.oncreate;
-
         target.oncreate = el => {
           attrs[prop].current = el;
-
-          if (oncreate) return oncreate(el);
         };
         return;
       }
@@ -319,11 +302,11 @@
         retval[0] = retval[0](fixedVNode[1], fixedVNode[2]);
       }
 
-      if (isNode(retval)) {
-        fixedVNode = fixProps(retval);
-      } else {
-        return retval[0];
+      if (!isNode(retval)) {
+        return createElement(retval[0]);
       }
+
+      fixedVNode = fixProps(retval);
     }
 
     const [tag, attrs, children] = fixedVNode;
@@ -377,7 +360,7 @@
 
     const el = isArray(view) || isScalar(view) ? cb(view) : view;
 
-    append(target, el);
+    if (!isUndef(el)) append(target, el);
 
     return el;
   }
@@ -389,34 +372,30 @@
         const b = fixProps(next);
 
         if (isNode(a) && isNode(b)) {
-          if (target.nodeType === 1 && target.tagName.toLowerCase() === a[0]) {
+          if (target.nodeType === 1 && target.tagName.toLowerCase() === b[0]) {
             if (updateProps(target, a[1], b[1], svg, cb)) {
               if (isFunction(target.onupdate)) target.onupdate(target);
               if (isFunction(target.update)) target.update();
             }
 
             sortedZip(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
-          } else if (target.nodeType === 1) {
-            if (a && b && a[0] === b[0]) {
-              updateElement(target.childNodes[0], a, b, svg, cb, null);
-            } else {
-              detach(target.childNodes[0], createElement(b, svg, cb));
-            }
           } else {
             detach(target, createElement(b, svg, cb));
           }
         } else if (!isNode(a) && !isNode(b)) {
-          sortedZip(a, b, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+          sortedZip(fixTree(a), fixTree(b), (x, y, z) => updateElement(target, x, y, svg, cb, z));
         } else {
           replace(target, createElement(b, svg, cb), 0);
         }
+      } else {
+        detach(target, createElement(next, svg, cb));
       }
     } else if (target.childNodes[i]) {
       if (next === null) {
         destroyElement(target.childNodes[i]);
       } else if (isScalar(prev) && isScalar(next)) {
-        if (prev !== next) target.childNodes[i].nodeValue = next;
-      } else if (prev && next && prev[0] === next[0] && target.nodeType === 1) {
+        target.childNodes[i].nodeValue = next;
+      } else if (prev && next && prev[0] === next[0]) {
         updateElement(target.childNodes[i], prev, next, svg, cb, null);
       } else {
         replace(target, createElement(next, svg, cb), i);
@@ -429,7 +408,7 @@
   const STACK = [];
 
   function pop(scope) {
-    STACK.splice(STACK.indexOf(scope), 1);
+    STACK[STACK.indexOf(scope)] = null;
   }
 
   function push(scope) {
@@ -487,11 +466,14 @@
 
     scope.key += 1;
     scope.val = scope.val || [];
-    scope.val[key] = scope.val[key] || fallback;
+
+    if (typeof scope.val[key] === 'undefined') {
+      scope.val[key] = fallback;
+    }
 
     return [scope.val[key], v => {
       scope.val[key] = v;
-      raf(scope.sync);
+      scope.sync();
     }];
   }
 
@@ -514,26 +496,44 @@
 
   function createContext(tag, createView) {
     return (props, children) => {
-      const scope = {
-        sync: () => scope.set().then(() => {
-          if (scope.get) {
-            return Promise.all(scope.get.map(fx => {
-              return Promise.resolve()
-                .then(() => fx.on && isFunction(fx.off) && fx.off())
-                .then(() => fx.on && fx.cb())
-                .then(x => { fx.off = x; });
-            }));
-          }
-        }).catch(e => {
+      let deferred;
+
+      const scope = {};
+
+      function end(skip) {
+        return scope.get.reduce((prev, fx) => {
+          return prev.then(() => fx.off && fx.off())
+            .then(() => !skip && fx.on && fx.cb())
+            .then(x => {
+              if (isFunction(x)) fx.off = x;
+            });
+        }, Promise.resolve());
+      }
+
+      function next(promise) {
+        return promise.catch(e => {
+          if (scope.get) raf(() => end(true));
           if (scope.onError) {
             scope.onError(e);
           } else {
             throw e;
           }
-        }),
-      };
+        }).then(() => {
+          deferred = null;
+        });
+      }
 
-      let length;
+      function after() {
+        if (!scope.get) return;
+        if (deferred) return deferred.then(after);
+        deferred = next(end());
+      }
+
+      scope.sync = () => Promise.resolve().then(() => {
+        if (deferred) return deferred.then(scope.sync);
+        deferred = next(scope.set());
+      });
+
       return createView(() => {
         scope.key = 0;
         scope.fx = 0;
@@ -543,19 +543,20 @@
 
         try {
           const retval = tag(props, children);
+          const key = [scope.key, scope.fx, scope.m].join('.');
 
-          if (!scope.length) {
-            length = scope.key;
-            scope.length = scope.key;
-          } else if (length !== scope.key) {
+          if (!scope.hash) {
+            scope.hash = key;
+          } else if (scope.hash !== key) {
             throw new Error('Hooks must be called in a predictable way');
           }
-
-          pop(scope);
 
           return retval;
         } catch (e) {
           throw new Error(`${tag.name || 'View'}: ${e.message}`);
+        } finally {
+          pop(scope);
+          after();
         }
       }, sync => { scope.set = sync; });
     };
@@ -652,14 +653,14 @@
 
           if (typeof retval === 'object' && typeof retval.then === 'function') {
             return retval.then(result => {
-              if (result && !(isScalar(result) || isArray(result))) {
+              if (isPlain(result)) {
                 return sync(Object.assign(data, result));
               }
               return result;
             });
           }
 
-          if (retval && !(isScalar(retval) || isArray(retval))) {
+          if (isPlain(retval)) {
             sync(Object.assign(data, retval));
           }
 
@@ -853,7 +854,9 @@
   }
 
   const h = (name, attrs, ...children) => {
-    return typeof attrs === 'object' ? [name, attrs, children] : [name, undefined, [attrs].concat(children)];
+    return attrs === null || isPlain(attrs)
+      ? [name, attrs || undefined, children]
+      : [name, undefined, [attrs].concat(children)];
   };
 
   const pre = (vnode, svg, cb = createElement) => {
