@@ -52,6 +52,17 @@ describe('node', () => {
       await destroyElement(div, () => null);
       expect(td.explain(div.remove).callCount).to.eql(0);
     });
+
+    it('should remove all Fragment childNodes', async () => {
+      const vdom = createElement([[['OSOM'], ['SO']]]);
+
+      vdom.childNodes[0].remove = td.func('-OSOM');
+      vdom.childNodes[1].remove = td.func('-SO');
+
+      await vdom.remove();
+      expect(td.explain(vdom.childNodes[0].remove).callCount).to.eql(1);
+      expect(td.explain(vdom.childNodes[1].remove).callCount).to.eql(1);
+    });
   });
 
   describe('createElement', () => {
@@ -290,40 +301,40 @@ describe('node', () => {
       expect(a.outerHTML).to.eql('<a></a>');
     });
 
-    it('can reconcilliate child nodes', () => {
-      updateElement(div, [['a']], ['b', 'OK!']);
-      expect(div.innerHTML).to.eql('<b>OK!</b>');
+    it('can reconcilliate childNodes', () => {
+      updateElement(div, ['div'], ['b', 'OK!']);
+      expect(body.innerHTML).to.eql('<b>OK!</b>');
 
-      updateElement(div, [[['b', 'OK']]], [['b', 'NOT']]);
-      expect(div.innerHTML).to.eql('<b>NOT</b>');
+      updateElement(div, ['b', 'OK!'], [['b', 'NOT']]);
+      expect(body.innerHTML).to.eql('<b>NOT</b>');
     });
 
     it('can reconcilliate root nodes', () => {
-      updateElement(div, ['a'], ['b', 'OK']);
+      updateElement(div, ['div'], ['b', 'OK']);
       expect(body.innerHTML).to.eql('<b>OK</b>');
 
-      updateElement(div, ['a'], [['b', 'OK']]);
+      updateElement(div, ['b', 'OK'], [['b', 'OK']]);
       expect(body.innerHTML).to.eql('<b>OK</b>');
 
-      updateElement(div, [['a']], [[[['b', 'OK']]]]);
+      updateElement(div, [['b', 'OK']], [[[['b', 'OK']]]]);
       expect(body.innerHTML).to.eql('<b>OK</b>');
 
-      updateElement(div, 'foo', 'bar');
+      updateElement(div, [[[['b', 'OK']]]], 'bar');
       expect(body.innerHTML).to.eql('bar');
     });
 
     it('can reconcilliate text nodes', () => {
       updateElement(div, ['div'], [['foo bar']]);
-      expect(body.innerHTML).to.eql('<div>foo bar</div>');
+      expect(body.innerHTML).to.eql('foo bar');
 
-      updateElement(div, [[[['b', 'OK']]]], [['some text', [[['b', 'OK']]]]]);
-      expect(body.innerHTML).to.eql('<div>some text<b>OK</b></div>');
+      updateElement(div, [['foo bar']], [['some text', [[['b', 'OK']]]]]);
+      expect(div.innerHTML).to.eql('some text<b>OK</b>');
 
       updateElement(div, [['some text', ['b', 'OK']]], ['foo ', 'barX']);
-      expect(body.innerHTML).to.eql('<div>foo barX</div>');
+      expect(div.innerHTML).to.eql('foo barX');
 
       updateElement(div, ['foo ', 'barX'], ['a ', 'OK']);
-      expect(body.innerHTML).to.eql('<div>a OK</div>');
+      expect(div.innerHTML).to.eql('a OK');
 
       updateElement(div, ['a', 'OK'], ['a', 'OK']);
       expect(body.innerHTML).to.eql('<a>OK</a>');
@@ -353,8 +364,8 @@ describe('node', () => {
     });
 
     it('can update scalar values', () => {
-      updateElement(div, [['a', 1]], [['a', 0]]);
-      expect(div.outerHTML).to.eql('<div><a>0</a></div>');
+      updateElement(div, ['div', 1], ['div', 0]);
+      expect(body.innerHTML).to.eql('<div>0</div>');
     });
 
     it('will invoke hooks on update', () => {
@@ -395,8 +406,8 @@ describe('node', () => {
     });
 
     it('will append given children', () => {
-      a.appendChild(createElement(['b']));
-      updateElement(a, ['b'], [['i'], [[[['i']]]], [[[[['i']]]]]]);
+      updateElement(a, ['a'], ['a', [['b']]]);
+      updateElement(a, ['a', [['b']]], ['a', [[['i'], [[[['i']]]], [[[[['i']]]]]]]]);
       expect(a.outerHTML).to.eql('<a><i></i><i></i><i></i></a>');
     });
 
@@ -413,7 +424,9 @@ describe('node', () => {
       a.appendChild(createElement($old));
       updateElement(a, $old, $new);
 
-      expect(a.outerHTML).to.eql('<a><del><em>OSOM!</em></del></a>');
+      expect(a.innerHTML).to.eql('<del><em>OSOM!</em></del>');
+      expect(div.innerHTML).to.eql('<a><del><em>OSOM!</em></del></a>');
+      expect(body.innerHTML).to.eql('<div><a><del><em>OSOM!</em></del></a></div>');
     });
   });
 });

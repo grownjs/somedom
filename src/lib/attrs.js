@@ -27,7 +27,7 @@ export function fixProps(vnode) {
     vnode[1] = null;
   }
 
-  vnode[2] = fixTree(toArray(vnode[2]));
+  vnode[2] = toArray(vnode[2]);
 
   if (!isNode(vnode) || isFunction(vnode[0])) return vnode;
 

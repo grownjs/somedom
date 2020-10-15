@@ -33,6 +33,12 @@
       this.childNodes.push(node);
     }
 
+    remove() {
+      return Promise.all(this.childNodes.map(node => {
+        return typeof node.remove === 'function' && node.remove();
+      }));
+    }
+
     mount(target) {
       this.childNodes.forEach(node => {
         if (!(node instanceof Fragment)) {
@@ -200,7 +206,7 @@
       vnode[1] = null;
     }
 
-    vnode[2] = fixTree(toArray(vnode[2]));
+    vnode[2] = toArray(vnode[2]);
 
     if (!isNode(vnode) || isFunction(vnode[0])) return vnode;
 
@@ -374,34 +380,37 @@
         const a = fixProps(prev);
         const b = fixProps(next);
 
-        if (isNode(a) && isNode(b)) {
-          if (target.nodeType === 1 && target.tagName.toLowerCase() === b[0]) {
-            if (updateProps(target, a[1], b[1], svg, cb)) {
-              if (isFunction(target.onupdate)) target.onupdate(target);
-              if (isFunction(target.update)) target.update();
+        if (target.nodeType === 1) {
+          if (isNode(a) && isNode(b)) {
+            if (target.tagName === b[0].toUpperCase()) {
+              if (updateProps(target, a[1], b[1], svg, cb)) {
+                if (isFunction(target.onupdate)) target.onupdate(target);
+                if (isFunction(target.update)) target.update();
+              }
+              sortedZip(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
+            } else {
+              detach(target, createElement(b, svg, cb));
             }
-
-            sortedZip(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
-          } else {
+          } else if (isNode(a)) {
             detach(target, createElement(b, svg, cb));
+          } else {
+            sortedZip(a, b, (x, y, z) => updateElement(target, x, y, svg, cb, z));
           }
-        } else if (!isNode(a) && !isNode(b)) {
-          sortedZip(fixTree(a), fixTree(b), (x, y, z) => updateElement(target, x, y, svg, cb, z));
         } else {
-          replace(target, createElement(b, svg, cb), 0);
+          sortedZip(a, b, (x, y, z) => updateElement(target, x, y, svg, cb, z));
         }
-      } else {
+      } else if (target.nodeType !== 3) {
         detach(target, createElement(next, svg, cb));
+      } else {
+        target.nodeValue = next;
       }
     } else if (target.childNodes[i]) {
-      if (next === null) {
+      if (isUndef(next)) {
         destroyElement(target.childNodes[i]);
-      } else if (isScalar(prev) && isScalar(next)) {
-        target.childNodes[i].nodeValue = next;
-      } else if (prev && next && prev[0] === next[0]) {
-        updateElement(target.childNodes[i], prev, next, svg, cb, null);
-      } else {
+      } else if (!prev || prev[0] !== next[0]) {
         replace(target, createElement(next, svg, cb), i);
+      } else {
+        updateElement(target.childNodes[i], prev, next, svg, cb, null);
       }
     } else {
       append(target, createElement(next, svg, cb));

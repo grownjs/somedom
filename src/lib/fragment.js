@@ -8,6 +8,12 @@ export default class Fragment {
     this.childNodes.push(node);
   }
 
+  remove() {
+    return Promise.all(this.childNodes.map(node => {
+      return typeof node.remove === 'function' && node.remove();
+    }));
+  }
+
   mount(target) {
     this.childNodes.forEach(node => {
       if (!(node instanceof Fragment)) {
