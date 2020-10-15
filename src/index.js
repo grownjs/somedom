@@ -26,13 +26,15 @@ import {
 } from './lib/props';
 
 import {
-  apply, format, filter, isFunction,
+  apply, format, filter, isPlain, isFunction,
 } from './lib/util';
 
 import { addEvents } from './lib/events';
 
 export const h = (name, attrs, ...children) => {
-  return typeof attrs === 'object' ? [name, attrs, children] : [name, undefined, [attrs].concat(children)];
+  return attrs === null || isPlain(attrs)
+    ? [name, attrs || undefined, children]
+    : [name, undefined, [attrs].concat(children)];
 };
 
 export const pre = (vnode, svg, cb = render) => {

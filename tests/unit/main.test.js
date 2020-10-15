@@ -20,6 +20,8 @@ describe('somedom', () => {
   describe('h', () => {
     it('should return whatever you pass to', () => {
       expect(h()).to.eql([undefined, undefined, [undefined]]);
+      expect(h(1, null, 2)).to.eql([1, undefined, [2]]);
+      expect(h(1, {}, 2)).to.eql([1, {}, [2]]);
       expect(h(1, 2, 3, 4, 5)).to.eql([1, undefined, [2, 3, 4, 5]]);
     });
   });
