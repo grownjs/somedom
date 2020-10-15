@@ -1,6 +1,7 @@
 export default class Fragment {
   constructor(data, cb) {
     this.childNodes = (data && data.map(cb)) || [];
+    this.nodeType = 11;
   }
 
   appendChild(node) {
