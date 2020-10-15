@@ -74,6 +74,8 @@ export function createContext(tag, createView) {
   return (props, children) => {
     let deferred;
 
+    const scope = {};
+
     function end(skip) {
       return scope.get.reduce((prev, fx) => {
         return prev.then(() => fx.off && fx.off())
@@ -81,7 +83,7 @@ export function createContext(tag, createView) {
           .then(x => {
             if (isFunction(x)) fx.off = x;
           });
-      }, Promise.resolve())
+      }, Promise.resolve());
     }
 
     function next(promise) {
@@ -94,7 +96,7 @@ export function createContext(tag, createView) {
         }
       }).then(() => {
         deferred = null;
-      })
+      });
     }
 
     function after() {
@@ -103,12 +105,10 @@ export function createContext(tag, createView) {
       deferred = next(end());
     }
 
-    const scope = {
-      sync: () => Promise.resolve().then(() => {
-        if (deferred) return deferred.then(scope.sync);
-        deferred = next(scope.set());
-      }),
-    };
+    scope.sync = () => Promise.resolve().then(() => {
+      if (deferred) return deferred.then(scope.sync);
+      deferred = next(scope.set());
+    });
 
     return createView(() => {
       scope.key = 0;

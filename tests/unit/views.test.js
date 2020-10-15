@@ -9,18 +9,10 @@ import {
 } from '../../src/lib/views';
 
 import {
-  onError,
-  useRef,
-  useMemo,
-  useState,
-  useEffect,
-} from '../../src/lib/hooks';
-
-import {
   bind, render, listeners,
 } from '../../src';
 
-import { tick, trim, format } from '../../src/lib/util';
+import { trim, format } from '../../src/lib/util';
 import { bindHelpers as $$ } from '../../src/ssr';
 
 import doc from './fixtures/document';
@@ -30,7 +22,7 @@ import doc from './fixtures/document';
 beforeEach(doc.enable);
 afterEach(doc.disable);
 
-describe('thunks', () => {
+describe('views', () => {
   describe('createView', () => {
     let tag;
     let data;
@@ -134,85 +126,6 @@ describe('thunks', () => {
 
       expect(result).to.eql(-1);
       expect(c).to.eql(2);
-    });
-
-    it('should fail on calling hooks outside views', () => {
-      let error;
-      try {
-        useRef();
-      } catch (e) {
-        error = e;
-      }
-
-      expect(error.message).to.eql('Cannot call getContext() outside views');
-    });
-
-    it('should allow to capture context through hooks', async () => {
-      const values = [1, 2, 3];
-      const stack = [];
-
-      let broke;
-      function CounterView(props = {}) {
-        const [value, setValue] = useState(props.value || Math.random());
-
-        if (broke) useState();
-
-        const [other, setOther] = useState('FIXME');
-        const fixedValues = useMemo(() => values.slice(), []);
-        const myValue = useMemo(() => fixedValues.pop(), [other]);
-        const myRef = useRef();
-
-        stack.push(myValue);
-
-        useEffect(() => {
-          stack.push('AFTER');
-
-          return () => {
-            stack.push('CLEAN');
-            stack.push(myRef.current.tagName);
-          };
-        }, [other]);
-
-        return [[['div', { ref: myRef }, [[
-          ['button', { onclick: () => setValue(value - Math.random()) }, '--'],
-          ['button', { onclick: () => setValue(value + Math.random()) }, '++'],
-          ['button', { onclick: () => setOther(prompt('Value?')) }, 'ask'], // eslint-disable-line
-          ['button', { onclick: () => setOther('OSOM') }, 'truth'],
-          ['span', [['value: ', value, ', ', other]]],
-        ]]]]];
-      }
-
-      const Counter = createView(CounterView);
-      const counter = Counter({ value: 42 });
-
-      const $ = bind(render, listeners());
-      const app = counter(null, $);
-
-      await $$(app.target).withText('truth').dispatch('click');
-
-      expect(stack).to.eql([3, 2]);
-      expect(app.target.outerHTML).to.contains('<span>value: 42, OSOM</span>');
-
-      await tick();
-      expect(stack).to.eql([3, 2, 'AFTER']);
-
-      global.prompt = () => 'WAT';
-      await $$(app.target).withText('ask').dispatch('click');
-
-      expect(app.target.outerHTML).to.contains('<span>value: 42, WAT</span>');
-
-      await tick();
-      expect(stack).to.eql([3, 2, 'AFTER', 1, 'CLEAN', 'DIV', 'AFTER']);
-
-      broke = true;
-      await $$(app.target).withText('++').dispatch('click');
-
-      let error;
-      onError(e => { error = e; });
-
-      await tick();
-      expect(stack).to.eql([3, 2, 'AFTER', 1, 'CLEAN', 'DIV', 'AFTER', undefined]);
-      expect(error.message).to.contains('Hooks must be called in a predictable way');
     });
   });
 

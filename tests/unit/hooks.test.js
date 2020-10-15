@@ -5,7 +5,6 @@ import { expect } from 'chai';
 
 import {
   createView,
-  createThunk,
 } from '../../src/lib/views';
 
 import {
@@ -25,7 +24,7 @@ import {
   getContext,
 } from '../../src/lib/ctx';
 
-import { tick, trim, format } from '../../src/lib/util';
+import { tick } from '../../src/lib/util';
 import { bindHelpers as $$ } from '../../src/ssr';
 
 import doc from './fixtures/document';
@@ -36,7 +35,10 @@ beforeEach(doc.enable);
 afterEach(doc.disable);
 
 describe('hooks', () => {
-  let scope, error, sync, view;
+  let scope;
+  let error;
+  let sync;
+  let view;
 
   beforeEach(() => {
     scope = null;
@@ -84,13 +86,15 @@ describe('hooks', () => {
     });
 
     it('should handle context on nested calls', async () => {
-      let a, b, c;
+      let a;
+      let b;
+      let c;
 
       function wrap(tag) {
         return (props, children) => {
-          const doc = document.createDocumentFragment();
-          tag(props, children)(doc);
-          return doc;
+          const target = document.createDocumentFragment();
+          tag(props, children)(target);
+          return target;
         };
       }
 
@@ -168,7 +172,7 @@ describe('hooks', () => {
     it('should raise failures otherwise', async () => {
       function callback(e) {
         error = e;
-      };
+      }
 
       const app = await createContext(() => {
         useEffect(() => {
@@ -197,7 +201,7 @@ describe('hooks', () => {
       let ref;
       createContext(() => {
         ref = useRef();
-        return ['span', { ref }];
+        return ['span', { ref }];
       }, createView)()();
 
       expect(ref.current.outerHTML).to.eql('<span></span>');
@@ -207,7 +211,6 @@ describe('hooks', () => {
   describe('useMemo()', () => {
     it('should return same value on unchanged deps', async () => {
       const callback = td.func('truth');
-      const stack = [];
 
       td.when(callback())
         .thenReturn(42);
@@ -345,5 +348,5 @@ describe('hooks', () => {
       expect(stack.join('.')).to.eql('3.AFTER.2.CLEAN.DIV.AFTER.1.CLEAN.DIV.AFTER');
       expect(app.target.outerHTML).to.contains('<span>value: 42, WAT</span>');
     });
-  })
+  });
 });
