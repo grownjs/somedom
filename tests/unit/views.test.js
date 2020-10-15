@@ -71,7 +71,7 @@ describe('views', () => {
 
       it('should call state() if it is a function', () => {
         const state = td.func('state');
-        const result = Symbol();
+        const result = Symbol('result');
 
         td.when(state(td.matchers.anything()))
           .thenReturn(result);
@@ -109,7 +109,7 @@ describe('views', () => {
       let Test;
 
       beforeEach(() => {
-        Test = class {};
+        Test = require('./fixtures/class');
       });
 
       it('should return wrapped classes as view params', () => {
@@ -153,7 +153,7 @@ describe('views', () => {
 
       it('should call state() if it is a function', () => {
         const state = Test.prototype.state = td.func('state');
-        const result = Symbol();
+        const result = Symbol('result');
 
         Test.prototype.render = () => null;
 
@@ -239,7 +239,7 @@ describe('views', () => {
       const app = view();
 
       td.when(callback(td.matchers.anything()))
-        .thenDo(callback => callback({ value: 42 }));
+        .thenDo(ok => ok({ value: 42 }));
 
       expect(app.target).not.to.be.undefined;
       expect(app.target.outerHTML).to.eql('<a></a>');
@@ -286,7 +286,7 @@ describe('views', () => {
       const callback = td.func('callback');
 
       td.when(actions.test())
-        .thenReturn(() => ({ x: 42 }))
+        .thenReturn(() => ({ x: 42 }));
 
       const view = createView(props => ['pre', JSON.stringify(props)], null, actions);
       const app = view();
@@ -310,6 +310,7 @@ describe('views', () => {
         render() {
           return ['div', [this.state.value]];
         }
+
         update() {
           return { value: `${this.props.value}!` };
         }

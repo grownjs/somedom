@@ -14,11 +14,14 @@
 
   const SKIP_METHODS = [
     'constructor',
+    'instance',
     'children',
     'render',
     'state',
     'props',
   ];
+
+  const SHARED_CONTEXT = [];
 
   class Fragment {
     constructor(data, cb) {
@@ -405,24 +408,293 @@
     }
   }
 
-  const STACK = [];
-
   function pop(scope) {
-    STACK[STACK.indexOf(scope)] = null;
+    SHARED_CONTEXT[SHARED_CONTEXT.indexOf(scope)] = null;
   }
 
   function push(scope) {
-    STACK.push(scope);
+    SHARED_CONTEXT.push(scope);
   }
 
   function getContext() {
-    const scope = STACK[STACK.length - 1];
+    const scope = SHARED_CONTEXT[SHARED_CONTEXT.length - 1];
 
     if (!scope) {
       throw new Error('Cannot call getContext() outside views');
     }
 
     return scope;
+  }
+
+  function createContext(tag, view) {
+    return (props, children) => {
+      let deferred;
+
+      const scope = {};
+
+      function end(skip) {
+        return scope.get.reduce((prev, fx) => {
+          return prev.then(() => fx.off && fx.off())
+            .then(() => !skip && fx.on && fx.cb())
+            .then(x => {
+              if (isFunction(x)) fx.off = x;
+            });
+        }, Promise.resolve());
+      }
+
+      function next(promise) {
+        return promise.catch(e => {
+          if (scope.get) raf(() => end(true));
+          if (scope.onError) {
+            scope.onError(e);
+          } else {
+            throw e;
+          }
+        }).then(() => {
+          deferred = null;
+        });
+      }
+
+      function after() {
+        if (!scope.get) return;
+        if (deferred) return deferred.then(after);
+        deferred = next(end());
+      }
+
+      scope.sync = () => Promise.resolve().then(() => {
+        if (deferred) return deferred.then(scope.sync);
+        deferred = next(scope.set());
+      });
+
+      return view(() => {
+        scope.key = 0;
+        scope.fx = 0;
+        scope.m = 0;
+
+        push(scope);
+
+        try {
+          const retval = tag(props, children);
+          const key = [scope.key, scope.fx, scope.m].join('.');
+
+          if (!scope.hash) {
+            scope.hash = key;
+          } else if (scope.hash !== key) {
+            throw new Error('Hooks must be called in a predictable way');
+          }
+
+          return retval;
+        } catch (e) {
+          throw new Error(`${tag.name || 'View'}: ${e.message}`);
+        } finally {
+          pop(scope);
+          after();
+        }
+      }, sync => { scope.set = sync; });
+    };
+  }
+
+  function getDecorated(Tag, state, actions, children) {
+    if (isPlain(Tag) && isFunction(Tag.render)) {
+      const factory = Tag;
+
+      Tag = (_state, _actions) => factory.render(_state, _actions, children);
+
+      state = isFunction(factory.state) ? factory.state(state) : factory.state || state;
+      actions = Object.keys(factory).reduce((memo, key) => {
+        if (!SKIP_METHODS.includes(key) && isFunction(factory[key])) {
+          memo[key] = (...args) => factory[key](...args);
+        }
+        return memo;
+      }, {});
+    }
+
+    let instance;
+    if (
+      isFunction(Tag)
+      && (Tag.prototype && isFunction(Tag.prototype.render))
+      && (Tag.constructor === Function && Tag.prototype.constructor !== Function)
+    ) {
+      instance = new Tag(state, children);
+      instance.props = clone(state || {});
+
+      Tag = _state => (instance.state = _state, instance.render()); // eslint-disable-line
+
+      state = isFunction(instance.state) ? instance.state(state) : instance.state || state;
+      actions = getMethods(instance).reduce((memo, key) => {
+        if (key.charAt() !== '_') {
+          const method = instance[key].bind(instance);
+
+          memo[key] = (...args) => () => method(...args);
+          instance[key] = (...args) => memo[key](...args);
+        }
+        return memo;
+      }, {});
+    }
+
+    return {
+      Tag, state, actions, instance,
+    };
+  }
+
+  function createView(Factory, initialState, userActions, refreshCallback) {
+    const children = isArray(userActions) ? userActions : undefined;
+
+    userActions = isPlain(userActions) ? userActions : {};
+
+    if (isFunction(initialState)) {
+      refreshCallback = initialState;
+      initialState = null;
+    }
+
+    const {
+      Tag, state, actions, instance,
+    } = getDecorated(Factory, initialState, userActions, children);
+
+    if (!instance && isFunction(Factory) && arguments.length === 1) {
+      return createContext(Factory, createView);
+    }
+
+    return (el, cb = createElement, hook = refreshCallback) => {
+      const data = clone(state || {});
+      const fns = [];
+
+      let childNode;
+      let vnode;
+      let $;
+
+      function sync(result) {
+        return Promise.all(fns.map(fn => fn(data, $)))
+          .then(() => {
+            updateElement(childNode, vnode, vnode = fixTree(Tag(data, $)), null, cb, null);
+          })
+          .then(() => result);
+      }
+
+      if (hook) {
+        hook(payload => sync(Object.assign(data, payload)));
+      }
+
+      // decorate given actions
+      $ = Object.keys(actions).reduce((memo, fn) => {
+        const method = actions[fn];
+
+        if (!isFunction(method)) {
+          throw new Error(`Invalid action, given ${method} (${fn})`);
+        }
+
+        memo[fn] = (...args) => {
+          const retval = method(...args)(data, $);
+
+          if (isObject(retval) && isFunction(retval.then)) {
+            return retval.then(result => {
+              if (isPlain(result)) {
+                return sync(Object.assign(data, result));
+              }
+              return result;
+            });
+          }
+
+          if (isPlain(retval)) {
+            sync(Object.assign(data, retval));
+          }
+
+          return retval;
+        };
+
+        if (instance) {
+          instance[fn] = memo[fn];
+          memo.instance = instance;
+        }
+
+        return memo;
+      }, {});
+
+      $.subscribe = fn => {
+        Promise.resolve(fn(data, $)).then(() => fns.push(fn));
+
+        return () => {
+          fns.splice(fns.indexOf(fn), 1);
+        };
+      };
+
+      $.unmount = _cb => destroyElement(childNode, _cb);
+
+      Object.defineProperty($, 'state', {
+        configurable: false,
+        enumerable: true,
+        get: () => data,
+      });
+
+      childNode = mountElement(el, vnode = fixTree(Tag(data, $)), cb);
+      $.target = childNode;
+
+      return $;
+    };
+  }
+
+  function createThunk(vnode, cb = createElement) {
+    const ctx = {
+      refs: {},
+      render: cb,
+      source: null,
+      vnode: vnode || ['div'],
+      thunk: createView(() => ctx.vnode, null),
+    };
+
+    ctx.unmount = async _cb => {
+      const tasks = [];
+
+      Object.keys(ctx.refs).forEach(ref => {
+        ctx.refs[ref].forEach(thunk => {
+          tasks.push(thunk.target.remove());
+        });
+      });
+
+      await Promise.all(tasks);
+
+      if (ctx.source) {
+        await destroyElement(ctx.source.target, _cb);
+      }
+    };
+
+    ctx.mount = async (el, _vnode) => {
+      await ctx.unmount();
+
+      ctx.vnode = _vnode || ctx.vnode;
+      ctx.source = ctx.thunk(el, ctx.render);
+
+      return ctx;
+    };
+
+    ctx.wrap = (tag, name) => {
+      if (!isFunction(tag)) throw new Error(`Expecting a view factory, given '${tag}'`);
+
+      return (props, children) => {
+        const identity = name || tag.name || 'Thunk';
+        const target = document.createDocumentFragment();
+        const thunk = tag(props, children)(target, ctx.render);
+
+        ctx.refs[identity] = ctx.refs[identity] || [];
+        ctx.refs[identity].push(thunk);
+
+        const _remove = thunk.target.remove;
+
+        thunk.target.remove = target.remove = _cb => Promise.resolve()
+          .then(() => {
+            ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);
+
+            if (!ctx.refs[identity].length) {
+              delete ctx.refs[identity];
+            }
+          })
+          .then(() => _remove(_cb));
+
+        return target;
+      };
+    };
+
+    return ctx;
   }
 
   function onError(callback) {
@@ -492,259 +764,6 @@
     scope.get[key] = scope.get[key] || {};
 
     Object.assign(scope.get[key], { cb: callback, on: enabled });
-  }
-
-  function createContext(tag, createView) {
-    return (props, children) => {
-      let deferred;
-
-      const scope = {};
-
-      function end(skip) {
-        return scope.get.reduce((prev, fx) => {
-          return prev.then(() => fx.off && fx.off())
-            .then(() => !skip && fx.on && fx.cb())
-            .then(x => {
-              if (isFunction(x)) fx.off = x;
-            });
-        }, Promise.resolve());
-      }
-
-      function next(promise) {
-        return promise.catch(e => {
-          if (scope.get) raf(() => end(true));
-          if (scope.onError) {
-            scope.onError(e);
-          } else {
-            throw e;
-          }
-        }).then(() => {
-          deferred = null;
-        });
-      }
-
-      function after() {
-        if (!scope.get) return;
-        if (deferred) return deferred.then(after);
-        deferred = next(end());
-      }
-
-      scope.sync = () => Promise.resolve().then(() => {
-        if (deferred) return deferred.then(scope.sync);
-        deferred = next(scope.set());
-      });
-
-      return createView(() => {
-        scope.key = 0;
-        scope.fx = 0;
-        scope.m = 0;
-
-        push(scope);
-
-        try {
-          const retval = tag(props, children);
-          const key = [scope.key, scope.fx, scope.m].join('.');
-
-          if (!scope.hash) {
-            scope.hash = key;
-          } else if (scope.hash !== key) {
-            throw new Error('Hooks must be called in a predictable way');
-          }
-
-          return retval;
-        } catch (e) {
-          throw new Error(`${tag.name || 'View'}: ${e.message}`);
-        } finally {
-          pop(scope);
-          after();
-        }
-      }, sync => { scope.set = sync; });
-    };
-  }
-
-  function getDecorated(Tag, state, actions, children) {
-    if (typeof Tag === 'object') {
-      const factory = Tag;
-
-      Tag = (_state, _actions) => factory.render(_state, _actions, children);
-
-      state = (typeof factory.state === 'function' && factory.state(state)) || state;
-      actions = Object.keys(factory).reduce((memo, key) => {
-        if (key !== 'state' && key !== 'render' && typeof factory[key] === 'function') {
-          memo[key] = (...args) => factory[key](...args);
-        }
-        return memo;
-      }, {});
-    }
-
-    let instance;
-    if (
-      typeof Tag === 'function'
-      && (Tag.prototype && typeof Tag.prototype.render === 'function')
-      && (Tag.constructor === Function && Tag.prototype.constructor !== Function)
-    ) {
-      instance = new Tag(state, children);
-
-      Tag = _state => (instance.state = _state, instance.render()); // eslint-disable-line
-
-      state = instance.state || state;
-      actions = getMethods(instance).reduce((memo, key) => {
-        if (key.charAt() !== '_') {
-          const method = instance[key].bind(instance);
-
-          memo[key] = (...args) => () => method(...args);
-          instance[key] = (...args) => memo[key](...args);
-        }
-        return memo;
-      }, {});
-    }
-
-    return {
-      Tag, state, actions, instance,
-    };
-  }
-
-  function createView(Factory, initialState, userActions, refreshCallback) {
-    const children = isArray(userActions) ? userActions : undefined;
-
-    if (typeof initialState === 'function') {
-      refreshCallback = initialState;
-      initialState = null;
-    }
-
-    const {
-      Tag, state, actions, instance,
-    } = getDecorated(Factory, initialState, userActions || {}, children);
-
-    if (!instance && isFunction(Factory) && arguments.length === 1) {
-      return createContext(Factory, createView);
-    }
-
-    return (el, cb = createElement, hook = refreshCallback) => {
-      const data = clone(state || {});
-      const fns = [];
-
-      let childNode;
-      let vnode;
-      let $;
-
-      function sync(result) {
-        return Promise.all(fns.map(fn => fn(data, $)))
-          .then(() => {
-            updateElement(childNode, vnode, vnode = fixTree(Tag(data, $)), null, cb, null);
-          })
-          .then(() => result);
-      }
-
-      if (hook) {
-        hook(payload => sync(Object.assign(data, payload)));
-      }
-
-      // decorate given actions
-      $ = Object.keys(actions).reduce((memo, fn) => {
-        const method = actions[fn];
-
-        if (typeof method !== 'function') {
-          throw new Error(`Invalid action, given ${method} (${fn})`);
-        }
-
-        memo[fn] = (...args) => {
-          const retval = method(...args)(data, $);
-
-          if (typeof retval === 'object' && typeof retval.then === 'function') {
-            return retval.then(result => {
-              if (isPlain(result)) {
-                return sync(Object.assign(data, result));
-              }
-              return result;
-            });
-          }
-
-          if (isPlain(retval)) {
-            sync(Object.assign(data, retval));
-          }
-
-          return retval;
-        };
-
-        if (instance) {
-          instance[fn] = memo[fn];
-        }
-
-        return memo;
-      }, {});
-
-      $.subscribe = fn => {
-        Promise.resolve(fn(data, $)).then(() => fns.push(fn));
-
-        return () => {
-          fns.splice(fns.indexOf(fn), 1);
-        };
-      };
-
-      $.unmount = _cb => destroyElement(childNode, _cb);
-
-      Object.defineProperty($, 'state', {
-        configurable: false,
-        enumerable: true,
-        get: () => data,
-      });
-
-      childNode = mountElement(el, vnode = fixTree(Tag(data, $)), cb);
-      $.target = childNode;
-
-      return $;
-    };
-  }
-
-  function createThunk(vnode, cb = createElement) {
-    const ctx = {
-      refs: {},
-      render: cb,
-      source: null,
-      vnode: vnode || ['div'],
-      thunk: createView(() => ctx.vnode, null),
-    };
-
-    ctx.unmount = async _cb => {
-      if (ctx.source) {
-        await destroyElement(ctx.source.target, _cb);
-      }
-    };
-
-    ctx.mount = async (el, _vnode) => {
-      await ctx.unmount();
-
-      ctx.vnode = _vnode || ctx.vnode;
-      ctx.source = ctx.thunk(el, ctx.render);
-
-      return ctx;
-    };
-
-    ctx.wrap = (tag, name) => (props, children) => {
-      const identity = name || tag.name || 'Thunk';
-      const target = document.createDocumentFragment();
-      const thunk = tag(props, children)(target, ctx.render);
-
-      ctx.refs[identity] = ctx.refs[identity] || [];
-      ctx.refs[identity].push(thunk);
-
-      const _remove = thunk.target.remove;
-
-      thunk.target.remove = target.remove = _cb => Promise.resolve()
-        .then(() => {
-          ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);
-
-          if (!ctx.refs[identity].length) {
-            delete ctx.refs[identity];
-          }
-        })
-        .then(() => _remove(_cb));
-
-      return target;
-    };
-
-    return ctx;
   }
 
   function values(attrs, cb) {

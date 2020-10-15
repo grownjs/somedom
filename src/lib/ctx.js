@@ -1,5 +1,5 @@
 import { raf, isFunction } from './util';
-import { SHARED_CONTEXT as context } from './shared'
+import { SHARED_CONTEXT as context } from './shared';
 
 export function pop(scope) {
   context[context.indexOf(scope)] = null;

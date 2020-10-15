@@ -1,5 +1,5 @@
-import { raf, isDiff, isFunction } from './util';
-import { pop, push, getContext } from './ctx';
+import { isDiff } from './util';
+import { getContext } from './ctx';
 
 export { createContext } from './ctx';
 
