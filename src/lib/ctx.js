@@ -1,7 +1,7 @@
 const STACK = [];
 
 export function pop(scope) {
-  STACK.splice(STACK.indexOf(scope), 1);
+  STACK[STACK.indexOf(scope)] = null;
 }
 
 export function push(scope) {
