@@ -28,8 +28,11 @@ export const CLOSE_TAGS = [
 
 export const SKIP_METHODS = [
   'constructor',
+  'instance',
   'children',
   'render',
   'state',
   'props',
 ];
+
+export const SHARED_CONTEXT = [];

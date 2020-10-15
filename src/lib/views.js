@@ -11,7 +11,7 @@ import {
 } from './shared';
 
 import { fixTree } from './attrs';
-import { createContext } from './hooks';
+import { createContext } from './ctx';
 
 export function getDecorated(Tag, state, actions, children) {
   if (isPlain(Tag) && isFunction(Tag.render)) {
