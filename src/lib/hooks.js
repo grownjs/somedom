@@ -42,11 +42,14 @@ export function useState(fallback) {
 
   scope.key += 1;
   scope.val = scope.val || [];
-  scope.val[key] = scope.val[key] || fallback;
+
+  if (typeof scope.val[key] === 'undefined') {
+    scope.val[key] = fallback;
+  }
 
   return [scope.val[key], v => {
     scope.val[key] = v;
-    raf(scope.sync);
+    scope.sync();
   }];
 }
 
@@ -69,26 +72,44 @@ export function useEffect(callback, inputs) {
 
 export function createContext(tag, createView) {
   return (props, children) => {
-    const scope = {
-      sync: () => scope.set().then(() => {
-        if (scope.get) {
-          return Promise.all(scope.get.map(fx => {
-            return Promise.resolve()
-              .then(() => fx.on && isFunction(fx.off) && fx.off())
-              .then(() => fx.on && fx.cb())
-              .then(x => { fx.off = x; });
-          }));
-        }
-      }).catch(e => {
+    let deferred;
+
+    function end(skip) {
+      return scope.get.reduce((prev, fx) => {
+        return prev.then(() => fx.off && fx.off())
+          .then(() => !skip && fx.on && fx.cb())
+          .then(x => {
+            if (isFunction(x)) fx.off = x;
+          });
+      }, Promise.resolve())
+    }
+
+    function next(promise) {
+      return promise.catch(e => {
+        if (scope.get) raf(() => end(true));
         if (scope.onError) {
           scope.onError(e);
         } else {
           throw e;
         }
+      }).then(() => {
+        deferred = null;
+      })
+    }
+
+    function after() {
+      if (!scope.get) return;
+      if (deferred) return deferred.then(after);
+      deferred = next(end());
+    }
+
+    const scope = {
+      sync: () => Promise.resolve().then(() => {
+        if (deferred) return deferred.then(scope.sync);
+        deferred = next(scope.set());
       }),
     };
 
-    let length;
     return createView(() => {
       scope.key = 0;
       scope.fx = 0;
@@ -98,19 +119,20 @@ export function createContext(tag, createView) {
 
       try {
         const retval = tag(props, children);
+        const key = [scope.key, scope.fx, scope.m].join('.');
 
-        if (!scope.length) {
-          length = scope.key;
-          scope.length = scope.key;
-        } else if (length !== scope.key) {
+        if (!scope.hash) {
+          scope.hash = key;
+        } else if (scope.hash !== key) {
           throw new Error('Hooks must be called in a predictable way');
         }
-
-        pop(scope);
 
         return retval;
       } catch (e) {
         throw new Error(`${tag.name || 'View'}: ${e.message}`);
+      } finally {
+        pop(scope);
+        after();
       }
     }, sync => { scope.set = sync; });
   };
