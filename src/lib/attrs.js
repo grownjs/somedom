@@ -29,8 +29,7 @@ export function fixProps(vnode) {
 
   vnode[2] = fixTree(toArray(vnode[2]));
 
-  if (isFunction(vnode[0])) return vnode;
-  if (!isNode(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
+  if (!isNode(vnode) || isFunction(vnode[0])) return vnode;
 
   const matches = vnode[0].match(ELEM_REGEX);
   const name = matches[1] || 'div';
@@ -64,12 +63,8 @@ export function assignProps(target, attrs, svg, cb) {
     if (prop === 'key') return;
 
     if (prop === 'ref') {
-      const oncreate = target.oncreate;
-
       target.oncreate = el => {
         attrs[prop].current = el;
-
-        if (oncreate) return oncreate(el);
       };
       return;
     }
