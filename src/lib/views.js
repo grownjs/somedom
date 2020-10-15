@@ -3,21 +3,25 @@ import {
 } from './node';
 
 import {
-  getMethods, isFunction, isPlain, isArray, clone,
+  getMethods, isFunction, isObject, isPlain, isArray, clone,
 } from './util';
+
+import {
+  SKIP_METHODS,
+} from './shared';
 
 import { fixTree } from './attrs';
 import { createContext } from './hooks';
 
 export function getDecorated(Tag, state, actions, children) {
-  if (typeof Tag === 'object') {
+  if (isPlain(Tag) && isFunction(Tag.render)) {
     const factory = Tag;
 
     Tag = (_state, _actions) => factory.render(_state, _actions, children);
 
-    state = (typeof factory.state === 'function' && factory.state(state)) || state;
+    state = isFunction(factory.state) ? factory.state(state) : factory.state || state;
     actions = Object.keys(factory).reduce((memo, key) => {
-      if (key !== 'state' && key !== 'render' && typeof factory[key] === 'function') {
+      if (!SKIP_METHODS.includes(key) && isFunction(factory[key])) {
         memo[key] = (...args) => factory[key](...args);
       }
       return memo;
@@ -26,15 +30,16 @@ export function getDecorated(Tag, state, actions, children) {
 
   let instance;
   if (
-    typeof Tag === 'function'
-    && (Tag.prototype && typeof Tag.prototype.render === 'function')
+    isFunction(Tag)
+    && (Tag.prototype && isFunction(Tag.prototype.render))
     && (Tag.constructor === Function && Tag.prototype.constructor !== Function)
   ) {
     instance = new Tag(state, children);
+    instance.props = clone(state || {});
 
     Tag = _state => (instance.state = _state, instance.render()); // eslint-disable-line
 
-    state = instance.state || state;
+    state = isFunction(instance.state) ? instance.state(state) : instance.state || state;
     actions = getMethods(instance).reduce((memo, key) => {
       if (key.charAt() !== '_') {
         const method = instance[key].bind(instance);
@@ -54,14 +59,16 @@ export function getDecorated(Tag, state, actions, children) {
 export function createView(Factory, initialState, userActions, refreshCallback) {
   const children = isArray(userActions) ? userActions : undefined;
 
-  if (typeof initialState === 'function') {
+  userActions = isPlain(userActions) ? userActions : {};
+
+  if (isFunction(initialState)) {
     refreshCallback = initialState;
     initialState = null;
   }
 
   const {
     Tag, state, actions, instance,
-  } = getDecorated(Factory, initialState, userActions || {}, children);
+  } = getDecorated(Factory, initialState, userActions, children);
 
   if (!instance && isFunction(Factory) && arguments.length === 1) {
     return createContext(Factory, createView);
@@ -91,14 +98,14 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
     $ = Object.keys(actions).reduce((memo, fn) => {
       const method = actions[fn];
 
-      if (typeof method !== 'function') {
+      if (!isFunction(method)) {
         throw new Error(`Invalid action, given ${method} (${fn})`);
       }
 
       memo[fn] = (...args) => {
         const retval = method(...args)(data, $);
 
-        if (typeof retval === 'object' && typeof retval.then === 'function') {
+        if (isObject(retval) && isFunction(retval.then)) {
           return retval.then(result => {
             if (isPlain(result)) {
               return sync(Object.assign(data, result));
@@ -116,6 +123,7 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
 
       if (instance) {
         instance[fn] = memo[fn];
+        memo.instance = instance;
       }
 
       return memo;
@@ -154,6 +162,16 @@ export function createThunk(vnode, cb = createElement) {
   };
 
   ctx.unmount = async _cb => {
+    const tasks = [];
+
+    Object.keys(ctx.refs).forEach(ref => {
+      ctx.refs[ref].forEach(thunk => {
+        tasks.push(thunk.target.remove());
+      });
+    });
+
+    await Promise.all(tasks);
+
     if (ctx.source) {
       await destroyElement(ctx.source.target, _cb);
     }
@@ -168,27 +186,31 @@ export function createThunk(vnode, cb = createElement) {
     return ctx;
   };
 
-  ctx.wrap = (tag, name) => (props, children) => {
-    const identity = name || tag.name || 'Thunk';
-    const target = document.createDocumentFragment();
-    const thunk = tag(props, children)(target, ctx.render);
+  ctx.wrap = (tag, name) => {
+    if (!isFunction(tag)) throw new Error(`Expecting a view factory, given '${tag}'`);
 
-    ctx.refs[identity] = ctx.refs[identity] || [];
-    ctx.refs[identity].push(thunk);
+    return (props, children) => {
+      const identity = name || tag.name || 'Thunk';
+      const target = document.createDocumentFragment();
+      const thunk = tag(props, children)(target, ctx.render);
 
-    const _remove = thunk.target.remove;
+      ctx.refs[identity] = ctx.refs[identity] || [];
+      ctx.refs[identity].push(thunk);
 
-    thunk.target.remove = target.remove = _cb => Promise.resolve()
-      .then(() => {
-        ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);
+      const _remove = thunk.target.remove;
 
-        if (!ctx.refs[identity].length) {
-          delete ctx.refs[identity];
-        }
-      })
-      .then(() => _remove(_cb));
+      thunk.target.remove = target.remove = _cb => Promise.resolve()
+        .then(() => {
+          ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);
 
-    return target;
+          if (!ctx.refs[identity].length) {
+            delete ctx.refs[identity];
+          }
+        })
+        .then(() => _remove(_cb));
+
+      return target;
+    };
   };
 
   return ctx;
