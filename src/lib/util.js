@@ -120,7 +120,7 @@ export function sortedZip(prev, next, cb) {
 
   for (let i = 0; i < length; i += 1) {
     if (isDiff(prev[i], next[i])) {
-      cb(prev[i] || null, next[i] || null, i);
+      cb(prev[i] || null, !isUndef(next[i]) ? next[i] : null, i);
     }
   }
 }

@@ -352,6 +352,11 @@ describe('node', () => {
       expect(a.outerHTML).to.eql('<a href="#"></a>');
     });
 
+    it('can update scalar values', () => {
+      updateElement(div, [['a', 1]], [['a', 0]]);
+      expect(div.outerHTML).to.eql('<div><a>0</a></div>');
+    });
+
     it('will invoke hooks on update', () => {
       a.onupdate = td.func('onupdate');
       a.update = td.func('update');
