@@ -92,7 +92,7 @@ export function mountElement(target, view, cb = createElement) {
 
   const el = isArray(view) || isScalar(view) ? cb(view) : view;
 
-  append(target, el);
+  if (!isUndef(el)) append(target, el);
 
   return el;
 }

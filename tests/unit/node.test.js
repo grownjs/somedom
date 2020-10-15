@@ -202,6 +202,10 @@ describe('node', () => {
       expect(target.childNodes[0].tagName).to.eql('SPAN');
     }
 
+    it('returns nothing if nothing is given', () => {
+      expect(mountElement()).to.be.undefined;
+    });
+
     it('should help to mount given vnodes', () => {
       const div = document.createElement('div');
 
@@ -238,7 +242,17 @@ describe('node', () => {
       td.reset();
     });
 
-    it('can mount fragments recursively', () => {
+    it('should create markup from scalar values', () => {
+      mountElement(null, 42);
+      expect(document.body.innerHTML).to.eql('42');
+    });
+
+    it('should create fragments from arrays', () => {
+      mountElement(null, [42, ['i', -1]]);
+      expect(document.body.innerHTML).to.eql('42<i>-1</i>');
+    });
+
+    it('should mount fragments recursively', () => {
       const div = document.createElement('div');
 
       mountElement(div, [
