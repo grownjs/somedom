@@ -11,10 +11,10 @@ import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
 
-beforeEach(doc.enable);
-afterEach(doc.disable);
-
 describe('attrs', () => {
+  beforeEach(doc.enable);
+  afterEach(doc.disable);
+
   describe('fixTree', () => {
     it('should flatten values from nested trees', () => {
       expect(fixTree([[[1, 2, 3]]])).to.eql([1, 2, 3]);

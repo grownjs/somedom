@@ -28,10 +28,10 @@ import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
 
-beforeEach(doc.enable);
-afterEach(doc.disable);
-
 describe('util', () => {
+  beforeEach(doc.enable);
+  afterEach(doc.disable);
+
   describe('clone', () => {
     it('should copy most common values', () => {
       const a = [{ d: new Date() }, { r: /x/ }];

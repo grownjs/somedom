@@ -13,10 +13,10 @@ import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
 
-beforeEach(doc.enable);
-afterEach(doc.disable);
-
 describe('node', () => {
+  beforeEach(doc.enable);
+  afterEach(doc.disable);
+
   describe('DocumentFragment', () => {
     it('should flatten arrays as fragments', () => {
       const tree = createElement([

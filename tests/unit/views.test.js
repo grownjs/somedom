@@ -26,10 +26,10 @@ import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
 
-beforeEach(doc.enable);
-afterEach(doc.disable);
-
 describe('views', () => {
+  beforeEach(doc.enable);
+  afterEach(doc.disable);
+
   describe('getDecorated', () => {
     describe('objects', () => {
       it('should return wrapped objects as view params', () => {

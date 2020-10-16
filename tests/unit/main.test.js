@@ -13,11 +13,11 @@ import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
 
-beforeEach(doc.enable);
-afterEach(doc.disable);
-
 describe('somedom', () => {
   let tag;
+
+  beforeEach(doc.enable);
+  afterEach(doc.disable);
 
   describe('h', () => {
     it('should return whatever you pass to', () => {
