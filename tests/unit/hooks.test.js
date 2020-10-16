@@ -198,13 +198,16 @@ describe('hooks', () => {
 
   describe('useRef()', () => {
     it('should allow to capture references', async () => {
-      let ref;
+      const refs = [];
+
       createContext(() => {
-        ref = useRef();
+        const ref = useRef();
+        refs.push(ref, useRef(-1));
         return ['span', { ref }];
       }, createView)()();
 
-      expect(ref.current.outerHTML).to.eql('<span></span>');
+      expect(refs[1].current).to.eql(-1);
+      expect(refs[0].current.outerHTML).to.eql('<span></span>');
     });
   });
 

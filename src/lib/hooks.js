@@ -1,4 +1,4 @@
-import { isDiff } from './util';
+import { isDiff, clone } from './util';
 import { getContext } from './ctx';
 
 export { createContext } from './ctx';
@@ -25,9 +25,9 @@ export function useMemo(callback, inputs) {
   return scope.v[key];
 }
 
-export function useRef() {
+export function useRef(result) {
   return useMemo(() => {
-    let value;
+    let value = clone(result);
 
     return Object.defineProperty({}, 'current', {
       configurable: false,
