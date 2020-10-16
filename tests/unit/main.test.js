@@ -97,13 +97,11 @@ describe('somedom', () => {
       data.map(x => td.when(rm(x.id)).thenDo(() => filter(x.id)));
 
       function view() {
-        return ['ul', data.map(x => ['li', { onclick: () => rm(x.id) }, x.value])];
+        return [[['ul', data.map(x => ['li', { onclick: () => rm(x.id) }, x.value])]]];
       }
 
       let vnode = view();
       const node = tag(vnode);
-
-      node.parentNode = document.createElement('body');
 
       for (let i = 0; i < 2; i += 1) {
         $(node).withText(`Item ${i + 1}`).dispatch('click');

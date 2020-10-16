@@ -55,13 +55,16 @@ describe('node', () => {
 
     it('should remove all Fragment childNodes', async () => {
       const vdom = createElement([[['OSOM'], ['SO']]]);
+      const remove = td.func('-OSOM');
+      const remove2 = td.func('-SO');
 
-      vdom.childNodes[0].remove = td.func('-OSOM');
-      vdom.childNodes[1].remove = td.func('-SO');
+      td.replace(vdom.childNodes[0], 'remove', remove);
+      td.replace(vdom.childNodes[1], 'remove', remove2);
 
       await vdom.remove();
-      expect(td.explain(vdom.childNodes[0].remove).callCount).to.eql(1);
-      expect(td.explain(vdom.childNodes[1].remove).callCount).to.eql(1);
+
+      expect(td.explain(remove).callCount).to.eql(1);
+      expect(td.explain(remove2).callCount).to.eql(1);
     });
   });
 

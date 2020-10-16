@@ -8,6 +8,10 @@ export default class Fragment {
     this.childNodes.push(node);
   }
 
+  replaceChild(node, target) {
+    this.childNodes[this.childNodes.indexOf(target)] = node;
+  }
+
   remove() {
     return Promise.all(this.childNodes.map(node => {
       return typeof node.remove === 'function' && node.remove();
@@ -15,6 +19,7 @@ export default class Fragment {
   }
 
   mount(target) {
+    this.parentNode = target;
     this.childNodes.forEach(node => {
       if (!(node instanceof Fragment)) {
         target.appendChild(node);
