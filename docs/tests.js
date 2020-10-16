@@ -728,9 +728,9 @@
     return scope.v[key];
   }
 
-  function useRef() {
+  function useRef(result) {
     return useMemo(() => {
-      let value;
+      let value = clone(result);
 
       return Object.defineProperty({}, 'current', {
         configurable: false,

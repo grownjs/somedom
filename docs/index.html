@@ -825,7 +825,61 @@
 
     <h3>Server Side Rendering</h3>
     <p>To render entire <i>vnode</i> trees on the back-end use:</p>
-    <p><code>import { <b>renderToString</b> } from 'somedom/ssr';</code></p>
+    <pre class="highlight">import {
+  useWindow,
+  renderToString,
+  bindHelpers as $,
+} from 'somedom/ssr';</pre>
+
+    <details>
+      <summary><code>useWindow()</code></summary>
+      <dl>
+        <dt><code>useWindow(cb)</code></dt>
+        <dd>
+          <p>Use this hook to patch <code>document</code> and <code>window</code> globally during the callback's lifecycle.</p>
+          <pre class="highlight">useWindow(() =&gt; {
+  var span = document.createElement('span');
+  var text = document.createTextNode('OSOM');
+
+  span.appendChild(text);
+
+  console.log(span.outerHTML);
+  // &lt;span&gt;OSOM&lt;/span&gt;
+});</pre>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>bindHelpers()</code></summary>
+      <dl>
+        <dt><code>bindHelpers(node)</code></dt>
+        <dd>
+          <p>Use this to wrap an existing node, e.g. <code>document.body</code> &mdash; it'll return the given node with <code>findText()</code> and <code>withText()</code> methods attached.</p>
+          <pre class="highlight">var $ = bindHelpers;
+
+// lets say you have an application
+var el = document.createElement('div');
+var app = new Application(el, {
+  value: 'Hello.',
+});
+
+// wrap to enable lookup methods
+var $root = $(app.target);
+
+// returns the first node matching
+$root.withText('Click me.').dispatch('click');</pre>
+        </dd>
+        <dd>
+          <p>The method above returns a single instance from calling <code>findText()</code> which just returns a list for matching nodes.</p>
+          <pre class="highlight">var button = $root.findText(/Click me/)[0];
+
+// `dispatch()` actually calls this method
+button.dispatchEvent({ type: 'click' });</pre>
+        </dd>
+      </dl>
+    </details>
+
     <details>
       <summary><code>renderToString()</code></summary>
       <dl>
@@ -836,7 +890,8 @@
 var dom = renderToString(test);
 var html = await dom();
 
-console.log(html); // &lt;h1&gt;It works!&lt;/h1&gt;</pre>
+console.log(html);
+// &lt;h1&gt;It works!&lt;/h1&gt;</pre>
         </dd>
         <dd>
           <p>Any given callback will be used as <b>tag</b> function.</p>
