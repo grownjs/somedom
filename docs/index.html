@@ -130,6 +130,40 @@
             appendChild(format(['span']));
           });</script>
         </dd>
+        <dd>
+          <p>The <b>tag</b> function returned has two methods: <code>tag()</code> and <code>view()</code> &mdash; with them you can create and decorate custom tags.</p>
+          <fieldset id="main"></fieldset>
+          <script>test(({ bind, render, styles, listeners, attributes, useState, useEffect }, appendChild) => {
+            var $ = bind(render,
+              listeners(),
+              attributes({ style: styles }));
+
+            var Tag = $.tag((p, c) => {
+              var [on, set] = useState(0);
+              var emphasis = on ? 'bold' : 'normal';
+              var props = {
+                onmouseout: () => set(0),
+                onmouseover: () => set(1),
+                style: {
+                  fontWeight: emphasis,
+                  cursor: 'pointer',
+                },
+              };
+
+              return ['em', props, [p.prefix, [c]]];
+            });
+
+            var Test = $.tag((p, c) => [Tag, p, c]);
+
+            var App = $.view(props => [Test, props, ['SO!']]);
+
+            var app = new App('#main', {
+              prefix: 'OSOM.',
+            });
+
+            appendChild();
+          });</script>
+        </dd>
       </dl>
     </details>
 

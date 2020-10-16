@@ -67,6 +67,19 @@ describe('somedom', () => {
       expect(td.explain(test1).callCount).to.eql(1);
       expect(td.explain(test2).callCount).to.eql(1);
     });
+
+    it('should allow to wrap thunks through view() and tag()', async () => {
+      const $$ = bind(render);
+
+      const Tag = $$.tag((props, children) => ['em', props, ['OSOM:', children]]);
+      const View = $$.view((props, children) => [Tag, props, children]);
+
+      const app = new View(null, { style: 'color:red' }, ['SO!']);
+
+      expect(app.target.outerHTML).to.eql(trim(`
+        <em style="color:red">OSOM:SO!</em>
+      `));
+    });
   });
 
   describe('hooks', () => {

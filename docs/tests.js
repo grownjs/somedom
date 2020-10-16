@@ -33,6 +33,10 @@
       this.childNodes.push(node);
     }
 
+    replaceChild(node, target) {
+      this.childNodes[this.childNodes.indexOf(target)] = node;
+    }
+
     remove() {
       return Promise.all(this.childNodes.map(node => {
         return typeof node.remove === 'function' && node.remove();
@@ -40,6 +44,7 @@
     }
 
     mount(target) {
+      this.parentNode = target;
       this.childNodes.forEach(node => {
         if (!(node instanceof Fragment)) {
           target.appendChild(node);
@@ -898,7 +903,32 @@
       return cbs.reduce((prev, cb) => cb(...args) || prev, undefined);
     };
 
-    return (...args) => (args.length <= 2 ? tag(args[0], args[1], mix) : mix(...args));
+    const cb = (...args) => (args.length <= 2 ? tag(args[0], args[1], mix) : mix(...args));
+
+    cb.view = (Tag, name) => {
+      function Factory(ref, props, children) {
+        return createView(Tag)(props, children)(ref, cb);
+      }
+
+      Object.defineProperty(Factory, 'name', {
+        value: name || Tag.name || 'View',
+      });
+
+      return Factory;
+    };
+
+    cb.tag = (Tag, name) => {
+      const mount$ = cb.view(Tag, name);
+
+      return (props, children) => {
+        const $ = document.createDocumentFragment();
+
+        mount$($, props, children);
+        return $;
+      };
+    };
+
+    return cb;
   };
 
   const listeners = opts => apply(addEvents, 3, opts);
