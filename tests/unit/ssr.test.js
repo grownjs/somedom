@@ -5,7 +5,12 @@ import { expect } from 'chai';
 
 import { view } from '../../src';
 import { trim } from '../../src/lib/util';
-import { renderToString } from '../../src/ssr';
+
+import {
+  useWindow,
+  renderToString,
+  bindHelpers as $,
+} from '../../src/ssr';
 
 import doc from './fixtures/document';
 
@@ -50,25 +55,54 @@ function getMock(value) {
 }
 
 describe('SSR', () => {
-  it('can render static vnodes as markup', async () => {
-    const vnode = ['h1', 'It works!'];
-    const dom = renderToString(vnode);
+  describe('useWindow', () => {
+    it('should attach document and window globally', () => {
+      doc.disable();
+      expect(() => document).to.throw(/document is not defined/);
 
-    const html = await dom();
+      useWindow(() => {
+        expect(() => document).not.to.throw();
+      });
 
-    expect(html).to.eql('<h1>It works!</h1>');
+      expect(() => document).to.throw(/document is not defined/);
+    });
   });
 
-  it('can render dynamic views as markup', async () => {
-    const nth = Math.round(Math.random() * 10) + 1;
-    const app = renderToString(main());
+  describe('bindHelpers', () => {
+    it('should help to locate nodes in the DOM', () => {
+      const div = document.createElement('div');
+      const span = document.createElement('span');
 
-    doc.enable();
-    await app.up(nth);
+      div.appendChild(span);
+      span.appendChild(document.createTextNode('OSOM'));
 
-    const html = await app();
+      document.body.appendChild(div);
 
-    expect(html).to.eql(getMock(nth));
+      expect($(document.body).withText(/OSOM/)).to.eql(span);
+    });
+  });
+
+  describe('renderToString', () => {
+    it('can render static vnodes as markup', async () => {
+      const vnode = ['h1', 'It works!'];
+      const dom = renderToString(vnode);
+
+      const html = await dom();
+
+      expect(html).to.eql('<h1>It works!</h1>');
+    });
+
+    it('can render dynamic views as markup', async () => {
+      const nth = Math.round(Math.random() * 10) + 1;
+      const app = renderToString(main());
+
+      doc.enable();
+      await app.up(nth);
+
+      const html = await app();
+
+      expect(html).to.eql(getMock(nth));
+    });
   });
 
   describe('document', () => {

@@ -10,24 +10,32 @@ import {
 
 export { bindHelpers } from './doc';
 
+export function useWindow(cb) {
+  try {
+    patchDocument();
+    patchWindow();
+
+    return cb();
+  } finally {
+    dropDocument();
+    dropWindow();
+  }
+}
+
 export function renderToString(vnode, cb = createElement) {
-  patchDocument();
-  patchWindow();
+  return useWindow(() => {
+    const target = document.createElement('div');
 
-  const target = document.createElement('div');
+    async function render() {
+      return format(render.target ? render.target.outerHTML : target.innerHTML);
+    }
 
-  async function render() {
-    return format(render.target ? render.target.outerHTML : target.innerHTML);
-  }
+    if (isFunction(vnode)) {
+      Object.assign(render, vnode(target, cb));
+    } else {
+      mountElement(target, vnode, cb);
+    }
 
-  if (isFunction(vnode)) {
-    Object.assign(render, vnode(target, cb));
-  } else {
-    mountElement(target, vnode, cb);
-  }
-
-  dropDocument();
-  dropWindow();
-
-  return render;
+    return render;
+  });
 }

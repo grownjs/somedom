@@ -13,11 +13,16 @@ export function findText(value) {
   function walk(sub, nodes) {
     nodes.forEach(x => {
       if (x.childNodes) walk(x, x.childNodes);
-      if (x.nodeValue && x.nodeValue.indexOf(value) !== -1) found.push(sub);
+      if (x.nodeValue) {
+        if (value instanceof RegExp && value.test(x.nodeValue)) found.push(sub);
+        else if (x.nodeValue.indexOf(value) !== -1) found.push(sub);
+      }
     });
   }
 
-  walk(this, this.childNodes);
+  if (this.childNodes) {
+    walk(this, this.childNodes);
+  }
 
   return found;
 }
@@ -171,9 +176,7 @@ export function patchWindow() {
     dispatchEvent,
     addEventListener,
     removeEventListener,
-    DocumentFragment: Fragment,
   };
-  global.DocumentFragment = Fragment;
 }
 
 export function dropDocument() {
@@ -182,5 +185,4 @@ export function dropDocument() {
 
 export function dropWindow() {
   delete global.window;
-  delete global.DocumentFragment;
 }
