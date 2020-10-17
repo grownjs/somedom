@@ -26,7 +26,7 @@ import {
 } from './lib/props';
 
 import {
-  apply, format, filter, isPlain, isArray, isFunction,
+  apply, format, filter, isUndef, isPlain, isScalar, isArray, toArray, isFunction,
 } from './lib/util';
 
 import { addEvents } from './lib/events';
@@ -55,8 +55,13 @@ export const bind = (tag, ...hooks) => {
   cb.view = (Tag, name) => {
     function Factory(ref, props, children) {
       if (this instanceof Factory) {
-        if (!children && isArray(props)) {
-          children = props;
+        if (isUndef(children) && (isScalar(props) || isArray(props))) {
+          children = toArray(props);
+          props = ref;
+          ref = null;
+        }
+
+        if (isUndef(props)) {
           props = ref;
           ref = null;
         }
@@ -64,7 +69,7 @@ export const bind = (tag, ...hooks) => {
         return view(Tag)(props, children)(ref, cb);
       }
 
-      if (!children) {
+      if (isUndef(children)) {
         return view(Tag)(ref, props)($(), cb).target;
       }
 
