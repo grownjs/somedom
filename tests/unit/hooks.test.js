@@ -31,7 +31,7 @@ import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
 
-describe.only('hooks', () => {
+describe('hooks', () => {
   beforeEach(doc.enable);
   afterEach(doc.disable);
 
@@ -247,6 +247,14 @@ describe.only('hooks', () => {
       await tick();
 
       expect(document.body.innerHTML).to.eql('OSOM');
+    });
+
+    it('should synchronize state with current values', async () => {
+      const app = createContext(() => {
+        useState(42);
+      }, createView)();
+
+      expect(app().state).to.eql({ data: [42] });
     });
   });
 

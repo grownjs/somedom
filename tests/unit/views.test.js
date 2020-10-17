@@ -277,8 +277,8 @@ describe('views', () => {
 
       expect(typeof el.subscribe).to.eql('function');
       expect(typeof el.unmount).to.eql('function');
+      expect(el.state).to.eql({ data: [] });
       expect(el.target).to.be.undefined;
-      expect(el.state).to.eql({});
     });
 
     it('should allow to subscribe to state changes', async () => {

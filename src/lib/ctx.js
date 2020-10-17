@@ -59,7 +59,7 @@ export function createContext(tag, view) {
       deferred = next(scope.set());
     });
 
-    return view(() => {
+    const factory = view(() => {
       scope.key = 0;
       scope.fx = 0;
       scope.m = 0;
@@ -84,5 +84,15 @@ export function createContext(tag, view) {
         after();
       }
     }, sync => { scope.set = sync; });
+
+    return (...args) => {
+      const view$ = factory(...args);
+
+      view$.subscribe(ctx => {
+        Object.assign(ctx, { data: scope.val || [] });
+      });
+
+      return view$;
+    };
   };
 }
