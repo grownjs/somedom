@@ -1,4 +1,4 @@
-import { isDiff, clone } from './util';
+import { isUndef, isDiff, clone } from './util';
 import { getContext } from './ctx';
 
 export { createContext } from './ctx';
@@ -45,7 +45,7 @@ export function useState(fallback) {
   scope.key += 1;
   scope.val = scope.val || [];
 
-  if (typeof scope.val[key] === 'undefined') {
+  if (isUndef(scope.val[key])) {
     scope.val[key] = fallback;
   }
 

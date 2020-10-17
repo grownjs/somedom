@@ -73,7 +73,7 @@ export function createElement(value, svg, cb) {
 }
 
 export function mountElement(target, view, cb = createElement) {
-  if (typeof view === 'function') {
+  if (isFunction(view)) {
     cb = view;
     view = target;
     target = undefined;

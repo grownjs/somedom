@@ -1,5 +1,5 @@
 import { CLOSE_TAGS } from '../lib/shared';
-import { tick } from '../lib/util';
+import { tick, isScalar } from '../lib/util';
 
 import Fragment from '../lib/fragment';
 
@@ -90,7 +90,7 @@ export function createElement(name) {
     },
     get outerHTML() {
       const props = Object.keys(el.attributes).reduce((prev, cur) => {
-        if (typeof el.attributes[cur] !== 'object') {
+        if (isScalar(el.attributes[cur])) {
           prev.push(` ${cur}="${encodeText(el.attributes[cur])}"`);
         }
         return prev;

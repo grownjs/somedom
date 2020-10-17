@@ -41,7 +41,7 @@ export const isEmpty = value => {
   if (isArray(value)) return value.length === 0;
   if (isPlain(value)) return Object.keys(value).length === 0;
 
-  return typeof value === 'undefined' || value === '' || value === null || value === false;
+  return isUndef(value) || value === '' || value === false;
 };
 
 export const isNode = x => isArray(x) && x.length <= 3 && ((typeof x[0] === 'string' && isSelector(x[0])) || isFunction(x[0]));
@@ -60,7 +60,7 @@ export const getMethods = obj => {
 
     keys.forEach(key => {
       if (!SKIP_METHODS.includes(key)
-        && typeof cur[key] === 'function'
+        && isFunction(cur[key])
         && !memo.includes(key)
       ) memo.push(key);
     });
@@ -108,7 +108,7 @@ export const trim = value => {
 };
 
 export const clone = value => {
-  if (!value || typeof value !== 'object') return value;
+  if (!value || !isObject(value)) return value;
   if (isArray(value)) return value.map(x => clone(x));
   if (value instanceof Date) return new Date(value.getTime());
   if (value instanceof RegExp) return new RegExp(value.source, value.flags);
