@@ -30,6 +30,8 @@ export function createElement(value, svg, cb) {
   if (isFunction(fixedVNode[0])) {
     const retval = fixedVNode[0](fixedVNode[1], fixedVNode[2]);
 
+    if (!isArray(retval) || !isNode(retval)) return retval;
+
     while (isFunction(retval[0])) {
       retval[0] = retval[0](fixedVNode[1], fixedVNode[2]);
     }

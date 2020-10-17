@@ -4,7 +4,7 @@ import td from 'testdouble';
 import { expect } from 'chai';
 
 import {
-  h, pre, bind, patch, render, listeners, attributes,
+  h, pre, bind, mount, patch, render, listeners, attributes,
 } from '../../src';
 
 import { tick, trim, format } from '../../src/lib/util';
@@ -72,11 +72,11 @@ describe('somedom', () => {
       const $$ = bind(render);
 
       const Tag = $$.tag((props, children) => ['em', props, ['OSOM:', children]]);
-      const View = $$.view((props, children) => [Tag, props, children]);
+      const View = $$.tag((props, children) => [Tag, props, children]);
 
-      const app = new View(null, { style: 'color:red' }, ['SO!']);
+      mount([View, { style: 'color:red' }, ['SO!']]);
 
-      expect(app.target.outerHTML).to.eql(trim(`
+      expect(document.body.innerHTML).to.eql(trim(`
         <em style="color:red">OSOM:SO!</em>
       `));
     });
