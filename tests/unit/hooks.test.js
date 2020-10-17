@@ -31,10 +31,10 @@ import doc from './fixtures/document';
 
 /* global beforeEach, afterEach, describe, it */
 
-beforeEach(doc.enable);
-afterEach(doc.disable);
+describe.only('hooks', () => {
+  beforeEach(doc.enable);
+  afterEach(doc.disable);
 
-describe('hooks', () => {
   let scope;
   let error;
   let sync;

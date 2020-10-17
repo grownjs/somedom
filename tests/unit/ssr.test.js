@@ -14,7 +14,7 @@ import {
 
 import doc from './fixtures/document';
 
-/* global describe, it */
+/* global beforeEach, afterEach, describe, it */
 
 function main() {
   const $actions = {
@@ -55,6 +55,9 @@ function getMock(value) {
 }
 
 describe('SSR', () => {
+  beforeEach(doc.enable);
+  afterEach(doc.disable);
+
   describe('useWindow', () => {
     it('should attach document and window globally', () => {
       doc.disable();
