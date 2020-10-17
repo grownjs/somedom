@@ -912,8 +912,13 @@
     cb.view = (Tag, name) => {
       function Factory(ref, props, children) {
         if (this instanceof Factory) {
-          if (!children && isArray(props)) {
-            children = props;
+          if (isUndef(children) && (isScalar(props) || isArray(props))) {
+            children = toArray(props);
+            props = ref;
+            ref = null;
+          }
+
+          if (isUndef(props)) {
             props = ref;
             ref = null;
           }
@@ -921,7 +926,7 @@
           return createView(Tag)(props, children)(ref, cb);
         }
 
-        if (!children) {
+        if (isUndef(children)) {
           return createView(Tag)(ref, props)($(), cb).target;
         }
 

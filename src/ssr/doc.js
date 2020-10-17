@@ -20,9 +20,7 @@ export function findText(value) {
     });
   }
 
-  if (this.childNodes) {
-    walk(this, this.childNodes);
-  }
+  walk(this, this.childNodes);
 
   return found;
 }
