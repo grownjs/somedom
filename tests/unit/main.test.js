@@ -72,11 +72,17 @@ describe('somedom', () => {
       const $$ = bind(render);
 
       const Tag = $$.tag((props, children) => ['em', props, ['OSOM:', children]]);
-      const View = $$.tag((props, children) => [Tag, props, children]);
+      const View = $$.view((props, children) => [Tag, props, children]);
 
       mount([View, { style: 'color:red' }, ['SO!']]);
 
       expect(document.body.innerHTML).to.eql(trim(`
+        <em style="color:red">OSOM:SO!</em>
+      `));
+
+      const app = new View({ style: 'color:red' }, ['SO!']);
+
+      expect(app.target.outerHTML).to.eql(trim(`
         <em style="color:red">OSOM:SO!</em>
       `));
     });

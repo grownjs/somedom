@@ -132,6 +132,7 @@
         </dd>
         <dd>
           <p>The <b>tag</b> function returned has two methods: <code>tag()</code> and <code>view()</code> &mdash; with them you can create and decorate custom tags.</p>
+          <p>While both can be rendered, only views are instantiable through the <code>new</code> operator.</p>
           <fieldset id="main"></fieldset>
           <script>test(({ bind, render, styles, listeners, attributes, useState, useEffect }, appendChild) => {
             var $ = bind(render,
@@ -153,7 +154,7 @@
               return ['em', props, [p.prefix, [c]]];
             });
 
-            var Test = $.tag((p, c) => [Tag, p, c]);
+            var Test = $.view((p, c) => [Tag, p, c]);
 
             var App = $.view(props => [Test, props, ['SO!']]);
 

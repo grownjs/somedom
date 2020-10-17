@@ -26,7 +26,7 @@ import {
 } from './lib/props';
 
 import {
-  apply, format, filter, isPlain, isFunction,
+  apply, format, filter, isPlain, isArray, isFunction,
 } from './lib/util';
 
 import { addEvents } from './lib/events';
@@ -50,8 +50,24 @@ export const bind = (tag, ...hooks) => {
 
   const cb = (...args) => (args.length <= 2 ? tag(args[0], args[1], mix) : mix(...args));
 
+  const $ = () => document.createDocumentFragment();
+
   cb.view = (Tag, name) => {
     function Factory(ref, props, children) {
+      if (this instanceof Factory) {
+        if (!children && isArray(props)) {
+          children = props;
+          props = ref;
+          ref = null;
+        }
+
+        return view(Tag)(props, children)(ref, cb);
+      }
+
+      if (!children) {
+        return view(Tag)(ref, props)($(), cb).target;
+      }
+
       return view(Tag)(props, children)(ref, cb);
     }
 
@@ -66,10 +82,7 @@ export const bind = (tag, ...hooks) => {
     const mount$ = cb.view(Tag, name);
 
     return (props, children) => {
-      const $ = document.createDocumentFragment();
-
-      mount$($, props, children);
-      return $;
+      return mount$($(), props, children).target;
     };
   };
 

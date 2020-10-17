@@ -312,6 +312,8 @@
     if (isFunction(fixedVNode[0])) {
       const retval = fixedVNode[0](fixedVNode[1], fixedVNode[2]);
 
+      if (!isArray(retval) || !isNode(retval)) return retval;
+
       while (isFunction(retval[0])) {
         retval[0] = retval[0](fixedVNode[1], fixedVNode[2]);
       }
@@ -905,8 +907,24 @@
 
     const cb = (...args) => (args.length <= 2 ? tag(args[0], args[1], mix) : mix(...args));
 
+    const $ = () => document.createDocumentFragment();
+
     cb.view = (Tag, name) => {
       function Factory(ref, props, children) {
+        if (this instanceof Factory) {
+          if (!children && isArray(props)) {
+            children = props;
+            props = ref;
+            ref = null;
+          }
+
+          return createView(Tag)(props, children)(ref, cb);
+        }
+
+        if (!children) {
+          return createView(Tag)(ref, props)($(), cb).target;
+        }
+
         return createView(Tag)(props, children)(ref, cb);
       }
 
@@ -921,10 +939,7 @@
       const mount$ = cb.view(Tag, name);
 
       return (props, children) => {
-        const $ = document.createDocumentFragment();
-
-        mount$($, props, children);
-        return $;
+        return mount$($(), props, children).target;
       };
     };
 
