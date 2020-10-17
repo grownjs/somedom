@@ -24,7 +24,7 @@ const plugins = [
 
 export default isDev ? {
   input: 'tests/e2e/main.test.js',
-  output: bundle('./docs/tests.js', 'iife'),
+  output: bundle('./docs/play.js', 'iife'),
   plugins,
 } : [{
   input: './src/index.js',
