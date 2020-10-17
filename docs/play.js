@@ -92,7 +92,7 @@
     if (isArray(value)) return value.length === 0;
     if (isPlain(value)) return Object.keys(value).length === 0;
 
-    return typeof value === 'undefined' || value === '' || value === null || value === false;
+    return isUndef(value) || value === '' || value === false;
   };
 
   const isNode = x => isArray(x) && x.length <= 3 && ((typeof x[0] === 'string' && isSelector(x[0])) || isFunction(x[0]));
@@ -111,7 +111,7 @@
 
       keys.forEach(key => {
         if (!SKIP_METHODS.includes(key)
-          && typeof cur[key] === 'function'
+          && isFunction(cur[key])
           && !memo.includes(key)
         ) memo.push(key);
       });
@@ -159,7 +159,7 @@
   };
 
   const clone = value => {
-    if (!value || typeof value !== 'object') return value;
+    if (!value || !isObject(value)) return value;
     if (isArray(value)) return value.map(x => clone(x));
     if (value instanceof Date) return new Date(value.getTime());
     if (value instanceof RegExp) return new RegExp(value.source, value.flags);
@@ -355,7 +355,7 @@
   }
 
   function mountElement(target, view, cb = createElement) {
-    if (typeof view === 'function') {
+    if (isFunction(view)) {
       cb = view;
       view = target;
       target = undefined;
@@ -482,7 +482,7 @@
         deferred = next(scope.set());
       });
 
-      return view(() => {
+      const factory = view(() => {
         scope.key = 0;
         scope.fx = 0;
         scope.m = 0;
@@ -507,6 +507,16 @@
           after();
         }
       }, sync => { scope.set = sync; });
+
+      return (...args) => {
+        const view$ = factory(...args);
+
+        view$.subscribe(ctx => {
+          Object.assign(ctx, { data: scope.val || [] });
+        });
+
+        return view$;
+      };
     };
   }
 
@@ -755,7 +765,7 @@
     scope.key += 1;
     scope.val = scope.val || [];
 
-    if (typeof scope.val[key] === 'undefined') {
+    if (isUndef(scope.val[key])) {
       scope.val[key] = fallback;
     }
 
