@@ -123,7 +123,6 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
 
       if (instance) {
         instance[fn] = memo[fn];
-        memo.instance = instance;
       }
 
       return memo;
@@ -147,6 +146,10 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
 
     childNode = mountElement(el, vnode = fixTree(Tag(data, $)), cb);
     $.target = childNode;
+
+    if (instance) {
+      $.instance = instance;
+    }
 
     return $;
   };
