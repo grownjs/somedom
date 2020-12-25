@@ -20,11 +20,12 @@ describe('somedom', () => {
   afterEach(doc.disable);
 
   describe('h', () => {
-    it('should return whatever you pass to', () => {
-      expect(h()).to.eql([undefined, undefined, [undefined]]);
-      expect(h(1, null, 2)).to.eql([1, undefined, [2]]);
-      expect(h(1, {}, 2)).to.eql([1, {}, [2]]);
-      expect(h(1, 2, 3, 4, 5)).to.eql([1, undefined, [2, 3, 4, 5]]);
+    it('should return well formed vnodes', () => {
+      expect(h()).to.eql(['div', null]);
+      expect(h('grab')).to.eql(['grab', null]);
+      expect(h('grab', 'a', 'beer')).to.eql(['grab', null, 'a', 'beer']);
+      expect(h('grab', [h('a', 'beer')])).to.eql(['grab', null, ['a', null, 'beer']]);
+      expect(h('grab', [h('a', ['beer', 'with', 'friends'])])).to.eql(['grab', null, ['a', null, 'beer', 'with', 'friends']]);
     });
   });
 
@@ -85,8 +86,6 @@ describe('somedom', () => {
       const View = bind(render)
         .view((props, children) => ['a', props, children]);
 
-      expect(new View().target.outerHTML).to.eql('<a></a>');
-      expect(new View(42).target.outerHTML).to.eql('<a>42</a>');
       expect(new View({ x: 'y' }).target.outerHTML).to.eql('<a x="y"></a>');
       expect(new View({ x: 'y' }, [-1]).target.outerHTML).to.eql('<a x="y">-1</a>');
     });

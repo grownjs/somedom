@@ -20,8 +20,8 @@ describe('node', () => {
   describe('DocumentFragment', () => {
     it('should flatten arrays as fragments', () => {
       const tree = createElement([
-        ['span', 'foo'],
-        ['span', 'bar'],
+        ['span', ['foo']],
+        ['span', ['bar']],
       ]);
 
       const div = document.createElement('div');
@@ -48,7 +48,7 @@ describe('node', () => {
       expect(td.explain(div.remove).callCount).to.eql(1);
     });
 
-    it('should skip removal if wait() does not resolve', async () => {
+    it('should skip removal if wait.skip() does not resolve', async () => {
       await destroyElement(div, () => null);
       expect(td.explain(div.remove).callCount).to.eql(0);
     });
@@ -78,11 +78,11 @@ describe('node', () => {
     });
 
     it('should handle regular html-elements', () => {
-      expect(createElement(['span']).tagName).to.eql('SPAN');
+      expect(createElement(['span', null]).tagName).to.eql('SPAN');
     });
 
     it('should handle svg-elements too', () => {
-      expect(createElement(['svg']).isSvg).to.be.true;
+      expect(createElement(['svg', null]).isSvg).to.be.true;
     });
 
     it('should call factories recursively', () => {
@@ -110,13 +110,13 @@ describe('node', () => {
 
     it('should handle children as 2nd argument', () => {
       expect(createElement(['span', [1, 'foo']]).childNodes.map(x => x.nodeValue)).to.eql(['1', 'foo']);
-      expect(createElement(['span', 'TEXT']).childNodes.map(x => x.nodeValue)).to.eql(['TEXT']);
-      expect(createElement(['span', 12.3]).childNodes.map(x => x.nodeValue)).to.eql(['12.3']);
-      expect(createElement(['span', false]).childNodes).to.eql([]);
+      expect(createElement(['span', ['TEXT']]).childNodes.map(x => x.nodeValue)).to.eql(['TEXT']);
+      expect(createElement(['span', [12.3]]).childNodes.map(x => x.nodeValue)).to.eql(['12.3']);
+      expect(createElement(['span', [false]]).childNodes).to.eql([]);
     });
 
     it('should wrap trees as DocumentFragment nodes', () => {
-      const tree = [[[[['p', [[[[['i']]]]]]]]]];
+      const tree = [[[[['p', [[[[['i', null]]]]]]]]]];
       const node = createElement(tree);
 
       let depth = 0;
@@ -134,7 +134,7 @@ describe('node', () => {
     it('should pass created element to given callback', () => {
       const spy = td.func('callback');
 
-      createElement(['span'], null, spy);
+      createElement(['span', null], null, spy);
       expect(td.explain(spy).callCount).to.eql(1);
     });
 
@@ -144,7 +144,7 @@ describe('node', () => {
 
       const Spy = td.func('Component');
 
-      td.when(Spy(attrs, nodes)).thenReturn(['div']);
+      td.when(Spy(attrs, nodes)).thenReturn(['div', null]);
 
       expect(createElement([Spy, attrs, nodes]).tagName).to.eql('DIV');
     });
@@ -155,8 +155,8 @@ describe('node', () => {
 
     it('should append given nodes as childNodes', () => {
       const node = createElement(['ul', [
-        ['li', '1'],
-        ['li', '2'],
+        ['li', ['1']],
+        ['li', ['2']],
       ]]);
 
       expect([node.tagName, node.childNodes.map(x => [x.tagName, x.childNodes.map(y => y.nodeValue)])]).to.eql([
@@ -171,12 +171,12 @@ describe('node', () => {
       const fn = td.func('hook');
 
       td.when(fn())
-        .thenReturn(['div']);
+        .thenReturn(['div', null]);
 
       td.when(fn(td.matchers.isA(Object), 'span', {}, []))
         .thenReturn(fn);
 
-      const node = createElement(['span'], null, fn);
+      const node = createElement(['span', null], null, fn);
 
       expect(td.explain(fn).callCount).to.eql(3);
       expect(node.outerHTML).to.eql('<div></div>');
@@ -191,7 +191,7 @@ describe('node', () => {
       div.enter = td.func('enter');
       div.exit = td.func('exit');
 
-      createElement(['x'], null, () => div);
+      createElement(['x', null], null, () => div);
 
       expect(td.explain(div.oncreate).callCount).to.eql(1);
       expect(td.explain(div.enter).callCount).to.eql(1);
@@ -223,7 +223,7 @@ describe('node', () => {
     it('should help to mount given vnodes', () => {
       const div = document.createElement('div');
 
-      mountElement(div, ['span'], h);
+      mountElement(div, ['span', null], h);
       ok(div);
     });
 
@@ -236,12 +236,12 @@ describe('node', () => {
     });
 
     it('should use document.body if target is not given', () => {
-      mountElement(['span'], h);
+      mountElement(['span', null], h);
       ok(document.body);
     });
 
     it('should fallback to view if arity is 1', () => {
-      mountElement(['span']);
+      mountElement(['span', null]);
       ok(document.body);
     });
 
@@ -250,7 +250,7 @@ describe('node', () => {
       td.when(document.querySelector('body'))
         .thenReturn(document.body);
 
-      mountElement('body', ['span']);
+      mountElement('body', ['span', null]);
       ok(document.body);
 
       td.reset();
@@ -262,7 +262,7 @@ describe('node', () => {
     });
 
     it('should create fragments from arrays', () => {
-      mountElement(null, [42, ['i', -1]]);
+      mountElement(null, [42, ['i', [-1]]]);
       expect(document.body.innerHTML).to.eql('42<i>-1</i>');
     });
 
@@ -271,13 +271,13 @@ describe('node', () => {
 
       mountElement(div, [
         'Some text ',
-        ['strong', 'before HTML'],
+        ['strong', ['before HTML']],
         ': ',
         [
           'because',
           ' ',
-          ['em', 'it is'],
-          [' ', [['strong', 'possible!']]],
+          ['em', ['it is']],
+          [' ', [['strong', ['possible!']]]],
         ],
       ]);
 
@@ -305,69 +305,69 @@ describe('node', () => {
     });
 
     it('can reconcilliate childNodes', () => {
-      updateElement(div, ['div'], ['b', 'OK!']);
+      updateElement(div, ['div', null], ['b', null, 'OK!']);
       expect(body.innerHTML).to.eql('<b>OK!</b>');
 
-      updateElement(div, ['b', 'OK!'], [['b', 'NOT']]);
+      updateElement(div, ['b', null, 'OK!'], [['b', null, 'NOT']]);
       expect(body.innerHTML).to.eql('<b>NOT</b>');
     });
 
     it('can reconcilliate root nodes', () => {
-      updateElement(div, ['div'], ['b', 'OK']);
+      updateElement(div, ['div', null], ['b', null, 'OK']);
       expect(body.innerHTML).to.eql('<b>OK</b>');
 
-      updateElement(div, ['b', 'OK'], [['b', 'OK']]);
+      updateElement(div, ['b', null, 'OK'], [['b', null, 'OK']]);
       expect(body.innerHTML).to.eql('<b>OK</b>');
 
-      updateElement(div, [['b', 'OK']], [[[['b', 'OK']]]]);
+      updateElement(div, [['b', null, 'OK']], [[[['b', null, 'OK']]]]);
       expect(body.innerHTML).to.eql('<b>OK</b>');
 
-      updateElement(div, [[[['b', 'OK']]]], 'bar');
+      updateElement(div, [[[['b', null, 'OK']]]], 'bar');
       expect(body.innerHTML).to.eql('bar');
     });
 
     it('can reconcilliate text nodes', () => {
-      updateElement(div, ['div'], [['foo bar']]);
+      updateElement(div, ['div', null], [['foo bar']]);
       expect(body.innerHTML).to.eql('foo bar');
 
-      updateElement(div, [['foo bar']], [['some text', [[['b', 'OK']]]]]);
+      updateElement(div, [['foo bar']], [['some text', [[['b', null, 'OK']]]]]);
       expect(div.innerHTML).to.eql('some text<b>OK</b>');
 
-      updateElement(div, [['some text', ['b', 'OK']]], ['foo ', 'barX']);
+      updateElement(div, [['some text', ['b', null, 'OK']]], ['foo ', 'barX']);
       expect(div.innerHTML).to.eql('foo barX');
 
       updateElement(div, ['foo ', 'barX'], ['a ', 'OK']);
       expect(div.innerHTML).to.eql('a OK');
 
-      updateElement(div, ['a', 'OK'], ['a', 'OK']);
+      updateElement(div, ['a', null, 'OK'], ['a', null, 'OK']);
       expect(body.innerHTML).to.eql('<a>OK</a>');
     });
 
     it('can reconcilliate between both text/nodes', () => {
-      updateElement(div, 'OLD', ['b', 'NEW']);
+      updateElement(div, 'OLD', ['b', null, 'NEW']);
       expect(body.outerHTML).to.eql('<body><b>NEW</b></body>');
 
-      updateElement(div, ['a'], 'FIXME');
+      updateElement(div, ['a', null], 'FIXME');
       expect(body.outerHTML).to.eql('<body>FIXME</body>');
     });
 
     it('can update nodes if they are the same', () => {
-      updateElement(div, ['div'], ['div', 'NEW']);
+      updateElement(div, ['div', null], ['div', null, 'NEW']);
       expect(body.outerHTML).to.eql('<body><div>NEW</div></body>');
     });
 
     it('can replace nodes if they are different', () => {
-      updateElement(div, ['div'], ['b', 'NEW']);
+      updateElement(div, ['div', null], ['b', null, 'NEW']);
       expect(body.outerHTML).to.eql('<body><b>NEW</b></body>');
     });
 
     it('can patch node attributes', () => {
-      updateElement(a, ['a'], ['a', { href: '#' }]);
+      updateElement(a, ['a', []], ['a', { href: '#' }]);
       expect(a.outerHTML).to.eql('<a href="#"></a>');
     });
 
     it('can update scalar values', () => {
-      updateElement(div, ['div', 1], ['div', 0]);
+      updateElement(div, ['div', null, 1], ['div', null, 0]);
       expect(body.innerHTML).to.eql('<div>0</div>');
     });
 
@@ -375,21 +375,21 @@ describe('node', () => {
       a.onupdate = td.func('onupdate');
       a.update = td.func('update');
 
-      updateElement(a, ['a'], ['a', { href: '#' }]);
+      updateElement(a, ['a', null], ['a', { href: '#' }]);
 
       expect(td.explain(a.onupdate).callCount).to.eql(1);
       expect(td.explain(a.update).callCount).to.eql(1);
     });
 
     it('can append childNodes', () => {
-      updateElement(a, ['a'], ['a', [[[['c', 'd']]]]]);
+      updateElement(a, ['a', null], ['a', [[[['c', null, 'd']]]]]);
       expect(div.outerHTML).to.eql('<div><a><c>d</c></a></div>');
     });
 
     it('can remove childNodes', async () => {
-      a.appendChild(createElement(['b']));
+      a.appendChild(createElement(['b', null]));
 
-      updateElement(a, ['a', [[[['b']]]]], ['a']);
+      updateElement(a, ['a', [[[['b', null]]]]], ['a', null]);
       await tick();
 
       expect(div.outerHTML).to.eql('<div><a></a></div>');
@@ -397,20 +397,20 @@ describe('node', () => {
 
     it('can update TextNodes', () => {
       a.appendChild(document.createTextNode());
-      updateElement(a, ['a', 'old'], ['a', 'old']);
-      updateElement(a, ['a', 'old'], ['a', 'new']);
+      updateElement(a, ['a', ['old']], ['a', ['old']]);
+      updateElement(a, ['a', ['old']], ['a', ['new']]);
       expect(div.outerHTML).to.eql('<div><a>new</a></div>');
     });
 
     it('will iterate recursively', () => {
-      a.appendChild(createElement(['b']));
-      updateElement(a, ['a', [['b']]], ['a', [[[[['b']]]]]]);
+      a.appendChild(createElement(['b', null]));
+      updateElement(a, ['a', [['b', null]]], ['a', [[[[['b', null]]]]]]);
       expect(a.outerHTML).to.eql('<a><b></b></a>');
     });
 
     it('will append given children', () => {
-      updateElement(a, ['a'], ['a', [['b']]]);
-      updateElement(a, ['a', [['b']]], ['a', [[['i'], [[[['i']]]], [[[[['i']]]]]]]]);
+      updateElement(a, ['a', null], ['a', [['b', null]]]);
+      updateElement(a, ['a', [['b', null]]], ['a', [[['i', null], [[[['i', null]]]], [[[[['i', null]]]]]]]]);
       expect(a.outerHTML).to.eql('<a><i></i><i></i><i></i></a>');
     });
 

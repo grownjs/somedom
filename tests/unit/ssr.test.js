@@ -31,7 +31,7 @@ function main() {
   };
 
   const $view = (state, actions) => ['div', [
-    ['h1', state.count],
+    ['h1', [state.count]],
     ['button',
       { onclick: () => actions.down(1) }, '-'],
     ['button',
@@ -87,7 +87,7 @@ describe('SSR', () => {
 
   describe('renderToString', () => {
     it('can render static vnodes as markup', async () => {
-      const vnode = ['h1', 'It works!'];
+      const vnode = ['h1', null, 'It works!'];
       const dom = renderToString(vnode);
 
       const html = await dom();

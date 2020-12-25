@@ -31,10 +31,11 @@ import {
 
 import { addEvents } from './lib/events';
 
-export const h = (name, attrs, ...children) => {
-  return attrs === null || isPlain(attrs)
-    ? [name, attrs || undefined, children]
-    : [name, undefined, [attrs].concat(children)];
+export const h = (tag, attrs, ...children) => {
+  if (isArray(attrs)) return [tag || 'div', null, ...attrs];
+  if (isScalar(attrs)) return [tag || 'div', null, attrs, ...children];
+
+  return [tag || 'div', attrs || null, ...children.reduce((memo, it) => memo.concat(it), [])];
 };
 
 export const pre = (vnode, svg, cb = render) => {

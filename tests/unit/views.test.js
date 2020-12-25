@@ -288,7 +288,7 @@ describe('views', () => {
       td.when(actions.test())
         .thenReturn(() => ({ x: 42 }));
 
-      const view = createView(props => ['pre', JSON.stringify(props)], null, actions);
+      const view = createView(props => ['pre', null, JSON.stringify(props)], null, actions);
       const app = view();
 
       const teardown = app.subscribe(callback);
@@ -306,15 +306,18 @@ describe('views', () => {
     });
 
     it('should overload class instances to proxy actions', async () => {
-      const view = createView(class {
-        render() {
-          return ['div', [this.state.value]];
-        }
+      function Class() {
+      }
 
-        update() {
-          return { value: `${this.props.value}!` };
-        }
-      }, { value: 'OSOM' });
+      Class.prototype.render = function $render() {
+        return ['div', [this.state.value]];
+      };
+
+      Class.prototype.update = function $update() {
+        return { value: `${this.props.value}!` };
+      };
+
+      const view = createView(Class, { value: 'OSOM' });
 
       const el = view();
 
@@ -325,7 +328,7 @@ describe('views', () => {
     });
 
     it('should call destroyElement() as result of unmount() calls', async () => {
-      const view = createView(() => ['div', 'OK'], null);
+      const view = createView(() => ['div', null, 'OK'], null);
       const app = view();
 
       expect(document.body.innerHTML).to.eql('<div>OK</div>');
@@ -345,7 +348,7 @@ describe('views', () => {
         actions = { setFoo: value => async () => ({ foo: value }) };
 
         td.when(tag(td.matchers.isA(Object), td.matchers.isA(Object)))
-          .thenReturn(['a']);
+          .thenReturn(['a', null]);
       });
 
       async function testThunk(value, result, subject, description) {
@@ -388,7 +391,7 @@ describe('views', () => {
       });
 
       it('should re-render on state changes', async () => {
-        const app = createView(({ foo }) => [['a', foo]], data, actions);
+        const app = createView(({ foo }) => [['a', null, foo]], data, actions);
         const el = app();
 
         expect(el.state).to.eql({ foo: 'BAR' });
@@ -523,7 +526,7 @@ describe('views', () => {
       }
 
       function Main(props) {
-        return ['fieldset', [[[['legend', 'Example:']], [[[[[MyCounter, props]]]]]]]];
+        return ['fieldset', [[[['legend', ['Example:']]], [[[[[MyCounter, props]]]]]]]];
       }
 
       beforeEach(() => {
@@ -591,6 +594,51 @@ describe('views', () => {
         await ctx.mount(body, vnode);
 
         expect(td.explain(ondestroy).callCount).to.eql(1);
+      });
+
+      it('should patch fragments from views', async () => {
+        const { view } = bind(render, listeners());
+
+        let inc = 0;
+        const Other = view(function Random() {
+          return ['OK: ', inc++]; // eslint-disable-line
+        });
+
+        const Counter = createView(class CounterView2 {
+          constructor() {
+            this.children = [Other];
+            this.state = { value: 42 };
+          }
+
+          inc() {
+            return { value: this.state.value + 1 };
+          }
+
+          render() {
+            return [
+              ['p', [
+                ['span', ['value: ', this.state.value]],
+              ]],
+              this.children,
+            ];
+          }
+        });
+
+        const div = document.createElement('div');
+        const app = Counter(div);
+
+        await app.instance.inc();
+        const a = div.outerHTML;
+
+        await app.instance.inc();
+        const b = div.outerHTML;
+
+        await app.instance.inc();
+        const c = div.outerHTML;
+
+        expect(a).to.eql('<div><p><span>value: 43</span></p>OK: 1</div>');
+        expect(b).to.eql('<div><p><span>value: 44</span></p>OK: 2</div>');
+        expect(c).to.eql('<div><p><span>value: 45</span></p>OK: 3</div>');
       });
     });
   });

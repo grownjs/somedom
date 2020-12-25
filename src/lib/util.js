@@ -44,7 +44,9 @@ export const isEmpty = value => {
   return isUndef(value) || value === '' || value === false;
 };
 
-export const isNode = x => isArray(x) && x.length <= 3 && ((typeof x[0] === 'string' && isSelector(x[0])) || isFunction(x[0]));
+export const isNode = x => isArray(x)
+  && ((typeof x[0] === 'string' && isSelector(x[0])) || isFunction(x[0]))
+  && (typeof x[1] === 'object' || isFunction(x[0]));
 
 export const getMethods = obj => {
   const stack = [];

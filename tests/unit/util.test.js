@@ -134,7 +134,13 @@ describe('util', () => {
       expect(isNode({})).to.be.false;
       expect(isNode([])).to.be.false;
       expect(isNode([''])).to.be.false;
-      expect(isNode(['x'])).to.be.true;
+      expect(isNode(['x'])).to.be.false;
+      expect(isNode(['x', 'y'])).to.be.false;
+      expect(isNode(['x', 'y', 'z'])).to.be.false;
+      expect(isNode(['x', ['y', 'z']])).to.be.true;
+      expect(isNode(['a', undefined])).to.be.false;
+      expect(isNode(['a', null])).to.be.true;
+      expect(isNode(['a', {}])).to.be.true;
       expect(isNode([Function])).to.be.true;
     });
   });

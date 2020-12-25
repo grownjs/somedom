@@ -23,15 +23,15 @@ describe('attrs', () => {
     });
 
     it('will invoke tag functions recursively', () => {
-      const tree = [() => [() => ['span', 'O', [[() => ['em', 'k']], '!']]]];
+      const tree = [() => [() => ['span', null, 'O', [[() => ['em', null, 'k']], '!']]]];
 
-      expect(fixTree(tree)).to.eql(['span', 'O', [['em', 'k'], '!']]);
+      expect(fixTree(tree)).to.eql(['span', null, 'O', [['em', null, 'k'], '!']]);
     });
 
     it('should unflatten nested children', () => {
-      const tree = [[[['span', 'O', [[['em', 'k']], '!']]]]];
+      const tree = [[[['span', null, 'O', [[['em', null, 'k']], '!']]]]];
 
-      expect(fixTree(tree)).to.eql([['span', 'O', [['em', 'k'], '!']]]);
+      expect(fixTree(tree)).to.eql([['span', null, 'O', [['em', null, 'k'], '!']]]);
     });
   });
 
@@ -43,14 +43,14 @@ describe('attrs', () => {
     });
 
     it('should normalize given vnodes', () => {
-      expect(fixProps(['div'])).to.eql(['div', {}, []]);
+      expect(fixProps(['div', null])).to.eql(['div', {}, []]);
     });
 
     it('should fix emmet-like syntax as regular attributes', () => {
-      expect(fixProps(['#a'])).to.eql(['div', { id: 'a' }, []]);
-      expect(fixProps(['div#a'])).to.eql(['div', { id: 'a' }, []]);
-      expect(fixProps(['div.b.c'])).to.eql(['div', { class: ['b', 'c'] }, []]);
-      expect(fixProps(['div#a.b.c'])).to.eql(['div', { id: 'a', class: ['b', 'c'] }, []]);
+      expect(fixProps(['#a', null])).to.eql(['div', { id: 'a' }, []]);
+      expect(fixProps(['div#a', null])).to.eql(['div', { id: 'a' }, []]);
+      expect(fixProps(['div.b.c', null])).to.eql(['div', { class: ['b', 'c'] }, []]);
+      expect(fixProps(['div#a.b.c', null])).to.eql(['div', { id: 'a', class: ['b', 'c'] }, []]);
     });
 
     it('should merge given classes with static ones', () => {
