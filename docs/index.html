@@ -229,7 +229,7 @@
           <fieldset id="target3"></fieldset>
           <script>test(({ view, bind, render, listeners }, appendChild) => {
             var heading = view({
-              render: () => ['h1', 'It works?'],
+              render: () => ['h1', ['It works?']],
             });
 
             var counter = view(class {
@@ -409,7 +409,7 @@
           });</script>
         </dd>
         <dd>
-          <p>Mounting multiple nodes are possible through <code>DocumentFragment</code>, e.g.</p>
+          <p>Rendering from multiple nodes is possible through <code>DocumentFragment</code>, e.g.</p>
           <small>output:</small>
           <fieldset id="test6"></fieldset>
           <script>test(({ mount }, appendChild) => {
@@ -417,12 +417,12 @@
 
             mount(test6, [
               'Some text ',
-              ['strong', 'before HTML'],
+              ['strong', ['before HTML']],
               ': ',
               [
                 'because',
                 ' ',
-                ['em', 'it is'],
+                ['em', ['it is']],
                 [' ', [['strong', { style }, 'possible!']]],
               ],
             ]);
@@ -562,7 +562,7 @@
           <p>You can render single or nested <i>vnodes</i>, attributes are supported as well.</p>
           <small>output:</small>
           <script>test(({ render }, appendChild) => {
-            appendChild(render(['b', 'Bold, ']));
+            appendChild(render(['b', ['Bold, ']]));
             appendChild(render(['em', [['span', 'Italic ']]]));
             appendChild(render(['span', { style: 'color:red' }, '& Colored.']));
           });</script>
@@ -803,7 +803,7 @@
                   { onclick: () => {
                     unmount(item);
                   } }, 'Remove'],
-                ['span', 'EXAMPLE'],
+                ['span', ['EXAMPLE']],
               ]]);
 
               mount('#test4', item);
@@ -921,7 +921,7 @@ button.dispatchEvent({ type: 'click' });</pre>
         <dt><code>renderToString(vnode[, cb])</code></dt>
         <dd>
           <p>Returns a new function, when invoked it'll produce HTML as its output.</p>
-          <pre class="highlight">var test = ['h1', 'It works!'];
+          <pre class="highlight">var test = ['h1', ['It works!']];
 var dom = renderToString(test);
 var html = await dom();
 

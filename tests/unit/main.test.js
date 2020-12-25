@@ -23,7 +23,9 @@ describe('somedom', () => {
     it('should return well formed vnodes', () => {
       expect(h()).to.eql(['div', null]);
       expect(h('grab')).to.eql(['grab', null]);
+      expect(h('grab', 'a')).to.eql(['grab', null, 'a']);
       expect(h('grab', 'a', 'beer')).to.eql(['grab', null, 'a', 'beer']);
+      expect(h('grab', h('a', 'beer'))).to.eql(['grab', null, 'a', null, 'beer']);
       expect(h('grab', [h('a', 'beer')])).to.eql(['grab', null, ['a', null, 'beer']]);
       expect(h('grab', [h('a', ['beer', 'with', 'friends'])])).to.eql(['grab', null, ['a', null, 'beer', 'with', 'friends']]);
     });
@@ -99,9 +101,9 @@ describe('somedom', () => {
   });
 
   describe('patch', () => {
-    it('will sync event-handlers properly', async () => {
-      tag = bind(render, listeners());
+    let node;
 
+    function setup(useFragment) {
       const rm = td.func('removeItem');
 
       let data = [
@@ -119,19 +121,29 @@ describe('somedom', () => {
       data.map(x => td.when(rm(x.id)).thenDo(() => filter(x.id)));
 
       function view() {
-        return [[['ul', data.map(x => ['li', { onclick: () => rm(x.id) }, x.value])]]];
+        const partial = ['ul', data.map(x => ['li', { onclick: () => rm(x.id) }, x.value])];
+
+        return useFragment
+          ? [partial]
+          : partial;
       }
 
       let vnode = view();
-      const node = tag(vnode);
+
+      tag = bind(render, listeners());
+      node = tag(vnode);
+
+      if (useFragment) {
+        node.mount(document.createElement('div'));
+      }
 
       for (let i = 0; i < 2; i += 1) {
         $(node).withText(`Item ${i + 1}`).dispatch('click');
         patch(node, vnode, vnode = view(), null, tag, null);
       }
+    }
 
-      await tick();
-
+    afterEach(() => {
       expect(format(node.outerHTML)).to.eql(trim(`
         <ul>
           <li>Item 3</li>
@@ -139,6 +151,16 @@ describe('somedom', () => {
           <li>Item 5</li>
         </ul>
       `));
+    });
+
+    it('will sync event-handlers properly', async () => {
+      setup();
+      await tick();
+    });
+
+    it('will sync event-handlers properly (fragments)', async () => {
+      setup(true);
+      await tick();
     });
   });
 });

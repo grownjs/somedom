@@ -1,5 +1,5 @@
 import {
-  isEmpty, isObject, isFunction, isScalar, isDiff, isNode, isArray, toArray,
+  isEmpty, isObject, isFunction, isScalar, isPlain, isDiff, isNode, isArray,
 } from './util';
 
 import { XLINK_NS, ELEM_REGEX } from './shared';
@@ -11,7 +11,7 @@ export function fixTree(vnode) {
     }
 
     if (isFunction(vnode[0])) {
-      return fixTree(vnode[0](vnode[1], toArray(vnode[2])));
+      return fixTree(vnode[0](vnode[1], vnode.slice(2)));
     }
 
     return vnode.map(fixTree);
@@ -20,26 +20,43 @@ export function fixTree(vnode) {
   return vnode;
 }
 
-export function fixProps(vnode) {
-  if (isScalar(vnode) || !isNode(vnode)) return vnode;
-  if (isArray(vnode[1]) || isScalar(vnode[1])) {
-    vnode[2] = vnode[1];
-    vnode[1] = null;
+export function fixProps(vnode, re) {
+  if (isScalar(vnode) || !isNode(vnode)) {
+    return re && isArray(vnode)
+      ? vnode.map(x => fixProps(x, re))
+      : vnode;
   }
 
-  vnode[2] = toArray(vnode[2]);
+  const children = vnode.slice(isArray(vnode[1]) ? 1 : 2)
+    .reduce((memo, it) => {
+      if (re && isNode(it)) {
+        memo.push(fixProps(it, re));
+      } else {
+        return memo.concat(it);
+      }
+      return memo;
+    }, []);
 
-  if (!isNode(vnode) || isFunction(vnode[0])) return vnode;
+
+  let attrs = isPlain(vnode[1])
+    ? { ...vnode[1] }
+    : null;
+
+  if (isFunction(vnode[0])) {
+    return [vnode[0], attrs, ...children];
+  }
 
   const matches = vnode[0].match(ELEM_REGEX);
-  const name = matches[1] || 'div';
-  const attrs = { ...vnode[1] };
+  const tag = matches[1] || 'div';
 
   if (matches[2]) {
+    attrs = attrs || {};
     attrs.id = matches[2].substr(1);
   }
 
   if (matches[3]) {
+    attrs = attrs || {};
+
     const classes = matches[3].substr(1).split('.');
 
     if (isArray(attrs.class) || isScalar(attrs.class)) {
@@ -55,7 +72,7 @@ export function fixProps(vnode) {
     }
   }
 
-  return [name, attrs, vnode[2]];
+  return [tag, attrs, ...children];
 }
 
 export function assignProps(target, attrs, svg, cb) {
@@ -89,9 +106,9 @@ export function assignProps(target, attrs, svg, cb) {
 }
 
 export function updateProps(target, prev, next, svg, cb) {
+  const keys = Object.keys(prev).concat(Object.keys(next));
   let changed;
 
-  const keys = Object.keys(prev).concat(Object.keys(next));
   const props = keys.reduce((all, k) => {
     if (k in prev && !(k in next)) {
       all[k] = null;

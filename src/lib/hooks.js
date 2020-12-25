@@ -17,7 +17,7 @@ export function useMemo(callback, inputs) {
 
   const prev = scope.d[key];
 
-  if (!prev || isDiff(prev, inputs)) {
+  if (isUndef(prev) || isDiff(prev, inputs)) {
     scope.v[key] = callback();
     scope.d[key] = inputs;
   }

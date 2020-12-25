@@ -10,6 +10,8 @@ import {
   SKIP_METHODS,
 } from './shared';
 
+import Fragment from './fragment';
+
 import { fixTree } from './attrs';
 import { createContext } from './ctx';
 
@@ -160,7 +162,7 @@ export function createThunk(vnode, cb = createElement) {
     refs: {},
     render: cb,
     source: null,
-    vnode: vnode || ['div'],
+    vnode: vnode || ['div', null],
     thunk: createView(() => ctx.vnode, null),
   };
 
@@ -194,7 +196,7 @@ export function createThunk(vnode, cb = createElement) {
 
     return (props, children) => {
       const identity = name || tag.name || 'Thunk';
-      const target = document.createDocumentFragment();
+      const target = new Fragment(identity);
       const thunk = tag(props, children)(target, ctx.render);
 
       ctx.refs[identity] = ctx.refs[identity] || [];
@@ -202,15 +204,15 @@ export function createThunk(vnode, cb = createElement) {
 
       const _remove = thunk.target.remove;
 
-      thunk.target.remove = target.remove = _cb => Promise.resolve()
-        .then(() => {
-          ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);
+      thunk.target.remove = target.remove = async _cb => {
+        ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);
 
-          if (!ctx.refs[identity].length) {
-            delete ctx.refs[identity];
-          }
-        })
-        .then(() => _remove(_cb));
+        if (!ctx.refs[identity].length) {
+          delete ctx.refs[identity];
+        }
+
+        return _remove(_cb);
+      };
 
       return target;
     };

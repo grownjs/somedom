@@ -20,7 +20,8 @@ export function findText(value) {
     });
   }
 
-  walk(this, this.childNodes);
+  const root = this.root || this;
+  walk(root, root.childNodes);
 
   return found;
 }
@@ -122,7 +123,15 @@ export function createElement(name) {
     },
     appendChild(n) {
       n.parentNode = el;
-      el.childNodes.push(n);
+
+      if (n instanceof Fragment) {
+        n.childNodes.forEach(sub => {
+          el.appendChild(sub);
+        });
+        n.childNodes = [];
+      } else {
+        el.childNodes.push(n);
+      }
     },
     setAttribute(k, v) {
       el.attributes[k] = v;

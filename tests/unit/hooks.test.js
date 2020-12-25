@@ -105,15 +105,17 @@ describe('hooks', () => {
 
       const B = wrap(createContext((props, children) => {
         b = useState(2);
-        return ['b', [[C, props, [children, b[0]]]]];
+        return ['b', [[C, props, children, b[0]]]];
       }, createView));
 
       const A = wrap(createContext((props, children) => {
         c = useState(1);
-        return ['a', [[B, props, [children, c[0]]]]];
+        return ['a', [[B, props, children, c[0]]]];
       }, createView));
 
-      document.body.appendChild(A(null, 0));
+      const app = A(null, 0);
+      app.mount(document.body);
+
       expect(document.body.innerHTML).to.eql('<a><b><c>0123</c></b></a>');
 
       a[1]('0');

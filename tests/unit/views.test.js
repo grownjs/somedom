@@ -230,7 +230,10 @@ describe('views', () => {
       const view2 = createView(callback, null, [42])();
 
       expect(view2.target.nodeType).to.eql(11);
-      expect(view2.target.childNodes).to.eql([{ nodeType: 3, nodeValue: '{}', parentNode: document.body }]);
+      expect(view2.target.childNodes).to.eql([]);
+      expect([view2.target.getNodeAt(0)]).to.eql([
+        { nodeType: 3, nodeValue: '{}', parentNode: document.body },
+      ]);
     });
 
     it('should allow to receive a refreshCallback', () => {
@@ -416,7 +419,7 @@ describe('views', () => {
       expect(thunk.refs).to.eql({});
       expect(thunk.source).to.be.null;
       expect(thunk.render).to.eql(createElement);
-      expect(thunk.vnode).to.eql(['div']);
+      expect(thunk.vnode).to.eql(['div', null]);
       expect(typeof thunk.thunk).to.eql('function');
       expect(typeof thunk.wrap).to.eql('function');
       expect(typeof thunk.mount).to.eql('function');
@@ -569,8 +572,8 @@ describe('views', () => {
         }
 
         expect(depth).to.eql(2);
-        expect(node.childNodes.length).to.eql(2);
-        expect(node.childNodes[1].childNodes.length).to.eql(3);
+        expect(node.childNodes.length).to.eql(3);
+        expect(node.childNodes[2].childNodes.length).to.eql(3);
       });
 
       it('should reference mounted views', async () => {

@@ -117,12 +117,23 @@ export const clone = value => {
   return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
 };
 
-export function sortedZip(prev, next, cb) {
+export function offsetAt(target, cb) {
+  let offset = -1;
+  for (let i = 0; i < target.childNodes.length; i += 1) {
+    if (cb(target.childNodes[i])) {
+      offset = i;
+      break;
+    }
+  }
+  return offset;
+}
+
+export function sortedZip(prev, next, cb, o = -1) {
   const length = Math.max(prev.length, next.length);
 
   for (let i = 0; i < length; i += 1) {
     if (isDiff(prev[i], next[i])) {
-      cb(prev[i] || null, !isUndef(next[i]) ? next[i] : null, i);
+      cb(prev[i] || null, !isUndef(next[i]) ? next[i] : null, i + o + 1);
     }
   }
 }
@@ -136,6 +147,12 @@ export const replace = (target, node, i) => target.replaceChild(node, target.chi
 export const remove = (target, node) => target && target.removeChild(node);
 
 export const detach = (target, node) => {
-  if (node) target.parentNode.insertBefore(node, target);
+  if (node) {
+    if (node instanceof Fragment) {
+      node.mount(target.parentNode, target);
+    } else {
+      target.parentNode.insertBefore(node, target);
+    }
+  }
   remove(target.parentNode, target);
 };

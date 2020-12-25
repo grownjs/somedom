@@ -45,6 +45,7 @@ window.addEventListener('DOMContentLoaded', () => {
     try {
       t.cb(somedom, x => appendChild(t.el, x));
     } catch (e) {
+      console.log(e);
       appendChild(t.el, render(['div', { class: 'error' }, e.toString()]));
     }
   });

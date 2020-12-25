@@ -24,38 +24,109 @@
   const SHARED_CONTEXT = [];
 
   class Fragment {
-    constructor(data, cb) {
-      this.childNodes = (data && data.map(cb)) || [];
+    constructor(identifier) {
+      this.childNodes = [];
       this.nodeType = 11;
+      this.name = identifier;
     }
 
     appendChild(node) {
       this.childNodes.push(node);
     }
 
-    replaceChild(node, target) {
-      this.childNodes[this.childNodes.indexOf(target)] = node;
+    getNodeAt(nth) {
+      return this.parentNode.childNodes[nth + this.offset + 1];
     }
 
     remove() {
-      return Promise.all(this.childNodes.map(node => {
-        return typeof node.remove === 'function' && node.remove();
-      }));
+      const offset = this.offset + 1;
+      const target = this.root;
+
+      return (async () => {
+        for (let i = offset + this.length; i >= offset; i -= 1) {
+          if (typeof target.childNodes[i].remove !== 'function') {
+            target.removeChild(target.childNodes[i]);
+          } else {
+            await target.childNodes[i].remove(); // eslint-disable-line
+          }
+        }
+      })();
     }
 
-    mount(target) {
+    mount(target, node) {
+      this.anchor = document.createTextNode('');
+      this.length = this.childNodes.length;
       this.parentNode = target;
-      this.childNodes.forEach(node => {
-        if (!(node instanceof Fragment)) {
-          target.appendChild(node);
+
+      if (!(target instanceof Fragment)) {
+        this.anchor._anchored = target._anchored = true;
+      }
+
+      const doc = document.createDocumentFragment();
+
+      this.flush(doc);
+
+      if (node) {
+        target.insertBefore(doc, node);
+        target.insertBefore(this.anchor, doc);
+      } else {
+        target.appendChild(this.anchor);
+        target.appendChild(doc);
+      }
+    }
+
+    flush(target) {
+      this.childNodes.forEach(sub => {
+        if (sub instanceof Fragment) {
+          sub.flush(target);
         } else {
-          node.mount(target);
+          target.appendChild(sub);
         }
       });
+      this.childNodes = [];
     }
 
     get outerHTML() {
-      return this.childNodes.map(node => node.outerHTML || node.nodeValue).join('');
+      if (this.childNodes.length) {
+        return this.childNodes.map(node => node.outerHTML || node.nodeValue).join('');
+      }
+
+      const target = this.root || this.parentNode;
+
+      return target instanceof Fragment
+        ? target.outerHTML
+        : target.innerHTML;
+    }
+
+    get offset() {
+      let offset = -1;
+      for (let i = 0; i < this.parentNode.childNodes.length; i += 1) {
+        if (this.parentNode.childNodes[i] === this.anchor) {
+          offset = i;
+          break;
+        }
+      }
+      return offset;
+    }
+
+    get root() {
+      let root = this;
+      while (root instanceof Fragment) root = root.parentNode;
+      return root;
+    }
+
+    static from(value, cb) {
+      const target = new Fragment('T');
+
+      value.forEach(vnode => {
+        if (vnode instanceof Fragment) {
+          vnode.mount(target);
+        } else {
+          target.appendChild(cb(vnode));
+        }
+      });
+
+      return target;
     }
   }
 
@@ -95,7 +166,9 @@
     return isUndef(value) || value === '' || value === false;
   };
 
-  const isNode = x => isArray(x) && x.length <= 3 && ((typeof x[0] === 'string' && isSelector(x[0])) || isFunction(x[0]));
+  const isNode = x => isArray(x)
+    && ((typeof x[0] === 'string' && isSelector(x[0])) || isFunction(x[0]))
+    && (typeof x[1] === 'object' || isFunction(x[0]));
 
   const getMethods = obj => {
     const stack = [];
@@ -166,12 +239,23 @@
     return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
   };
 
-  function sortedZip(prev, next, cb) {
+  function offsetAt(target, cb) {
+    let offset = -1;
+    for (let i = 0; i < target.childNodes.length; i += 1) {
+      if (cb(target.childNodes[i])) {
+        offset = i;
+        break;
+      }
+    }
+    return offset;
+  }
+
+  function sortedZip(prev, next, cb, o = -1) {
     const length = Math.max(prev.length, next.length);
 
     for (let i = 0; i < length; i += 1) {
       if (isDiff(prev[i], next[i])) {
-        cb(prev[i] || null, !isUndef(next[i]) ? next[i] : null, i);
+        cb(prev[i] || null, !isUndef(next[i]) ? next[i] : null, i + o + 1);
       }
     }
   }
@@ -184,7 +268,13 @@
   const remove = (target, node) => target && target.removeChild(node);
 
   const detach = (target, node) => {
-    if (node) target.parentNode.insertBefore(node, target);
+    if (node) {
+      if (node instanceof Fragment) {
+        node.mount(target.parentNode, target);
+      } else {
+        target.parentNode.insertBefore(node, target);
+      }
+    }
     remove(target.parentNode, target);
   };
 
@@ -195,7 +285,7 @@
       }
 
       if (isFunction(vnode[0])) {
-        return fixTree(vnode[0](vnode[1], toArray(vnode[2])));
+        return fixTree(vnode[0](vnode[1], vnode.slice(2)));
       }
 
       return vnode.map(fixTree);
@@ -204,26 +294,43 @@
     return vnode;
   }
 
-  function fixProps(vnode) {
-    if (isScalar(vnode) || !isNode(vnode)) return vnode;
-    if (isArray(vnode[1]) || isScalar(vnode[1])) {
-      vnode[2] = vnode[1];
-      vnode[1] = null;
+  function fixProps(vnode, re) {
+    if (isScalar(vnode) || !isNode(vnode)) {
+      return re && isArray(vnode)
+        ? vnode.map(x => fixProps(x, re))
+        : vnode;
     }
 
-    vnode[2] = toArray(vnode[2]);
+    const children = vnode.slice(isArray(vnode[1]) ? 1 : 2)
+      .reduce((memo, it) => {
+        if (re && isNode(it)) {
+          memo.push(fixProps(it, re));
+        } else {
+          return memo.concat(it);
+        }
+        return memo;
+      }, []);
 
-    if (!isNode(vnode) || isFunction(vnode[0])) return vnode;
+
+    let attrs = isPlain(vnode[1])
+      ? { ...vnode[1] }
+      : null;
+
+    if (isFunction(vnode[0])) {
+      return [vnode[0], attrs, ...children];
+    }
 
     const matches = vnode[0].match(ELEM_REGEX);
-    const name = matches[1] || 'div';
-    const attrs = { ...vnode[1] };
+    const tag = matches[1] || 'div';
 
     if (matches[2]) {
+      attrs = attrs || {};
       attrs.id = matches[2].substr(1);
     }
 
     if (matches[3]) {
+      attrs = attrs || {};
+
       const classes = matches[3].substr(1).split('.');
 
       if (isArray(attrs.class) || isScalar(attrs.class)) {
@@ -239,7 +346,7 @@
       }
     }
 
-    return [name, attrs, vnode[2]];
+    return [tag, attrs, ...children];
   }
 
   function assignProps(target, attrs, svg, cb) {
@@ -273,9 +380,9 @@
   }
 
   function updateProps(target, prev, next, svg, cb) {
+    const keys = Object.keys(prev).concat(Object.keys(next));
     let changed;
 
-    const keys = Object.keys(prev).concat(Object.keys(next));
     const props = keys.reduce((all, k) => {
       if (k in prev && !(k in next)) {
         all[k] = null;
@@ -298,24 +405,27 @@
   }
 
   function createElement(value, svg, cb) {
+    if (value instanceof Fragment) return value;
     if (isScalar(value)) return document.createTextNode(value);
     if (isUndef(value)) throw new Error(`Invalid vnode, given '${value}'`);
 
     if (!isNode(value)) {
       return isArray(value)
-        ? new Fragment(fixTree(value), node => createElement(node, svg, cb))
+        ? Fragment.from(value, node => createElement(node, svg, cb))
         : value;
     }
 
     let fixedVNode = fixProps(value);
 
     if (isFunction(fixedVNode[0])) {
-      const retval = fixedVNode[0](fixedVNode[1], fixedVNode[2]);
+      const retval = fixedVNode[0](fixedVNode[1], fixedVNode.slice(2));
 
-      if (!isArray(retval) || !isNode(retval)) return retval;
+      if (!isNode(retval)) {
+        return createElement(retval);
+      }
 
       while (isFunction(retval[0])) {
-        retval[0] = retval[0](fixedVNode[1], fixedVNode[2]);
+        retval[0] = retval[0](fixedVNode[1], fixedVNode.slice(2));
       }
 
       if (!isNode(retval)) {
@@ -325,7 +435,7 @@
       fixedVNode = fixProps(retval);
     }
 
-    const [tag, attrs, children] = fixedVNode;
+    const [tag, attrs, ...children] = fixedVNode;
     const isSvg = svg || tag === 'svg';
 
     let el = isSvg
@@ -372,6 +482,10 @@
 
     if (typeof target === 'string') {
       target = document.querySelector(target);
+
+      if (!target) {
+        throw new Error(`Target '${arguments[0]}' not found`);
+      }
     }
 
     const el = isArray(view) || isScalar(view) ? cb(view) : view;
@@ -383,37 +497,54 @@
 
   function updateElement(target, prev, next, svg, cb, i = null) {
     if (i === null) {
-      if (isArray(prev) && isArray(next)) {
-        const a = fixProps(prev);
-        const b = fixProps(next);
+      prev = fixProps(prev);
+      next = fixProps(next);
 
+      if (target instanceof Fragment) {
+        sortedZip(prev, next, (x, y, z) => updateElement(target.parentNode, x, y, svg, cb, z), target.offset);
+      } else if (isArray(prev) && isArray(next)) {
         if (target.nodeType === 1) {
-          if (isNode(a) && isNode(b)) {
-            if (target.tagName === b[0].toUpperCase()) {
-              if (updateProps(target, a[1], b[1], svg, cb)) {
+          if (isNode(prev) && isNode(next)) {
+            if (target.tagName === next[0].toUpperCase()) {
+              if (updateProps(target, prev[1] || {}, next[1] || {}, svg, cb)) {
                 if (isFunction(target.onupdate)) target.onupdate(target);
                 if (isFunction(target.update)) target.update();
               }
-              sortedZip(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
+
+              if (target._anchored) {
+                sortedZip(prev.slice(2), next.slice(2), (x, y, z) => updateElement(target, x, y, svg, cb, z), offsetAt(target, x => x._anchored));
+              } else {
+                sortedZip(prev.slice(2), next.slice(2), (x, y, z) => updateElement(target, x, y, svg, cb, z));
+              }
             } else {
-              detach(target, createElement(b, svg, cb));
+              detach(target, createElement(next, svg, cb));
             }
-          } else if (isNode(a)) {
-            detach(target, createElement(b, svg, cb));
+          } else if (isNode(prev)) {
+            detach(target, createElement(next, svg, cb));
+          } else if (target._anchored) {
+            sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z), offsetAt(target, x => x._anchored));
           } else {
-            sortedZip(a, b, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+            sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z));
           }
+        } else if (target.nodeType === 3) {
+          sortedZip(prev, next, (x, y, z) => updateElement(target.parentNode, x, y, svg, cb, z), offsetAt(target.parentNode, x => x === target) - 1);
         } else {
-          sortedZip(a, b, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+          sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z));
         }
       } else if (target.nodeType !== 3) {
         detach(target, createElement(next, svg, cb));
+      } else if (next instanceof Fragment) {
+        target.nodeValue = next.outerHTML;
       } else {
         target.nodeValue = next;
       }
     } else if (target.childNodes[i]) {
       if (isUndef(next)) {
-        destroyElement(target.childNodes[i]);
+        if (target.childNodes[i].nodeType !== 3) {
+          destroyElement(target.childNodes[i]);
+        } else {
+          detach(target.childNodes[i]);
+        }
       } else if (!prev || prev[0] !== next[0]) {
         replace(target, createElement(next, svg, cb), i);
       } else {
@@ -630,7 +761,6 @@
 
         if (instance) {
           instance[fn] = memo[fn];
-          memo.instance = instance;
         }
 
         return memo;
@@ -655,6 +785,10 @@
       childNode = mountElement(el, vnode = fixTree(Tag(data, $)), cb);
       $.target = childNode;
 
+      if (instance) {
+        $.instance = instance;
+      }
+
       return $;
     };
   }
@@ -664,7 +798,7 @@
       refs: {},
       render: cb,
       source: null,
-      vnode: vnode || ['div'],
+      vnode: vnode || ['div', null],
       thunk: createView(() => ctx.vnode, null),
     };
 
@@ -698,7 +832,7 @@
 
       return (props, children) => {
         const identity = name || tag.name || 'Thunk';
-        const target = document.createDocumentFragment();
+        const target = new Fragment(identity);
         const thunk = tag(props, children)(target, ctx.render);
 
         ctx.refs[identity] = ctx.refs[identity] || [];
@@ -706,15 +840,15 @@
 
         const _remove = thunk.target.remove;
 
-        thunk.target.remove = target.remove = _cb => Promise.resolve()
-          .then(() => {
-            ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);
+        thunk.target.remove = target.remove = async _cb => {
+          ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);
 
-            if (!ctx.refs[identity].length) {
-              delete ctx.refs[identity];
-            }
-          })
-          .then(() => _remove(_cb));
+          if (!ctx.refs[identity].length) {
+            delete ctx.refs[identity];
+          }
+
+          return _remove(_cb);
+        };
 
         return target;
       };
@@ -737,7 +871,7 @@
 
     const prev = scope.d[key];
 
-    if (!prev || isDiff(prev, inputs)) {
+    if (isUndef(prev) || isDiff(prev, inputs)) {
       scope.v[key] = callback();
       scope.d[key] = inputs;
     }
@@ -898,10 +1032,10 @@
     }
   }
 
-  const h = (name, attrs, ...children) => {
-    return attrs === null || isPlain(attrs)
-      ? [name, attrs || undefined, children]
-      : [name, undefined, [attrs].concat(children)];
+  const h = (tag, attrs, ...children) => {
+    if (isScalar(attrs)) return fixProps([tag || 'div', null, attrs, children]);
+    if (isArray(attrs)) return fixProps([tag || 'div', null, attrs]);
+    return fixProps([tag || 'div', attrs || null, children]);
   };
 
   const pre = (vnode, svg, cb = createElement) => {
@@ -917,7 +1051,7 @@
 
     const cb = (...args) => (args.length <= 2 ? tag(args[0], args[1], mix) : mix(...args));
 
-    const $ = () => document.createDocumentFragment();
+    const $ = () => new Fragment('$');
 
     cb.view = (Tag, name) => {
       function Factory(ref, props, children) {
@@ -1035,6 +1169,7 @@
       try {
         t.cb(somedom, x => appendChild(t.el, x));
       } catch (e) {
+        console.log(e);
         appendChild(t.el, createElement(['div', { class: 'error' }, e.toString()]));
       }
     });

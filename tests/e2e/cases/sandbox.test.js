@@ -5,9 +5,9 @@ import { Selector } from 'testcafe';
 fixture('somedom')
   .page(process.env.BASE_URL);
 
-test('it loads', async t => {
-  const error = Selector('.error');
+const error = Selector('.error');
 
+test('it loads', async t => {
   await t
     .expect(error.exists).ok()
     .expect(error.count).eql(1);
@@ -46,6 +46,21 @@ test('element lifecycle-hooks', async t => {
     .click(test5.find('button'))
     .expect(info.textContent)
     .contains('Destroyed');
+});
+
+test('element patching health-check', async t => {
+  const test0 = Selector('#test0');
+  const oldText = await test0.find('ul').textContent;
+
+  await t
+    .click(test0.parent('details'))
+    .click(test0.parent().find('label').withText('Play')).wait(5000);
+
+  await t
+    .expect(error.exists).ok()
+    .expect(error.count).eql(1);
+
+  await t.expect(test0.find('ul').textContent).notEql(oldText);
 });
 
 test('classes during lifecyle-hooks', async t => {

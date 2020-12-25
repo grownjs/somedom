@@ -26,16 +26,18 @@ import {
 } from './lib/props';
 
 import {
-  apply, format, filter, isUndef, isPlain, isScalar, isArray, toArray, isFunction,
+  apply, format, filter, isUndef, isScalar, isArray, toArray, isFunction,
 } from './lib/util';
 
+import Fragment from './lib/fragment';
+
+import { fixProps } from './lib/attrs';
 import { addEvents } from './lib/events';
 
 export const h = (tag, attrs, ...children) => {
-  if (isArray(attrs)) return [tag || 'div', null, ...attrs];
-  if (isScalar(attrs)) return [tag || 'div', null, attrs, ...children];
-
-  return [tag || 'div', attrs || null, ...children.reduce((memo, it) => memo.concat(it), [])];
+  if (isScalar(attrs)) return fixProps([tag || 'div', null, attrs, children]);
+  if (isArray(attrs)) return fixProps([tag || 'div', null, attrs]);
+  return fixProps([tag || 'div', attrs || null, children]);
 };
 
 export const pre = (vnode, svg, cb = render) => {
@@ -51,7 +53,7 @@ export const bind = (tag, ...hooks) => {
 
   const cb = (...args) => (args.length <= 2 ? tag(args[0], args[1], mix) : mix(...args));
 
-  const $ = () => document.createDocumentFragment();
+  const $ = () => new Fragment('$');
 
   cb.view = (Tag, name) => {
     function Factory(ref, props, children) {

@@ -1,10 +1,10 @@
 import {
   isFunction, isScalar, isArray, isNode, isEmpty, isUndef,
-  sortedZip, append, replace, detach,
+  offsetAt, sortedZip, append, replace, detach,
 } from './util';
 
 import {
-  assignProps, updateProps, fixProps, fixTree,
+  assignProps, updateProps, fixProps,
 } from './attrs';
 
 import { SVG_NS } from './shared';
@@ -16,24 +16,27 @@ export function destroyElement(target, wait = cb => cb()) {
 }
 
 export function createElement(value, svg, cb) {
+  if (value instanceof Fragment) return value;
   if (isScalar(value)) return document.createTextNode(value);
   if (isUndef(value)) throw new Error(`Invalid vnode, given '${value}'`);
 
   if (!isNode(value)) {
     return isArray(value)
-      ? new Fragment(fixTree(value), node => createElement(node, svg, cb))
+      ? Fragment.from(value, node => createElement(node, svg, cb))
       : value;
   }
 
   let fixedVNode = fixProps(value);
 
   if (isFunction(fixedVNode[0])) {
-    const retval = fixedVNode[0](fixedVNode[1], fixedVNode[2]);
+    const retval = fixedVNode[0](fixedVNode[1], fixedVNode.slice(2));
 
-    if (!isArray(retval) || !isNode(retval)) return retval;
+    if (!isNode(retval)) {
+      return createElement(retval);
+    }
 
     while (isFunction(retval[0])) {
-      retval[0] = retval[0](fixedVNode[1], fixedVNode[2]);
+      retval[0] = retval[0](fixedVNode[1], fixedVNode.slice(2));
     }
 
     if (!isNode(retval)) {
@@ -43,7 +46,7 @@ export function createElement(value, svg, cb) {
     fixedVNode = fixProps(retval);
   }
 
-  const [tag, attrs, children] = fixedVNode;
+  const [tag, attrs, ...children] = fixedVNode;
   const isSvg = svg || tag === 'svg';
 
   let el = isSvg
@@ -90,6 +93,10 @@ export function mountElement(target, view, cb = createElement) {
 
   if (typeof target === 'string') {
     target = document.querySelector(target);
+
+    if (!target) {
+      throw new Error(`Target '${arguments[0]}' not found`);
+    }
   }
 
   const el = isArray(view) || isScalar(view) ? cb(view) : view;
@@ -101,37 +108,54 @@ export function mountElement(target, view, cb = createElement) {
 
 export function updateElement(target, prev, next, svg, cb, i = null) {
   if (i === null) {
-    if (isArray(prev) && isArray(next)) {
-      const a = fixProps(prev);
-      const b = fixProps(next);
+    prev = fixProps(prev);
+    next = fixProps(next);
 
+    if (target instanceof Fragment) {
+      sortedZip(prev, next, (x, y, z) => updateElement(target.parentNode, x, y, svg, cb, z, -1), target.offset);
+    } else if (isArray(prev) && isArray(next)) {
       if (target.nodeType === 1) {
-        if (isNode(a) && isNode(b)) {
-          if (target.tagName === b[0].toUpperCase()) {
-            if (updateProps(target, a[1], b[1], svg, cb)) {
+        if (isNode(prev) && isNode(next)) {
+          if (target.tagName === next[0].toUpperCase()) {
+            if (updateProps(target, prev[1] || {}, next[1] || {}, svg, cb)) {
               if (isFunction(target.onupdate)) target.onupdate(target);
               if (isFunction(target.update)) target.update();
             }
-            sortedZip(a[2], b[2], (x, y, z) => updateElement(target, x, y, svg, cb, z));
+
+            if (target._anchored) {
+              sortedZip(prev.slice(2), next.slice(2), (x, y, z) => updateElement(target, x, y, svg, cb, z), offsetAt(target, x => x._anchored));
+            } else {
+              sortedZip(prev.slice(2), next.slice(2), (x, y, z) => updateElement(target, x, y, svg, cb, z));
+            }
           } else {
-            detach(target, createElement(b, svg, cb));
+            detach(target, createElement(next, svg, cb));
           }
-        } else if (isNode(a)) {
-          detach(target, createElement(b, svg, cb));
+        } else if (isNode(prev)) {
+          detach(target, createElement(next, svg, cb));
+        } else if (target._anchored) {
+          sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z), offsetAt(target, x => x._anchored));
         } else {
-          sortedZip(a, b, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+          sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z));
         }
+      } else if (target.nodeType === 3) {
+        sortedZip(prev, next, (x, y, z) => updateElement(target.parentNode, x, y, svg, cb, z), offsetAt(target.parentNode, x => x === target) - 1);
       } else {
-        sortedZip(a, b, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+        sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z));
       }
     } else if (target.nodeType !== 3) {
       detach(target, createElement(next, svg, cb));
+    } else if (next instanceof Fragment) {
+      target.nodeValue = next.outerHTML;
     } else {
       target.nodeValue = next;
     }
   } else if (target.childNodes[i]) {
     if (isUndef(next)) {
-      destroyElement(target.childNodes[i]);
+      if (target.childNodes[i].nodeType !== 3) {
+        destroyElement(target.childNodes[i]);
+      } else {
+        detach(target.childNodes[i]);
+      }
     } else if (!prev || prev[0] !== next[0]) {
       replace(target, createElement(next, svg, cb), i);
     } else {

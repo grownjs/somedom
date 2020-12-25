@@ -7,6 +7,8 @@ import {
   createElement, mountElement, destroyElement, updateElement,
 } from '../../src/lib/node';
 
+import Fragment from '../../src/lib/fragment';
+
 import { tick, trim, format } from '../../src/lib/util';
 
 import doc from './fixtures/document';
@@ -27,7 +29,84 @@ describe('node', () => {
       const div = document.createElement('div');
       div.appendChild(tree);
 
+      expect(div.childNodes.some(x => x instanceof Fragment)).to.be.false;
       expect(div.outerHTML).to.eql('<div><span>foo</span><span>bar</span></div>');
+    });
+
+    it('should invoke factories from fragments', () => {
+      const value = 42;
+      const children = [function Random() {
+        return ['OK: ', -1];
+      }];
+
+      expect(createElement([
+        ['p', [
+          ['span', ['value: ', value]],
+        ]],
+        children,
+      ]).outerHTML).to.eql('<p><span>value: 42</span></p>OK: -1');
+    });
+
+    it('should render children indistinctly', () => {
+      expect(createElement(['p', null, 'hola', 'mundo']).outerHTML).to.eql('<p>holamundo</p>');
+      expect(createElement(['p', null, 'hola', 'mundo']).childNodes.length).to.eql(2);
+
+      expect(createElement(['p', null, ['hola', 'mundo']]).outerHTML).to.eql('<p>holamundo</p>');
+      expect(createElement(['p', null, ['hola', 'mundo']]).childNodes.length).to.eql(2);
+
+      expect(createElement(['p', null, [['hola', 'mundo']]]).outerHTML).to.eql('<p>holamundo</p>');
+      expect(createElement(['p', null, [['hola', 'mundo']]]).childNodes.length).to.eql(3);
+    });
+
+    describe('updateElement', () => {
+      let div;
+      let x;
+      let y;
+
+      const factory = (...children) => ({
+        vnode: [
+          ['span', ['OK']],
+          ...children,
+        ],
+        result: `<div><span>OK</span>${children.reduce((memo, it) => memo.concat(it), []).join('')}</div>`,
+      });
+
+      beforeEach(() => {
+        div = document.createElement('div');
+      });
+
+      it('should skip anchors while patching fragments', () => {
+        x = factory('just: ', 'x');
+        y = factory('just: ', 'y');
+
+        mountElement(div, x.vnode);
+        expect(div.outerHTML).to.eql(x.result);
+
+        updateElement(div, x.vnode, y.vnode);
+        expect(div.outerHTML).to.eql(y.result);
+      });
+
+      it('should skip anchors while patching fragments (mixed)', () => {
+        x = factory('just: ', 'x');
+        y = factory(['just: ', 'y']);
+
+        mountElement(div, x.vnode);
+        expect(div.outerHTML).to.eql(x.result);
+
+        updateElement(div, x.vnode, y.vnode);
+        expect(div.outerHTML).to.eql(y.result);
+      });
+
+      it('should skip anchors while patching fragments (nested)', () => {
+        x = factory(['just: ', 'x']);
+        y = factory(['just: ', 'y']);
+
+        mountElement(div, x.vnode);
+        expect(div.outerHTML).to.eql(x.result);
+
+        updateElement(div, x.vnode, y.vnode);
+        expect(div.outerHTML).to.eql(y.result);
+      });
     });
   });
 
@@ -48,7 +127,7 @@ describe('node', () => {
       expect(td.explain(div.remove).callCount).to.eql(1);
     });
 
-    it('should skip removal if wait.skip() does not resolve', async () => {
+    it('should skip removal if wait() does not resolve', async () => {
       await destroyElement(div, () => null);
       expect(td.explain(div.remove).callCount).to.eql(0);
     });
@@ -58,8 +137,10 @@ describe('node', () => {
       const remove = td.func('-OSOM');
       const remove2 = td.func('-SO');
 
-      td.replace(vdom.childNodes[0], 'remove', remove);
-      td.replace(vdom.childNodes[1], 'remove', remove2);
+      vdom.mount(document.createElement('div'));
+
+      td.replace(vdom.getNodeAt(0), 'remove', remove);
+      td.replace(vdom.getNodeAt(1), 'remove', remove2);
 
       await vdom.remove();
 
@@ -118,17 +199,16 @@ describe('node', () => {
     it('should wrap trees as DocumentFragment nodes', () => {
       const tree = [[[[['p', [[[[['i', null]]]]]]]]]];
       const node = createElement(tree);
+      node.mount(document.createElement('div'));
 
-      let depth = 0;
-      let obj = node;
-
-      while (obj && obj.childNodes) {
-        depth += 1;
-        obj = obj.childNodes[0];
-      }
-
-      expect(depth).to.eql(3);
+      expect(node.parentNode).not.to.be.undefined;
+      expect(node.childNodes.length).to.eql(0);
       expect(node.outerHTML).to.eql('<p><i></i></p>');
+      expect(node.getNodeAt(0).tagName).to.eql('P');
+      expect(node.getNodeAt(0).childNodes.length).to.eql(2);
+      expect(node.getNodeAt(0).childNodes[0].nodeType).to.eql(3);
+      expect(node.getNodeAt(0).childNodes[1].tagName).to.eql('I');
+      expect(node.getNodeAt(0).childNodes[1].childNodes.length).to.eql(0);
     });
 
     it('should pass created element to given callback', () => {
@@ -173,7 +253,7 @@ describe('node', () => {
       td.when(fn())
         .thenReturn(['div', null]);
 
-      td.when(fn(td.matchers.isA(Object), 'span', {}, []))
+      td.when(fn(td.matchers.isA(Object), 'span', null, []))
         .thenReturn(fn);
 
       const node = createElement(['span', null], null, fn);
