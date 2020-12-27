@@ -10,7 +10,7 @@ import Fragment from './fragment';
 
 export const isArray = value => Array.isArray(value);
 export const isFunction = value => typeof value === 'function';
-export const isSelector = value => value && ELEM_REGEX.test(value);
+export const isSelector = value => typeof value === 'string' && ELEM_REGEX.test(value);
 export const isUndef = value => typeof value === 'undefined' || value === null;
 export const isPlain = value => value !== null && Object.prototype.toString.call(value) === '[object Object]';
 export const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');

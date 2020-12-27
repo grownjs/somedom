@@ -366,6 +366,10 @@ describe('node', () => {
         </div>
       `));
     });
+
+    it('should fail on invalid targets', () => {
+      expect(() => mountElement('#undef', [])).to.throw(/Target '#undef' not found/);
+    });
   });
 
   describe('updateElement', () => {

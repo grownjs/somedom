@@ -8,7 +8,7 @@
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
-  const ELEM_REGEX = /^(\w*|[.#]\w+)(#[\w-]+)?([\w.-]+)?$/;
+  const ELEM_REGEX = /^(\w*|[.#]\w+)(#[\w-]+)?(\.[\w-][\w-.]*)*$/;
 
   const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
 
@@ -24,10 +24,9 @@
   const SHARED_CONTEXT = [];
 
   class Fragment {
-    constructor(identifier) {
+    constructor() {
       this.childNodes = [];
       this.nodeType = 11;
-      this.name = identifier;
     }
 
     appendChild(node) {
@@ -44,11 +43,7 @@
 
       return (async () => {
         for (let i = offset + this.length; i >= offset; i -= 1) {
-          if (typeof target.childNodes[i].remove !== 'function') {
-            target.removeChild(target.childNodes[i]);
-          } else {
-            await target.childNodes[i].remove(); // eslint-disable-line
-          }
+          await target.childNodes[i].remove(); // eslint-disable-line
         }
       })();
     }
@@ -116,7 +111,7 @@
     }
 
     static from(value, cb) {
-      const target = new Fragment('T');
+      const target = new Fragment();
 
       value.forEach(vnode => {
         if (vnode instanceof Fragment) {
@@ -132,7 +127,7 @@
 
   const isArray = value => Array.isArray(value);
   const isFunction = value => typeof value === 'function';
-  const isSelector = value => value && ELEM_REGEX.test(value);
+  const isSelector = value => typeof value === 'string' && ELEM_REGEX.test(value);
   const isUndef = value => typeof value === 'undefined' || value === null;
   const isPlain = value => value !== null && Object.prototype.toString.call(value) === '[object Object]';
   const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
@@ -415,7 +410,7 @@
         : value;
     }
 
-    let fixedVNode = fixProps(value);
+    let fixedVNode = fixProps(value, true);
 
     if (isFunction(fixedVNode[0])) {
       const retval = fixedVNode[0](fixedVNode[1], fixedVNode.slice(2));
@@ -526,10 +521,8 @@
           } else {
             sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z));
           }
-        } else if (target.nodeType === 3) {
-          sortedZip(prev, next, (x, y, z) => updateElement(target.parentNode, x, y, svg, cb, z), offsetAt(target.parentNode, x => x === target) - 1);
         } else {
-          sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+          sortedZip(prev, next, (x, y, z) => updateElement(target.parentNode, x, y, svg, cb, z), offsetAt(target.parentNode, x => x === target) - 1);
         }
       } else if (target.nodeType !== 3) {
         detach(target, createElement(next, svg, cb));
@@ -832,7 +825,7 @@
 
       return (props, children) => {
         const identity = name || tag.name || 'Thunk';
-        const target = new Fragment(identity);
+        const target = new Fragment();
         const thunk = tag(props, children)(target, ctx.render);
 
         ctx.refs[identity] = ctx.refs[identity] || [];
@@ -1032,10 +1025,10 @@
     }
   }
 
-  const h = (tag, attrs, ...children) => {
-    if (isScalar(attrs)) return fixProps([tag || 'div', null, attrs, children]);
-    if (isArray(attrs)) return fixProps([tag || 'div', null, attrs]);
-    return fixProps([tag || 'div', attrs || null, children]);
+  const h = (tag = 'div', attrs = null, ...children) => {
+    if (isScalar(attrs)) return fixProps([tag, null, attrs, children]);
+    if (isArray(attrs)) return fixProps([tag, null, attrs]);
+    return fixProps([tag, attrs || null, children]);
   };
 
   const pre = (vnode, svg, cb = createElement) => {
@@ -1051,7 +1044,7 @@
 
     const cb = (...args) => (args.length <= 2 ? tag(args[0], args[1], mix) : mix(...args));
 
-    const $ = () => new Fragment('$');
+    const $ = () => new Fragment();
 
     cb.view = (Tag, name) => {
       function Factory(ref, props, children) {

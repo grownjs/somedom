@@ -26,7 +26,7 @@ export function createElement(value, svg, cb) {
       : value;
   }
 
-  let fixedVNode = fixProps(value);
+  let fixedVNode = fixProps(value, true);
 
   if (isFunction(fixedVNode[0])) {
     const retval = fixedVNode[0](fixedVNode[1], fixedVNode.slice(2));
@@ -137,10 +137,8 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
         } else {
           sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z));
         }
-      } else if (target.nodeType === 3) {
-        sortedZip(prev, next, (x, y, z) => updateElement(target.parentNode, x, y, svg, cb, z), offsetAt(target.parentNode, x => x === target) - 1);
       } else {
-        sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+        sortedZip(prev, next, (x, y, z) => updateElement(target.parentNode, x, y, svg, cb, z), offsetAt(target.parentNode, x => x === target) - 1);
       }
     } else if (target.nodeType !== 3) {
       detach(target, createElement(next, svg, cb));

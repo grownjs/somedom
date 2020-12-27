@@ -196,7 +196,7 @@ export function createThunk(vnode, cb = createElement) {
 
     return (props, children) => {
       const identity = name || tag.name || 'Thunk';
-      const target = new Fragment(identity);
+      const target = new Fragment();
       const thunk = tag(props, children)(target, ctx.render);
 
       ctx.refs[identity] = ctx.refs[identity] || [];

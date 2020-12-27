@@ -34,10 +34,10 @@ import Fragment from './lib/fragment';
 import { fixProps } from './lib/attrs';
 import { addEvents } from './lib/events';
 
-export const h = (tag, attrs, ...children) => {
-  if (isScalar(attrs)) return fixProps([tag || 'div', null, attrs, children]);
-  if (isArray(attrs)) return fixProps([tag || 'div', null, attrs]);
-  return fixProps([tag || 'div', attrs || null, children]);
+export const h = (tag = 'div', attrs = null, ...children) => {
+  if (isScalar(attrs)) return fixProps([tag, null, attrs, children]);
+  if (isArray(attrs)) return fixProps([tag, null, attrs]);
+  return fixProps([tag, attrs || null, children]);
 };
 
 export const pre = (vnode, svg, cb = render) => {
@@ -53,7 +53,7 @@ export const bind = (tag, ...hooks) => {
 
   const cb = (...args) => (args.length <= 2 ? tag(args[0], args[1], mix) : mix(...args));
 
-  const $ = () => new Fragment('$');
+  const $ = () => new Fragment();
 
   cb.view = (Tag, name) => {
     function Factory(ref, props, children) {

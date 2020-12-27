@@ -4,7 +4,7 @@ import td from 'testdouble';
 import { expect } from 'chai';
 
 import {
-  h, pre, bind, mount, patch, render, listeners, attributes,
+  h, pre, bind, mount, patch, render, classes, listeners, attributes,
 } from '../../src';
 
 import { tick, trim, format } from '../../src/lib/util';
@@ -161,6 +161,21 @@ describe('somedom', () => {
     it('will sync event-handlers properly (fragments)', async () => {
       setup(true);
       await tick();
+    });
+  });
+
+  describe('emmet-like syntax', () => {
+    it('should transform selectors recursively', () => {
+      tag = bind(render, attributes({
+        class: classes,
+      }));
+
+      const a = tag(['foo', null, ['bar', null, ['baz', null]]]).outerHTML;
+      const b = tag(['foo', ['bar', ['baz', []]]]).outerHTML;
+      const c = tag(['a.foo', ['b.bar', ['c.baz', []]]]).outerHTML;
+
+      expect(a).to.eql(b);
+      expect(c).to.eql('<a class="foo"><b class="bar"><c class="baz"></c></b></a>');
     });
   });
 });

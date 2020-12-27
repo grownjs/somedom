@@ -1,8 +1,7 @@
 export default class Fragment {
-  constructor(identifier) {
+  constructor() {
     this.childNodes = [];
     this.nodeType = 11;
-    this.name = identifier;
   }
 
   appendChild(node) {
@@ -19,11 +18,7 @@ export default class Fragment {
 
     return (async () => {
       for (let i = offset + this.length; i >= offset; i -= 1) {
-        if (typeof target.childNodes[i].remove !== 'function') {
-          target.removeChild(target.childNodes[i]);
-        } else {
-          await target.childNodes[i].remove(); // eslint-disable-line
-        }
+        await target.childNodes[i].remove(); // eslint-disable-line
       }
     })();
   }
@@ -91,7 +86,7 @@ export default class Fragment {
   }
 
   static from(value, cb) {
-    const target = new Fragment('T');
+    const target = new Fragment();
 
     value.forEach(vnode => {
       if (vnode instanceof Fragment) {

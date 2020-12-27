@@ -8,6 +8,7 @@ import {
   filter,
   isUndef,
   isArray,
+  isSelector,
   isFunction,
   isObject,
   isScalar,
@@ -119,11 +120,26 @@ describe('util', () => {
   });
 
   describe('isScalar', () => {
-    it('should validate given scalaras', () => {
+    it('should validate given scalars', () => {
       expect(isScalar).not.to.throw();
       expect(isScalar(1)).to.be.true;
       expect(isScalar({})).to.be.false;
       expect(isScalar(null)).to.be.false;
+    });
+  });
+
+  describe('isSelector', () => {
+    it('should validate some selectors', () => {
+      expect(isSelector).not.to.throw();
+      expect(isSelector(1)).to.be.false;
+      expect(isSelector([])).to.be.false;
+      expect(isSelector('not fun')).to.be.false;
+      expect(isSelector('this is')).to.be.false;
+      expect(isSelector('broken..')).to.be.false;
+      expect(isSelector('indeed#')).to.be.false;
+      expect(isSelector('this#is')).to.be.true;
+      expect(isSelector('actually.fun')).to.be.true;
+      expect(isSelector('really#always.fun')).to.be.true;
     });
   });
 
