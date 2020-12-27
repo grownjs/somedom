@@ -10,7 +10,7 @@ function summarize(script) {
     .replace(/\}\)\s*;$/, '');
 
   mount(parentNode, ['details', [
-    ['summary', 'View executed code'],
+    ['summary', ['View executed code']],
     ['pre', { class: 'highlight' }, format(code)],
   ]]);
 }

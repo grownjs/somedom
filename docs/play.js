@@ -1127,7 +1127,7 @@
       .replace(/\}\)\s*;$/, '');
 
     mountElement(parentNode, ['details', [
-      ['summary', 'View executed code'],
+      ['summary', ['View executed code']],
       ['pre', { class: 'highlight' }, trim(code)],
     ]]);
   }
