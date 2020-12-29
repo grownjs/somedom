@@ -87,7 +87,7 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
     function sync(result) {
       return Promise.all(fns.map(fn => fn(data, $)))
         .then(() => {
-          updateElement(childNode, vnode, vnode = fixTree(Tag(data, $)), null, cb, null);
+          updateElement(childNode, vnode, vnode = fixTree(Tag(data, $)), null, cb);
         })
         .then(() => result);
     }
