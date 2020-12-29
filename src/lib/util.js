@@ -24,7 +24,7 @@ export const isDiff = (prev, next) => {
     for (let i = 0; i < next.length; i += 1) {
       if (isDiff(prev[i], next[i])) return true;
     }
-  } else if (isPlain(prev)) {
+  } else if (isPlain(prev) && isPlain(next)) {
     const a = Object.keys(prev).sort();
     const b = Object.keys(next).sort();
 
