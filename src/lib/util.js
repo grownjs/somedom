@@ -9,12 +9,13 @@ import {
 import Fragment from './fragment';
 
 export const isArray = value => Array.isArray(value);
+export const isString = value => typeof value === 'string';
 export const isFunction = value => typeof value === 'function';
-export const isSelector = value => typeof value === 'string' && ELEM_REGEX.test(value);
+export const isSelector = value => isString(value) && ELEM_REGEX.test(value);
 export const isUndef = value => typeof value === 'undefined' || value === null;
 export const isPlain = value => value !== null && Object.prototype.toString.call(value) === '[object Object]';
 export const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
-export const isScalar = value => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+export const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
 
 export const isDiff = (prev, next) => {
   if (isFunction(prev) || isFunction(next) || typeof prev !== typeof next) return true;

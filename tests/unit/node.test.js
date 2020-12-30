@@ -218,6 +218,25 @@ describe('node', () => {
       expect(td.explain(spy).callCount).to.eql(1);
     });
 
+    it('should convert entities back as unicode', () => {
+      const TEXTAREA = {};
+
+      Object.defineProperty(TEXTAREA, 'innerHTML', {
+        set: value => {
+          TEXTAREA.textContent = value.replace('&infin;', '∞');
+        },
+      });
+
+      td.replace(document, 'createElement');
+      td.when(document.createElement('textarea'))
+        .thenReturn(TEXTAREA);
+
+      expect(createElement('foo &infin; bar').nodeValue).to.eql('foo ∞ bar');
+      expect(td.explain(document.createElement).callCount).to.eql(1);
+
+      td.reset();
+    });
+
     it('should handle functions as elements', () => {
       const attrs = {};
       const nodes = [];
