@@ -1,5 +1,5 @@
 import {
-  isFunction, isScalar, isString, isArray, isNode, isEmpty, isUndef,
+  isFunction, isScalar, isArray, isNode, isEmpty, isUndef,
   offsetAt, sortedZip, append, replace, detach,
 } from './util';
 
@@ -17,18 +17,7 @@ export function destroyElement(target, wait = cb => cb()) {
 
 export function createElement(value, svg, cb) {
   if (value instanceof Fragment) return value;
-
-  if (isScalar(value)) {
-    if (isString(value) && value.includes('&')) {
-      const TEXTAREA = document.createElement('textarea');
-
-      TEXTAREA.innerHTML = value;
-      value = TEXTAREA.textContent;
-    }
-
-    return document.createTextNode(value);
-  }
-
+  if (isScalar(value)) return document.createTextNode(value);
   if (isUndef(value)) throw new Error(`Invalid vnode, given '${value}'`);
 
   if (!isNode(value)) {

@@ -86,9 +86,6 @@ export function createElement(name) {
       },
       contains: value => el.className.split(/\W/).indexOf(value) !== -1,
     },
-    set innerHTML(v) {
-      el.textContent = v;
-    },
     get innerHTML() {
       return el.childNodes.map(node => node.outerHTML || node.nodeValue).join('');
     },
