@@ -491,6 +491,7 @@
   }
 
   function updateElement(target, prev, next, svg, cb, i = null) {
+    if (target._dirty) return;
     if (i === null) {
       prev = fixProps(prev);
       next = fixProps(next);
@@ -716,7 +717,7 @@
       function sync(result) {
         return Promise.all(fns.map(fn => fn(data, $)))
           .then(() => {
-            updateElement(childNode, vnode, vnode = fixTree(Tag(data, $)), null, cb, null);
+            updateElement(childNode, vnode, vnode = fixTree(Tag(data, $)), null, cb);
           })
           .then(() => result);
       }

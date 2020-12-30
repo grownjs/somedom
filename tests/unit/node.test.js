@@ -388,6 +388,12 @@ describe('node', () => {
       expect(a.outerHTML).to.eql('<a></a>');
     });
 
+    it('should skip _dirty nodes', () => {
+      div._dirty = true;
+      updateElement(div, ['div', null], ['b', null, 'OK!']);
+      expect(body.innerHTML).to.eql('<div><a></a></div>');
+    });
+
     it('can reconcilliate childNodes', () => {
       updateElement(div, ['div', null], ['b', null, 'OK!']);
       expect(body.innerHTML).to.eql('<b>OK!</b>');

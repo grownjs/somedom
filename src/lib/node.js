@@ -107,6 +107,7 @@ export function mountElement(target, view, cb = createElement) {
 }
 
 export function updateElement(target, prev, next, svg, cb, i = null) {
+  if (target._dirty) return;
   if (i === null) {
     prev = fixProps(prev);
     next = fixProps(next);
