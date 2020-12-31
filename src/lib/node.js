@@ -12,7 +12,7 @@ import { SVG_NS } from './shared';
 import Fragment from './fragment';
 
 export function destroyElement(target, wait = cb => cb()) {
-  return Promise.resolve().then(() => wait(() => target.remove()));
+  return Promise.resolve().then(() => wait(() => target && target.remove()));
 }
 
 export function createElement(value, svg, cb) {
@@ -107,7 +107,7 @@ export function mountElement(target, view, cb = createElement) {
 }
 
 export function updateElement(target, prev, next, svg, cb, i = null) {
-  if (target._dirty) return;
+  if (!target || target._dirty) return;
   if (i === null) {
     prev = fixProps(prev);
     next = fixProps(next);
@@ -123,20 +123,14 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
               if (isFunction(target.update)) target.update();
             }
 
-            if (target._anchored) {
-              sortedZip(prev.slice(2), next.slice(2), (x, y, z) => updateElement(target, x, y, svg, cb, z), offsetAt(target, x => x._anchored));
-            } else {
-              sortedZip(prev.slice(2), next.slice(2), (x, y, z) => updateElement(target, x, y, svg, cb, z));
-            }
+            sortedZip(prev.slice(2), next.slice(2), (x, y, z) => updateElement(target, x, y, svg, cb, z), target);
           } else {
             detach(target, createElement(next, svg, cb));
           }
         } else if (isNode(prev)) {
           detach(target, createElement(next, svg, cb));
-        } else if (target._anchored) {
-          sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z), offsetAt(target, x => x._anchored));
         } else {
-          sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+          sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z), target);
         }
       } else {
         sortedZip(prev, next, (x, y, z) => updateElement(target.parentNode, x, y, svg, cb, z), offsetAt(target.parentNode, x => x === target) - 1);
@@ -149,13 +143,15 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
       target.nodeValue = next;
     }
   } else if (['HTML', 'HEAD', 'BODY'].includes(target.tagName)) {
-    const newRoot = createElement(next, svg, cb);
-
-    if (newRoot instanceof Fragment) {
-      newRoot.mount(document.createDocumentFragment());
-      detach(target.children[i - 1], newRoot.parentNode);
+    if (isArray(next) && next.some(isNode)) {
+      sortedZip(prev, next, (x, y, z) => {
+        if (y) {
+          if (x) updateElement(target.childNodes[z], x, y, svg, cb);
+          else append(target, createElement(y, svg, cb));
+        } else destroyElement(target.childNodes[z]);
+      }, i);
     } else {
-      updateElement(target.childNodes[i], prev, next, svg, cb, null);
+      updateElement(target.childNodes[i], prev, next, svg, cb);
     }
   } else if (target.childNodes[i]) {
     if (isUndef(next)) {
@@ -167,7 +163,7 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
     } else if (!prev || prev[0] !== next[0]) {
       replace(target, createElement(next, svg, cb), i);
     } else {
-      updateElement(target.childNodes[i], prev, next, svg, cb, null);
+      updateElement(target.childNodes[i], prev, next, svg, cb);
     }
   } else {
     append(target, createElement(next, svg, cb));

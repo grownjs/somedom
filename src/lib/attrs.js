@@ -21,11 +21,7 @@ export function fixTree(vnode) {
 }
 
 export function fixProps(vnode, re) {
-  if (isScalar(vnode) || !isNode(vnode)) {
-    return re && isArray(vnode)
-      ? vnode.map(x => fixProps(x, re))
-      : vnode;
-  }
+  if (isScalar(vnode) || !isNode(vnode)) return vnode;
 
   const children = vnode.slice(isArray(vnode[1]) ? 1 : 2)
     .reduce((memo, it) => {

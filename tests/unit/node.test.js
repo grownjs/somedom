@@ -461,6 +461,25 @@ describe('node', () => {
       expect(body.innerHTML).to.eql('<div>0</div>');
     });
 
+    it('will handle top-level fragments', async () => {
+      const html = document.createElement('html');
+
+      updateElement(html, [], [['some', ['text']]], null, null, 0);
+      expect(html.outerHTML).to.eql('<html><some>text</some></html>');
+
+      updateElement(html, [[]], [[['some', ['text']]]], null, null, 0);
+      expect(html.outerHTML).to.eql('<html><some><some>text</some></some></html>');
+
+      updateElement(document.body, [[]], [['some', null]], null, null, 0);
+      expect(document.body.outerHTML).to.eql('<body></body>');
+
+      updateElement(document.body, [['some', null]], [[]], null, null, 0);
+      expect(document.body.outerHTML).to.eql('<body></body>');
+
+      updateElement(document.body, [['x', null]], [['y', null], null], null, null, 0);
+      expect(document.body.outerHTML).to.eql('<body></body>');
+    });
+
     it('will invoke hooks on update', () => {
       a.onupdate = td.func('onupdate');
       a.update = td.func('update');

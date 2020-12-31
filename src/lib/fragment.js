@@ -5,7 +5,13 @@ export default class Fragment {
   }
 
   appendChild(node) {
-    this.childNodes.push(node);
+    if (node instanceof Fragment) {
+      node.childNodes.forEach(sub => {
+        this.appendChild(sub);
+      });
+    } else {
+      this.childNodes.push(node);
+    }
   }
 
   getNodeAt(nth) {
@@ -18,9 +24,16 @@ export default class Fragment {
 
     return (async () => {
       for (let i = offset + this.length; i >= offset; i -= 1) {
-        await target.childNodes[i].remove(); // eslint-disable-line
+        if (target.childNodes[i]) await target.childNodes[i].remove(); // eslint-disable-line
       }
     })();
+  }
+
+  replace(target, i) {
+    const doc = document.createDocumentFragment();
+
+    this.flush(doc);
+    target.replaceChild(doc, target.childNodes[i]);
   }
 
   mount(target, node) {
@@ -47,11 +60,7 @@ export default class Fragment {
 
   flush(target) {
     this.childNodes.forEach(sub => {
-      if (sub instanceof Fragment) {
-        sub.flush(target);
-      } else {
-        target.appendChild(sub);
-      }
+      target.appendChild(sub);
     });
     this.childNodes = [];
   }

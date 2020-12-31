@@ -129,8 +129,14 @@ export function offsetAt(target, cb) {
   return offset;
 }
 
-export function sortedZip(prev, next, cb, o = -1) {
+export function sortedZip(prev, next, cb, t) {
   const length = Math.max(prev.length, next.length);
+
+  let o = -1;
+  if (typeof t === 'number') o = t;
+  else if (t && t._anchored) {
+    o = offsetAt(t, x => x.nodeType === 3 && x._anchored);
+  }
 
   for (let i = 0; i < length; i += 1) {
     if (isDiff(prev[i], next[i])) {
@@ -143,9 +149,9 @@ export const apply = (cb, length, options = {}) => (...args) => length === args.
 export const raf = cb => ((typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout)(cb);
 export const tick = cb => Promise.resolve(cb && cb()).then(() => new Promise(done => raf(done)));
 
-export const append = (target, node) => (node instanceof Fragment ? node.mount(target) : target.appendChild(node));
-export const replace = (target, node, i) => target.replaceChild(node, target.childNodes[i]);
 export const remove = (target, node) => target && target.removeChild(node);
+export const append = (target, node) => (node instanceof Fragment ? node.mount(target) : target.appendChild(node));
+export const replace = (target, node, i) => (node instanceof Fragment ? node.replace(target, i) : target.replaceChild(node, target.childNodes[i]));
 
 export const detach = (target, node) => {
   if (node) {

@@ -30,7 +30,13 @@
     }
 
     appendChild(node) {
-      this.childNodes.push(node);
+      if (node instanceof Fragment) {
+        node.childNodes.forEach(sub => {
+          this.appendChild(sub);
+        });
+      } else {
+        this.childNodes.push(node);
+      }
     }
 
     getNodeAt(nth) {
@@ -43,9 +49,16 @@
 
       return (async () => {
         for (let i = offset + this.length; i >= offset; i -= 1) {
-          await target.childNodes[i].remove(); // eslint-disable-line
+          if (target.childNodes[i]) await target.childNodes[i].remove(); // eslint-disable-line
         }
       })();
+    }
+
+    replace(target, i) {
+      const doc = document.createDocumentFragment();
+
+      this.flush(doc);
+      target.replaceChild(doc, target.childNodes[i]);
     }
 
     mount(target, node) {
@@ -72,11 +85,7 @@
 
     flush(target) {
       this.childNodes.forEach(sub => {
-        if (sub instanceof Fragment) {
-          sub.flush(target);
-        } else {
-          target.appendChild(sub);
-        }
+        target.appendChild(sub);
       });
       this.childNodes = [];
     }
@@ -246,8 +255,14 @@
     return offset;
   }
 
-  function sortedZip(prev, next, cb, o = -1) {
+  function sortedZip(prev, next, cb, t) {
     const length = Math.max(prev.length, next.length);
+
+    let o = -1;
+    if (typeof t === 'number') o = t;
+    else if (t && t._anchored) {
+      o = offsetAt(t, x => x.nodeType === 3 && x._anchored);
+    }
 
     for (let i = 0; i < length; i += 1) {
       if (isDiff(prev[i], next[i])) {
@@ -259,9 +274,9 @@
   const apply = (cb, length, options = {}) => (...args) => length === args.length && cb(...args, options);
   const raf = cb => ((typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout)(cb);
 
-  const append = (target, node) => (node instanceof Fragment ? node.mount(target) : target.appendChild(node));
-  const replace = (target, node, i) => target.replaceChild(node, target.childNodes[i]);
   const remove = (target, node) => target && target.removeChild(node);
+  const append = (target, node) => (node instanceof Fragment ? node.mount(target) : target.appendChild(node));
+  const replace = (target, node, i) => (node instanceof Fragment ? node.replace(target, i) : target.replaceChild(node, target.childNodes[i]));
 
   const detach = (target, node) => {
     if (node) {
@@ -291,11 +306,7 @@
   }
 
   function fixProps(vnode, re) {
-    if (isScalar(vnode) || !isNode(vnode)) {
-      return re && isArray(vnode)
-        ? vnode.map(x => fixProps(x, re))
-        : vnode;
-    }
+    if (isScalar(vnode) || !isNode(vnode)) return vnode;
 
     const children = vnode.slice(isArray(vnode[1]) ? 1 : 2)
       .reduce((memo, it) => {
@@ -397,7 +408,7 @@
   }
 
   function destroyElement(target, wait = cb => cb()) {
-    return Promise.resolve().then(() => wait(() => target.remove()));
+    return Promise.resolve().then(() => wait(() => target && target.remove()));
   }
 
   function createElement(value, svg, cb) {
@@ -492,7 +503,7 @@
   }
 
   function updateElement(target, prev, next, svg, cb, i = null) {
-    if (target._dirty) return;
+    if (!target || target._dirty) return;
     if (i === null) {
       prev = fixProps(prev);
       next = fixProps(next);
@@ -508,20 +519,14 @@
                 if (isFunction(target.update)) target.update();
               }
 
-              if (target._anchored) {
-                sortedZip(prev.slice(2), next.slice(2), (x, y, z) => updateElement(target, x, y, svg, cb, z), offsetAt(target, x => x._anchored));
-              } else {
-                sortedZip(prev.slice(2), next.slice(2), (x, y, z) => updateElement(target, x, y, svg, cb, z));
-              }
+              sortedZip(prev.slice(2), next.slice(2), (x, y, z) => updateElement(target, x, y, svg, cb, z), target);
             } else {
               detach(target, createElement(next, svg, cb));
             }
           } else if (isNode(prev)) {
             detach(target, createElement(next, svg, cb));
-          } else if (target._anchored) {
-            sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z), offsetAt(target, x => x._anchored));
           } else {
-            sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z));
+            sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z), target);
           }
         } else {
           sortedZip(prev, next, (x, y, z) => updateElement(target.parentNode, x, y, svg, cb, z), offsetAt(target.parentNode, x => x === target) - 1);
@@ -534,13 +539,15 @@
         target.nodeValue = next;
       }
     } else if (['HTML', 'HEAD', 'BODY'].includes(target.tagName)) {
-      const newRoot = createElement(next, svg, cb);
-
-      if (newRoot instanceof Fragment) {
-        newRoot.mount(document.createDocumentFragment());
-        detach(target.children[i - 1], newRoot.parentNode);
+      if (isArray(next) && next.some(isNode)) {
+        sortedZip(prev, next, (x, y, z) => {
+          if (y) {
+            if (x) updateElement(target.childNodes[z], x, y, svg, cb);
+            else append(target, createElement(y, svg, cb));
+          } else destroyElement(target.childNodes[z]);
+        }, i);
       } else {
-        updateElement(target.childNodes[i], prev, next, svg, cb, null);
+        updateElement(target.childNodes[i], prev, next, svg, cb);
       }
     } else if (target.childNodes[i]) {
       if (isUndef(next)) {
@@ -552,7 +559,7 @@
       } else if (!prev || prev[0] !== next[0]) {
         replace(target, createElement(next, svg, cb), i);
       } else {
-        updateElement(target.childNodes[i], prev, next, svg, cb, null);
+        updateElement(target.childNodes[i], prev, next, svg, cb);
       }
     } else {
       append(target, createElement(next, svg, cb));
