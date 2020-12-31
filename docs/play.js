@@ -62,8 +62,8 @@
       this.flush(doc);
 
       if (node) {
+        target.insertBefore(this.anchor, node);
         target.insertBefore(doc, node);
-        target.insertBefore(this.anchor, doc);
       } else {
         target.appendChild(this.anchor);
         target.appendChild(doc);
@@ -532,6 +532,15 @@
         target.nodeValue = next.outerHTML;
       } else {
         target.nodeValue = next;
+      }
+    } else if (['HTML', 'HEAD', 'BODY'].includes(target.tagName)) {
+      const newRoot = createElement(next, svg, cb);
+
+      if (newRoot instanceof Fragment) {
+        newRoot.mount(document.createDocumentFragment());
+        detach(target.children[i - 1], newRoot.parentNode);
+      } else {
+        updateElement(target.childNodes[i], prev, next, svg, cb, null);
       }
     } else if (target.childNodes[i]) {
       if (isUndef(next)) {

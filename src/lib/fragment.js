@@ -37,8 +37,8 @@ export default class Fragment {
     this.flush(doc);
 
     if (node) {
+      target.insertBefore(this.anchor, node);
       target.insertBefore(doc, node);
-      target.insertBefore(this.anchor, doc);
     } else {
       target.appendChild(this.anchor);
       target.appendChild(doc);
