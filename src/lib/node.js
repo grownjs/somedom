@@ -4,7 +4,7 @@ import {
 } from './util';
 
 import {
-  assignProps, updateProps, fixProps, fixTree,
+  assignProps, updateProps, fixProps,
 } from './attrs';
 
 import { SVG_NS } from './shared';
@@ -99,7 +99,7 @@ export function mountElement(target, view, cb = createElement) {
     }
   }
 
-  const el = isArray(view) || isScalar(view) ? cb(fixTree(view)) : view;
+  const el = isArray(view) || isScalar(view) ? cb(view) : view;
 
   if (!isUndef(el)) append(target, el);
 
@@ -137,10 +137,8 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
       }
     } else if (target.nodeType !== 3) {
       detach(target, createElement(next, svg, cb));
-    } else if (next instanceof Fragment) {
-      target.nodeValue = next.outerHTML;
     } else {
-      target.nodeValue = next;
+      target.nodeValue = next.outerHTML || next.nodeValue || next;
     }
   } else if (target.childNodes[i]) {
     if (isUndef(next)) {

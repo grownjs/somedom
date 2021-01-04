@@ -28,7 +28,7 @@ describe('attrs', () => {
       expect(fixTree(tree)).to.eql(['span', null, 'O', ['em', null, 'k'], '!']);
     });
 
-    it('should unflatten nested children', () => {
+    it('should flatten nested children', () => {
       const tree = [[[['span', null, 'O', [[['em', null, 'k']], '!']], '?']]];
 
       expect(fixTree(tree)).to.eql([['span', null, 'O', ['em', null, 'k'], '!'], '?']);

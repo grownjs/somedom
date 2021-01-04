@@ -291,17 +291,54 @@
 
   function fixTree(vnode) {
     if (isArray(vnode)) {
-      if (!(isNode(vnode) || vnode.some(isNode))) {
-        return vnode.reduce((memo, cur) => memo.concat(fixTree(cur)), []);
+      if (isNode(vnode)) {
+        if (isArray(vnode[1])) {
+          vnode[1] = vnode[1].map(fixTree);
+        }
+        if (isFunction(vnode[0])) {
+          return fixTree(vnode[0](vnode[1], vnode.slice(2)));
+        }
+        if (vnode.length > 2) {
+          const nextTree = vnode.slice(2).reduce((memo, it) => {
+            const subTree = fixTree(it);
+
+            if (isArray(subTree) && !isNode(subTree)) {
+              if (!subTree.some(isNode)) {
+                memo.push(...subTree.reduce((prev, cur) => prev.concat(cur), []));
+              } else {
+                memo.push(...subTree);
+              }
+            } else {
+              memo.push(subTree);
+            }
+            return memo;
+          }, []);
+
+          vnode.length = 2;
+          vnode.push(...nextTree);
+        }
+        return vnode;
       }
 
-      if (isFunction(vnode[0])) {
-        return fixTree(vnode[0](vnode[1], vnode.slice(2)));
+      let newTree = vnode.reduce((memo, el) => {
+        const lastNode = memo[memo.length - 1];
+        const newNode = fixTree(el);
+
+        if (typeof lastNode === 'string' && typeof newNode === 'string') {
+          memo[memo.length - 1] += newNode;
+        } else {
+          memo.push(newNode);
+        }
+        return memo;
+      }, []);
+
+      if (!newTree.some(x => isArray(x) || x instanceof Fragment)) {
+        return newTree.join('');
       }
 
-      return vnode.map(fixTree);
+      while (newTree.length === 1) newTree = newTree[0];
+      return newTree;
     }
-
     return vnode;
   }
 
@@ -317,7 +354,6 @@
         }
         return memo;
       }, []);
-
 
     let attrs = isPlain(vnode[1])
       ? { ...vnode[1] }
@@ -503,7 +539,7 @@
   }
 
   function updateElement(target, prev, next, svg, cb, i = null) {
-    if (!target || target._dirty) return;
+    if (target._dirty) return;
     if (i === null) {
       prev = fixProps(prev);
       next = fixProps(next);
@@ -533,21 +569,8 @@
         }
       } else if (target.nodeType !== 3) {
         detach(target, createElement(next, svg, cb));
-      } else if (next instanceof Fragment) {
-        target.nodeValue = next.outerHTML;
       } else {
-        target.nodeValue = next;
-      }
-    } else if (['HTML', 'HEAD', 'BODY'].includes(target.tagName)) {
-      if (isArray(next) && next.some(isNode)) {
-        sortedZip(prev, next, (x, y, z) => {
-          if (y) {
-            if (x) updateElement(target.childNodes[z], x, y, svg, cb);
-            else append(target, createElement(y, svg, cb));
-          } else destroyElement(target.childNodes[z]);
-        }, i);
-      } else {
-        updateElement(target.childNodes[i], prev, next, svg, cb);
+        target.nodeValue = next.outerHTML || next.nodeValue || next;
       }
     } else if (target.childNodes[i]) {
       if (isUndef(next)) {
@@ -734,7 +757,7 @@
       function sync(result) {
         return Promise.all(fns.map(fn => fn(data, $)))
           .then(() => {
-            updateElement(childNode, vnode, vnode = fixTree(Tag(data, $)), null, cb);
+            updateElement(childNode, vnode, vnode = fixTree(Tag(clone(data), $)), null, cb);
           })
           .then(() => result);
       }
@@ -766,16 +789,14 @@
           if (isPlain(retval)) {
             sync(Object.assign(data, retval));
           }
-
           return retval;
         };
 
         if (instance) {
           instance[fn] = memo[fn];
         }
-
         return memo;
-      }, {});
+      }, Object.create(null));
 
       $.subscribe = fn => {
         Promise.resolve(fn(data, $)).then(() => fns.push(fn));
@@ -793,13 +814,12 @@
         get: () => data,
       });
 
-      childNode = mountElement(el, vnode = fixTree(Tag(data, $)), cb);
+      childNode = mountElement(el, vnode = fixTree(Tag(clone(data), $)), cb);
       $.target = childNode;
 
       if (instance) {
         $.instance = instance;
       }
-
       return $;
     };
   }

@@ -236,23 +236,46 @@ describe('views', () => {
       ]);
     });
 
-    it('should allow to receive a refreshCallback', () => {
+    it('should allow to update ViewFragments', async () => {
+      let i = 0;
+      const action = () => () => ({ value: i++ }); // eslint-disable-line
+      const view = createView(props => ['b', props], null, { action });
+      const app = view(document.body);
+
+      expect(app.target.outerHTML).to.eql('<b></b>');
+      await app.action();
+      expect(app.target.outerHTML).to.eql('<b value="0"></b>');
+
+      await app.action();
+      expect(app.target.outerHTML).to.eql('<b value="1"></b>');
+
+      await app.action();
+      expect(app.target.outerHTML).to.eql('<b value="2"></b>');
+    });
+
+    it('should allow to receive a refreshCallback', async () => {
       const callback = td.func('refreshCallback');
-      const view = createView((props, children) => ['a', props, children], callback);
-      const app = view();
 
+      let i = 42;
       td.when(callback(td.matchers.anything()))
-        .thenDo(ok => ok({ value: 42 }));
+        .thenDo(ok => ok({ value: i++ })); // eslint-disable-line
 
+      const view = createView(props => ['a', props], callback);
+      const app = view(document.body);
+
+      expect(i).to.eql(43);
+      expect(app.state).to.eql({ value: 42 });
       expect(app.target).not.to.be.undefined;
-      expect(app.target.outerHTML).to.eql('<a></a>');
+      expect(app.target.outerHTML).to.eql('<a value="42"></a>');
       expect(td.explain(callback).callCount).to.eql(1);
 
-      const view2 = createView((props, children) => ['b', props, children], null, null, callback);
-      const app2 = view2();
+      const view2 = createView(props => ['b', props], null, null, callback);
+      const app2 = view2(document.body);
 
+      expect(i).to.eql(44);
+      expect(app2.state).to.eql({ value: 43 });
       expect(app2.target).not.to.be.undefined;
-      expect(app2.target.outerHTML).to.eql('<b value="42"></b>');
+      expect(app2.target.outerHTML).to.eql('<b value="43"></b>');
       expect(td.explain(callback).callCount).to.eql(2);
     });
 
@@ -350,7 +373,7 @@ describe('views', () => {
         data = { foo: 'BAR' };
         actions = { setFoo: value => async () => ({ foo: value }) };
 
-        td.when(tag(td.matchers.isA(Object), td.matchers.isA(Object)))
+        td.when(tag(td.matchers.isA(Object), td.matchers.anything()))
           .thenReturn(['a', null]);
       });
 
@@ -599,7 +622,7 @@ describe('views', () => {
         expect(td.explain(ondestroy).callCount).to.eql(1);
       });
 
-      it.skip('should patch fragments from views', async () => {
+      it('should patch fragments from views', async () => {
         const { view } = bind(render, listeners());
 
         let inc = 0;
@@ -629,6 +652,8 @@ describe('views', () => {
 
         const div = document.createElement('div');
         const app = Counter(div);
+
+        expect(div.outerHTML).to.eql('<div><p><span>value: 42</span></p>OK: 0</div>');
 
         await app.instance.inc();
         const a = div.outerHTML;

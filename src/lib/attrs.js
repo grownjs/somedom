@@ -4,9 +4,14 @@ import {
 
 import { XLINK_NS, ELEM_REGEX } from './shared';
 
+import Fragment from './fragment';
+
 export function fixTree(vnode) {
   if (isArray(vnode)) {
     if (isNode(vnode)) {
+      if (isArray(vnode[1])) {
+        vnode[1] = vnode[1].map(fixTree);
+      }
       if (isFunction(vnode[0])) {
         return fixTree(vnode[0](vnode[1], vnode.slice(2)));
       }
@@ -14,7 +19,7 @@ export function fixTree(vnode) {
         const nextTree = vnode.slice(2).reduce((memo, it) => {
           const subTree = fixTree(it);
 
-          if (isArray(subTree)) {
+          if (isArray(subTree) && !isNode(subTree)) {
             if (!subTree.some(isNode)) {
               memo.push(...subTree.reduce((prev, cur) => prev.concat(cur), []));
             } else {
@@ -44,7 +49,7 @@ export function fixTree(vnode) {
       return memo;
     }, []);
 
-    if (!newTree.some(isArray)) {
+    if (!newTree.some(x => isArray(x) || x instanceof Fragment)) {
       return newTree.join('');
     }
 
@@ -66,7 +71,6 @@ export function fixProps(vnode, re) {
       }
       return memo;
     }, []);
-
 
   let attrs = isPlain(vnode[1])
     ? { ...vnode[1] }

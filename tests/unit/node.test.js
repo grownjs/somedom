@@ -113,18 +113,23 @@ describe('node', () => {
       });
 
       it('should flatten all nested Fragments into a single one', () => {
-        const vdom = value => [
+        const vdom = value => fixTree([
           ['small', null, ['TEXT']],
           ['\n', '\n\n\n  PATH=/:id/edit\n  ', ['\n  ', value, ':\n'], '\n\n'],
           ['\n', '\n\n\n'],
-        ];
+        ]);
 
         const a = vdom('BEFORE');
         const b = vdom('AFTER');
+
         div = document.body;
         mountElement(div, a);
         expect(div.childNodes.length).to.eql(3);
-        expect(div.childNodes.filter(x => !x._anchored).length).to.eql(2);
+        expect(div.childNodes.filter(n => !n._anchored).length).to.eql(2);
+
+        updateElement(div, a, b);
+        expect(div.childNodes.length).to.eql(3);
+        expect(div.childNodes.filter(n => !n._anchored).length).to.eql(2);
       });
     });
   });

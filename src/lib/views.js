@@ -87,7 +87,7 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
     function sync(result) {
       return Promise.all(fns.map(fn => fn(data, $)))
         .then(() => {
-          updateElement(childNode, vnode, vnode = fixTree(Tag(data, $)), null, cb);
+          updateElement(childNode, vnode, vnode = fixTree(Tag(clone(data), $)), null, cb);
         })
         .then(() => result);
     }
@@ -119,16 +119,14 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
         if (isPlain(retval)) {
           sync(Object.assign(data, retval));
         }
-
         return retval;
       };
 
       if (instance) {
         instance[fn] = memo[fn];
       }
-
       return memo;
-    }, {});
+    }, Object.create(null));
 
     $.subscribe = fn => {
       Promise.resolve(fn(data, $)).then(() => fns.push(fn));
@@ -146,13 +144,12 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
       get: () => data,
     });
 
-    childNode = mountElement(el, vnode = fixTree(Tag(data, $)), cb);
+    childNode = mountElement(el, vnode = fixTree(Tag(clone(data), $)), cb);
     $.target = childNode;
 
     if (instance) {
       $.instance = instance;
     }
-
     return $;
   };
 }
