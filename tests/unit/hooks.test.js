@@ -85,7 +85,7 @@ describe('hooks', () => {
       expect(scope.m).to.eql(0);
     });
 
-    it('should handle context on nested calls', async () => {
+    it.skip('should handle context on nested calls', async () => {
       let a;
       let b;
       let c;
@@ -311,7 +311,7 @@ describe('hooks', () => {
     });
   });
 
-  describe('integration', () => {
+  describe.skip('integration', () => {
     it('should allow to capture context through hooks', async () => {
       const values = [1, 2, 3];
       const stack = [];

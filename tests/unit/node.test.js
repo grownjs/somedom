@@ -10,6 +10,7 @@ import {
 import Fragment from '../../src/lib/fragment';
 
 import { tick, trim, format } from '../../src/lib/util';
+import { fixTree } from '../../src/lib/attrs';
 
 import doc from './fixtures/document';
 
@@ -64,10 +65,10 @@ describe('node', () => {
       let y;
 
       const factory = (...children) => ({
-        vnode: [
+        vnode: fixTree([
           ['span', ['OK']],
           ...children,
-        ],
+        ]),
         result: `<div><span>OK</span>${children.reduce((memo, it) => memo.concat(it), []).join('')}</div>`,
       });
 
@@ -81,8 +82,11 @@ describe('node', () => {
 
         mountElement(div, x.vnode);
         expect(div.outerHTML).to.eql(x.result);
+        expect(div.firstChild._anchored).to.be.true;
+        expect(div.childNodes.length).to.eql(3);
 
         updateElement(div, x.vnode, y.vnode);
+        expect(div.childNodes.length).to.eql(3);
         expect(div.outerHTML).to.eql(y.result);
       });
 
@@ -106,6 +110,21 @@ describe('node', () => {
 
         updateElement(div, x.vnode, y.vnode);
         expect(div.outerHTML).to.eql(y.result);
+      });
+
+      it('should flatten all nested Fragments into a single one', () => {
+        const vdom = value => [
+          ['small', null, ['TEXT']],
+          ['\n', '\n\n\n  PATH=/:id/edit\n  ', ['\n  ', value, ':\n'], '\n\n'],
+          ['\n', '\n\n\n'],
+        ];
+
+        const a = vdom('BEFORE');
+        const b = vdom('AFTER');
+        div = document.body;
+        mountElement(div, a);
+        expect(div.childNodes.length).to.eql(3);
+        expect(div.childNodes.filter(x => !x._anchored).length).to.eql(2);
       });
     });
   });
@@ -459,25 +478,6 @@ describe('node', () => {
     it('can update scalar values', () => {
       updateElement(div, ['div', null, 1], ['div', null, 0]);
       expect(body.innerHTML).to.eql('<div>0</div>');
-    });
-
-    it('will handle top-level fragments', async () => {
-      const html = document.createElement('html');
-
-      updateElement(html, [], [['some', ['text']]], null, null, 0);
-      expect(html.outerHTML).to.eql('<html><some>text</some></html>');
-
-      updateElement(html, [[]], [[['some', ['text']]]], null, null, 0);
-      expect(html.outerHTML).to.eql('<html><some><some>text</some></some></html>');
-
-      updateElement(document.body, [[]], [['some', null]], null, null, 0);
-      expect(document.body.outerHTML).to.eql('<body></body>');
-
-      updateElement(document.body, [['some', null]], [[]], null, null, 0);
-      expect(document.body.outerHTML).to.eql('<body></body>');
-
-      updateElement(document.body, [['x', null]], [['y', null], null], null, null, 0);
-      expect(document.body.outerHTML).to.eql('<body></body>');
     });
 
     it('will invoke hooks on update', () => {

@@ -17,21 +17,21 @@ describe('attrs', () => {
 
   describe('fixTree', () => {
     it('should flatten values from nested trees', () => {
-      expect(fixTree([[[1, 2, 3]]])).to.eql([1, 2, 3]);
-      expect(fixTree([[[1, [2], 3]]])).to.eql([1, 2, 3]);
-      expect(fixTree([[[1, [2], [[3]]]]])).to.eql([1, 2, 3]);
+      expect(fixTree([[[1, 2, 3]]])).to.eql('123');
+      expect(fixTree([[[1, [2], 3]]])).to.eql('123');
+      expect(fixTree([[[1, [2], [[3]]]]])).to.eql('123');
     });
 
     it('will invoke tag functions recursively', () => {
       const tree = [() => [() => ['span', null, 'O', [[() => ['em', null, 'k']], '!']]]];
 
-      expect(fixTree(tree)).to.eql(['span', null, 'O', [['em', null, 'k'], '!']]);
+      expect(fixTree(tree)).to.eql(['span', null, 'O', ['em', null, 'k'], '!']);
     });
 
     it('should unflatten nested children', () => {
-      const tree = [[[['span', null, 'O', [[['em', null, 'k']], '!']]]]];
+      const tree = [[[['span', null, 'O', [[['em', null, 'k']], '!']], '?']]];
 
-      expect(fixTree(tree)).to.eql([['span', null, 'O', [['em', null, 'k'], '!']]]);
+      expect(fixTree(tree)).to.eql([['span', null, 'O', ['em', null, 'k'], '!'], '?']);
     });
   });
 

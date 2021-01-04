@@ -86,6 +86,9 @@ export function createElement(name) {
       },
       contains: value => el.className.split(/\W/).indexOf(value) !== -1,
     },
+    get firstChild() {
+      return el.childNodes[0];
+    },
     get innerHTML() {
       return el.childNodes.map(node => node.outerHTML || node.nodeValue).join('');
     },

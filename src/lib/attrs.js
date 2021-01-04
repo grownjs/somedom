@@ -6,17 +6,51 @@ import { XLINK_NS, ELEM_REGEX } from './shared';
 
 export function fixTree(vnode) {
   if (isArray(vnode)) {
-    if (!(isNode(vnode) || vnode.some(isNode))) {
-      return vnode.reduce((memo, cur) => memo.concat(fixTree(cur)), []);
+    if (isNode(vnode)) {
+      if (isFunction(vnode[0])) {
+        return fixTree(vnode[0](vnode[1], vnode.slice(2)));
+      }
+      if (vnode.length > 2) {
+        const nextTree = vnode.slice(2).reduce((memo, it) => {
+          const subTree = fixTree(it);
+
+          if (isArray(subTree)) {
+            if (!subTree.some(isNode)) {
+              memo.push(...subTree.reduce((prev, cur) => prev.concat(cur), []));
+            } else {
+              memo.push(...subTree);
+            }
+          } else {
+            memo.push(subTree);
+          }
+          return memo;
+        }, []);
+
+        vnode.length = 2;
+        vnode.push(...nextTree);
+      }
+      return vnode;
     }
 
-    if (isFunction(vnode[0])) {
-      return fixTree(vnode[0](vnode[1], vnode.slice(2)));
+    let newTree = vnode.reduce((memo, el) => {
+      const lastNode = memo[memo.length - 1];
+      const newNode = fixTree(el);
+
+      if (typeof lastNode === 'string' && typeof newNode === 'string') {
+        memo[memo.length - 1] += newNode;
+      } else {
+        memo.push(newNode);
+      }
+      return memo;
+    }, []);
+
+    if (!newTree.some(isArray)) {
+      return newTree.join('');
     }
 
-    return vnode.map(fixTree);
+    while (newTree.length === 1) newTree = newTree[0];
+    return newTree;
   }
-
   return vnode;
 }
 

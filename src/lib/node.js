@@ -4,7 +4,7 @@ import {
 } from './util';
 
 import {
-  assignProps, updateProps, fixProps,
+  assignProps, updateProps, fixProps, fixTree,
 } from './attrs';
 
 import { SVG_NS } from './shared';
@@ -99,7 +99,7 @@ export function mountElement(target, view, cb = createElement) {
     }
   }
 
-  const el = isArray(view) || isScalar(view) ? cb(view) : view;
+  const el = isArray(view) || isScalar(view) ? cb(fixTree(view)) : view;
 
   if (!isUndef(el)) append(target, el);
 
@@ -107,7 +107,7 @@ export function mountElement(target, view, cb = createElement) {
 }
 
 export function updateElement(target, prev, next, svg, cb, i = null) {
-  if (!target || target._dirty) return;
+  if (target._dirty) return;
   if (i === null) {
     prev = fixProps(prev);
     next = fixProps(next);
@@ -141,17 +141,6 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
       target.nodeValue = next.outerHTML;
     } else {
       target.nodeValue = next;
-    }
-  } else if (['HTML', 'HEAD', 'BODY'].includes(target.tagName)) {
-    if (isArray(next) && next.some(isNode)) {
-      sortedZip(prev, next, (x, y, z) => {
-        if (y) {
-          if (x) updateElement(target.childNodes[z], x, y, svg, cb);
-          else append(target, createElement(y, svg, cb));
-        } else destroyElement(target.childNodes[z]);
-      }, i);
-    } else {
-      updateElement(target.childNodes[i], prev, next, svg, cb);
     }
   } else if (target.childNodes[i]) {
     if (isUndef(next)) {
