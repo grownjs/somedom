@@ -20,11 +20,7 @@ export function fixTree(vnode) {
           const subTree = fixTree(it);
 
           if (isArray(subTree) && !isNode(subTree)) {
-            if (!subTree.some(isNode)) {
-              memo.push(...subTree.reduce((prev, cur) => prev.concat(cur), []));
-            } else {
-              memo.push(...subTree);
-            }
+            memo.push(...subTree);
           } else {
             memo.push(subTree);
           }
