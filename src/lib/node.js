@@ -28,8 +28,12 @@ export function createElement(value, svg, cb) {
 
   let fixedVNode = fixProps(value, true);
 
+  if (cb && cb.tags && cb.tags[fixedVNode[0]]) {
+    fixedVNode[0] = cb.tags[fixedVNode[0]];
+  }
+
   if (isFunction(fixedVNode[0])) {
-    const retval = fixedVNode[0](fixedVNode[1], fixedVNode.slice(2));
+    let retval = fixedVNode[0](fixedVNode[1], fixedVNode.slice(2));
 
     if (!isNode(retval)) {
       return createElement(retval);
@@ -37,6 +41,10 @@ export function createElement(value, svg, cb) {
 
     while (isFunction(retval[0])) {
       retval[0] = retval[0](fixedVNode[1], fixedVNode.slice(2));
+    }
+
+    if (cb && cb.tags && cb.tags[retval[0]]) {
+      retval = cb.tags[retval[0]](retval[1], retval[2]);
     }
 
     if (!isNode(retval)) {

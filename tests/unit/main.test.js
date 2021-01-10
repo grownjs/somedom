@@ -91,6 +91,17 @@ describe('somedom', () => {
       expect(new View({ x: 'y' }).target.outerHTML).to.eql('<a x="y"></a>');
       expect(new View({ x: 'y' }, [-1]).target.outerHTML).to.eql('<a x="y">-1</a>');
     });
+
+    it('should allow to register and render from custom tag extensions', () => {
+      const $$ = bind(render, [{
+        test(props, children) {
+          return ['a', props, children];
+        },
+      }]);
+
+      expect($$(['test', null, [42]]).outerHTML).to.eql('<a>42</a>');
+      expect($$(['div', [() => ['test', null, [42]]]]).outerHTML).to.eql('<div><a>42</a></div>');
+    });
   });
 
   describe('hooks', () => {

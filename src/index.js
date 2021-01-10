@@ -26,7 +26,7 @@ import {
 } from './lib/props';
 
 import {
-  apply, format, filter, isUndef, isScalar, isArray, toArray, isFunction,
+  apply, format, filter, isUndef, isScalar, isArray, toArray, isFunction, isPlain,
 } from './lib/util';
 
 import Fragment from './lib/fragment';
@@ -54,6 +54,10 @@ export const bind = (tag, ...hooks) => {
   const cb = (...args) => (args.length <= 2 ? tag(args[0], args[1], mix) : mix(...args));
 
   const $ = () => new Fragment();
+
+  mix.tags = Object.assign({},
+    ...filter(hooks, x => isArray(x) || isPlain(x))
+      .reduce((memo, cur) => memo.concat(cur), []).filter(isPlain));
 
   cb.view = (Tag, name) => {
     function Factory(ref, props, children) {

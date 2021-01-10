@@ -106,10 +106,28 @@
     <details>
       <summary><code>bind()</code></summary>
       <dl>
-        <dt><code>bind(render[, ...callbacks])</code></dt>
+        <dt><code>bind(render[, ...extensions])</code></dt>
         <dd>
-          <p>This function will help you to merge given middleare as a <b>tag</b> function.</p>
-          <p>It receives an initial <i>render</i> function and a list of <i>callbacks</i> to be applied.</p>
+          <p>This function will help you to merge given middleware as a <b>tag</b> function.</p>
+          <p>It receives an initial <i>render</i> function and a list of <i>extensions</i> to be applied:</p>
+          <blockquote>
+            <ul>
+              <li>Any factory <code>function</code> will be used as render callback, e.g. <code>attributes(...)</code>, <code>listeners(...)</code>, etc.</li>
+              <li>If you pass either an object or an array of objects, those will be registered as custom tags on the bound function.</li>
+            </ul>
+          </blockquote>
+          <small>output:</small>
+          <script>test(({ bind, render }, appendChild) => {
+            function Test(props, children) {
+              return ['em', props, children];
+            }
+
+            var tag = bind(render, { Test });
+
+            appendChild(tag(['Test', { style: 'color:red' }, [42]]));
+          });</script>
+        </dd>
+        <dd>
           <p>Always return a valid <i>HTMLElement</i> or <i>TextNode</i>, otherwise return <code>cb(..., svg)</code>.</p>
           <small>output:</small>
           <script>test(({ bind }, appendChild) => {

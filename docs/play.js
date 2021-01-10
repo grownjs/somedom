@@ -303,11 +303,7 @@
             const subTree = fixTree(it);
 
             if (isArray(subTree) && !isNode(subTree)) {
-              if (!subTree.some(isNode)) {
-                memo.push(...subTree.reduce((prev, cur) => prev.concat(cur), []));
-              } else {
-                memo.push(...subTree);
-              }
+              memo.push(...subTree);
             } else {
               memo.push(subTree);
             }
@@ -460,8 +456,12 @@
 
     let fixedVNode = fixProps(value, true);
 
+    if (cb && cb.tags && cb.tags[fixedVNode[0]]) {
+      fixedVNode[0] = cb.tags[fixedVNode[0]];
+    }
+
     if (isFunction(fixedVNode[0])) {
-      const retval = fixedVNode[0](fixedVNode[1], fixedVNode.slice(2));
+      let retval = fixedVNode[0](fixedVNode[1], fixedVNode.slice(2));
 
       if (!isNode(retval)) {
         return createElement(retval);
@@ -469,6 +469,10 @@
 
       while (isFunction(retval[0])) {
         retval[0] = retval[0](fixedVNode[1], fixedVNode.slice(2));
+      }
+
+      if (cb && cb.tags && cb.tags[retval[0]]) {
+        retval = cb.tags[retval[0]](retval[1], retval[2]);
       }
 
       if (!isNode(retval)) {
@@ -1083,6 +1087,10 @@
     const cb = (...args) => (args.length <= 2 ? tag(args[0], args[1], mix) : mix(...args));
 
     const $ = () => new Fragment();
+
+    mix.tags = Object.assign({},
+      ...filter(hooks, x => isArray(x) || isPlain(x))
+        .reduce((memo, cur) => memo.concat(cur), []).filter(isPlain));
 
     cb.view = (Tag, name) => {
       function Factory(ref, props, children) {
