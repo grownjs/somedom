@@ -1,6 +1,6 @@
 import {
   isFunction, isScalar, isArray, isNode, isEmpty, isUndef,
-  offsetAt, sortedZip, append, replace, detach,
+  sortedZip, append, replace, detach,
 } from './util';
 
 import {
@@ -113,27 +113,31 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
     next = fixProps(next);
 
     if (target instanceof Fragment) {
-      sortedZip(prev, next, (x, y, z) => updateElement(target.parentNode, x, y, svg, cb, z, -1), target.offset);
-    } else if (isArray(prev) && isArray(next)) {
-      if (target.nodeType === 1) {
-        if (isNode(prev) && isNode(next)) {
-          if (target.tagName === next[0].toUpperCase()) {
-            if (updateProps(target, prev[1] || {}, next[1] || {}, svg, cb)) {
-              if (isFunction(target.onupdate)) target.onupdate(target);
-              if (isFunction(target.update)) target.update();
-            }
-
-            sortedZip(prev.slice(2), next.slice(2), (x, y, z) => updateElement(target, x, y, svg, cb, z), target);
-          } else {
-            detach(target, createElement(next, svg, cb));
-          }
-        } else if (isNode(prev)) {
-          detach(target, createElement(next, svg, cb));
-        } else {
-          sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z), target);
-        }
+      if (!target.root) {
+        sortedZip(prev, next, (x, y, z) => {
+          delete target.childNodes[z]._dirty;
+          updateElement(target.childNodes[z], x, y, svg, cb, null);
+          target.childNodes[z]._dirty = true;
+        });
       } else {
-        sortedZip(prev, next, (x, y, z) => updateElement(target.parentNode, x, y, svg, cb, z), offsetAt(target.parentNode, x => x === target) - 1);
+        sortedZip(prev, next, (x, y, z) => updateElement(target.parentNode, x, y, svg, cb, z), target.offset);
+      }
+    } else if (isArray(prev) && isArray(next)) {
+      if (isNode(prev) && isNode(next)) {
+        if (target.tagName === next[0].toUpperCase()) {
+          if (updateProps(target, prev[1] || {}, next[1] || {}, svg, cb)) {
+            if (isFunction(target.onupdate)) target.onupdate(target);
+            if (isFunction(target.update)) target.update();
+          }
+
+          sortedZip(prev.slice(2), next.slice(2), (x, y, z) => updateElement(target, x, y, svg, cb, z), target);
+        } else {
+          detach(target, createElement(next, svg, cb));
+        }
+      } else if (isNode(prev)) {
+        detach(target, createElement(next, svg, cb));
+      } else {
+        sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z), target);
       }
     } else if (target.nodeType !== 3) {
       detach(target, createElement(next, svg, cb));
@@ -142,11 +146,7 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
     }
   } else if (target.childNodes[i]) {
     if (isUndef(next)) {
-      if (target.childNodes[i].nodeType !== 3) {
-        destroyElement(target.childNodes[i]);
-      } else {
-        detach(target.childNodes[i]);
-      }
+      destroyElement(target.childNodes[i]);
     } else if (!prev || prev[0] !== next[0]) {
       replace(target, createElement(next, svg, cb), i);
     } else {

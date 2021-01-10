@@ -76,6 +76,14 @@ describe('node', () => {
         div = document.createElement('div');
       });
 
+      it('should allow to patch unmounted fragments', () => {
+        const a = createElement(['a', 'b', 'c']);
+
+        expect(a.outerHTML).to.eql('abc');
+        updateElement(a, ['a', 'b', 'c'], ['d', 'e', 'f']);
+        expect(a.outerHTML).to.eql('def');
+      });
+
       it('should skip anchors while patching fragments', () => {
         x = factory('just: ', 'x');
         y = factory('just: ', 'y');
