@@ -88,10 +88,10 @@ describe('node', () => {
         x = factory('just: ', 'x');
         y = factory('just: ', 'y');
 
-        mountElement(div, x.vnode);
+        const el = mountElement(div, x.vnode);
         expect(div.outerHTML).to.eql(x.result);
-        expect(div.firstChild._anchored).to.be.true;
         expect(div.childNodes.length).to.eql(3);
+        expect(div.firstChild._anchored).to.eql(el);
 
         updateElement(div, x.vnode, y.vnode);
         expect(div.childNodes.length).to.eql(3);
