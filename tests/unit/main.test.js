@@ -101,6 +101,14 @@ describe('somedom', () => {
 
       expect($$(['test', null, [42]]).outerHTML).to.eql('<a>42</a>');
       expect($$(['div', [() => ['test', null, [42]]]]).outerHTML).to.eql('<div><a>42</a></div>');
+
+      const div = document.createElement('div');
+
+      mount(div, [['test', null, [1]]], $$);
+      expect(div.outerHTML).to.eql('<div><a>1</a></div>');
+
+      patch(div, [['test', null, [1]]], [['test', null, [2]]], null, $$);
+      expect(div.outerHTML).to.eql('<div><a>2</a></div>');
     });
   });
 

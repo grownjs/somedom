@@ -55,7 +55,7 @@ export const bind = (tag, ...hooks) => {
 
   const $ = () => new Fragment();
 
-  mix.tags = Object.assign({},
+  cb.tags = mix.tags = Object.assign({},
     ...filter(hooks, x => isArray(x) || isPlain(x))
       .reduce((memo, cur) => memo.concat(cur), []).filter(isPlain));
 
