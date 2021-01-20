@@ -37,23 +37,7 @@ export default class Fragment {
   }
 
   mount(target, node) {
-    let offset = -1;
-    let anchor;
-    for (let i = 0; i < target.childNodes.length; i += 1) {
-      if (target.childNodes[i]._anchored) {
-        anchor = target.childNodes[i];
-        offset = i;
-        break;
-      }
-    }
-
-    if (offset >= 0) {
-      for (let i = 0; i < anchor._anchored.length; i += 1) {
-        if (target.childNodes[i + offset + 1]) target.removeChild(target.childNodes[i + offset + 1]);
-      }
-    }
-
-    this.anchor = anchor || document.createTextNode('');
+    this.anchor = document.createTextNode('');
     this.length = this.childNodes.length;
     this.parentNode = target;
 
@@ -66,10 +50,10 @@ export default class Fragment {
     this.flush(doc);
 
     if (node) {
-      if (!anchor) target.insertBefore(this.anchor, node);
+      target.insertBefore(this.anchor, node);
       target.insertBefore(doc, node);
     } else {
-      if (!anchor) target.appendChild(this.anchor);
+      target.appendChild(this.anchor);
       target.appendChild(doc);
     }
   }
