@@ -554,7 +554,7 @@
       prev = fixProps(prev);
       next = fixProps(next);
 
-      const skipZip = (a, b, c, d) => {
+      function zipNodes(a, b, c, d) { // eslint-disable-line
         let j = 0;
         sortedZip(a, b, (x, y, z) => {
           while (isNode(x)
@@ -564,7 +564,7 @@
 
           updateElement(d || target, x, y, svg, cb, z + j);
         }, c);
-      };
+      }
 
       if (target instanceof Fragment) {
         if (!target.root) {
@@ -574,7 +574,7 @@
             target.childNodes[z]._dirty = true;
           });
         } else {
-          skipZip(prev, next, target.offset, target.parentNode);
+          zipNodes(prev, next, target.offset, target.parentNode);
         }
       } else if (isArray(prev) && isArray(next)) {
         if (isNode(prev) && isNode(next)) {
@@ -584,14 +584,14 @@
               if (isFunction(target.update)) target.update();
             }
 
-            skipZip(prev.slice(2), next.slice(2), target);
+            zipNodes(prev.slice(2), next.slice(2), target);
           } else {
             detach(target, createElement(next, svg, cb));
           }
         } else if (isNode(prev)) {
           detach(target, createElement(next, svg, cb));
         } else {
-          skipZip(prev, next, target);
+          zipNodes(prev, next, target);
         }
       } else if (target.nodeType !== 3) {
         detach(target, createElement(next, svg, cb));

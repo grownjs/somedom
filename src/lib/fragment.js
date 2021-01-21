@@ -77,6 +77,12 @@ export default class Fragment {
       : target.innerHTML;
   }
 
+  get children() {
+    const out = [];
+    for (let i = 0; i < this.length; i += 1) out.push(this.getNodeAt(i));
+    return out;
+  }
+
   get offset() {
     let offset = -1;
     for (let i = 0; i < this.parentNode.childNodes.length; i += 1) {

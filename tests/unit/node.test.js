@@ -21,6 +21,16 @@ describe('node', () => {
   afterEach(doc.disable);
 
   describe('DocumentFragment', () => {
+    it('should return children nodes after mount', () => {
+      const tmp = createElement([['foo', ['b', null, ['bar']]]]);
+      expect(tmp.children).to.eql([]);
+
+      tmp.mount(document.body);
+      expect(tmp.children).to.eql([
+        tmp.getNodeAt(0),
+      ]);
+    });
+
     it('should flatten arrays as fragments', () => {
       const tree = createElement([
         ['span', ['foo']],
