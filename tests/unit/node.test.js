@@ -556,6 +556,7 @@ describe('node', () => {
 
     it('should skip over invalid childNodes', () => {
       a.appendChild(document.createTextNode(''));
+      a.appendChild(document.createTextNode(''));
       a.appendChild(document.createElement('b'));
       updateElement(a, ['a', [['b', null]]], ['a', [['b', [42]]]]);
       expect(a.outerHTML).to.eql('<a><b>42</b></a>');

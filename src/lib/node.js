@@ -120,6 +120,18 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
     prev = fixProps(prev);
     next = fixProps(next);
 
+    function zipNodes(a, b, c, d) { // eslint-disable-line
+      let j = 0;
+      sortedZip(a, b, (x, y, z) => {
+        while (isNode(x)
+          && target.childNodes[z + j]
+          && target.childNodes[z + j].nodeType !== 1
+        ) j += 1;
+
+        updateElement(d || target, x, y, svg, cb, z + j);
+      }, c);
+    }
+
     if (target instanceof Fragment) {
       if (!target.root) {
         sortedZip(prev, next, (x, y, z) => {
@@ -128,7 +140,7 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
           target.childNodes[z]._dirty = true;
         });
       } else {
-        sortedZip(prev, next, (x, y, z) => updateElement(target.parentNode, x, y, svg, cb, z), target.offset);
+        zipNodes(prev, next, target.offset, target.parentNode);
       }
     } else if (isArray(prev) && isArray(next)) {
       if (isNode(prev) && isNode(next)) {
@@ -138,22 +150,14 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
             if (isFunction(target.update)) target.update();
           }
 
-          let j = 0;
-          sortedZip(prev.slice(2), next.slice(2), (x, y, z) => {
-            if (isNode(x)
-              && target.childNodes[z + j]
-              && target.childNodes[z + j].nodeType !== 1
-            ) j += 1;
-
-            updateElement(target, x, y, svg, cb, z + j);
-          }, target);
+          zipNodes(prev.slice(2), next.slice(2), target);
         } else {
           detach(target, createElement(next, svg, cb));
         }
       } else if (isNode(prev)) {
         detach(target, createElement(next, svg, cb));
       } else {
-        sortedZip(prev, next, (x, y, z) => updateElement(target, x, y, svg, cb, z), target);
+        zipNodes(prev, next, target);
       }
     } else if (target.nodeType !== 3) {
       detach(target, createElement(next, svg, cb));
