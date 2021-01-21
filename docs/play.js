@@ -566,7 +566,15 @@
               if (isFunction(target.update)) target.update();
             }
 
-            sortedZip(prev.slice(2), next.slice(2), (x, y, z) => updateElement(target, x, y, svg, cb, z), target);
+            let j = 0;
+            sortedZip(prev.slice(2), next.slice(2), (x, y, z) => {
+              if (isNode(x)
+                && target.childNodes[z + j]
+                && target.childNodes[z + j].nodeType !== 1
+              ) j += 1;
+
+              updateElement(target, x, y, svg, cb, z + j);
+            }, target);
           } else {
             detach(target, createElement(next, svg, cb));
           }
