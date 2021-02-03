@@ -211,6 +211,7 @@ describe('node', () => {
 
       expect(el.outerHTML).to.eql('<ul><li>Test 0</li><li>Test 1</li><li>Test 2</li><li>Test N</li></ul>');
       expect(el.nodeType).to.eql(11);
+      expect(ref.length).to.eql(2);
 
       updateElement(document.body, old, old = [
         ['ul', null, [
@@ -223,9 +224,9 @@ describe('node', () => {
       ]);
 
       await tick();
-
       expect(el.outerHTML).to.eql('<ul><li>Test 3</li><li>Test 4</li><li>Test M</li></ul>');
       expect(el.nodeType).to.eql(11);
+      expect(ref.length).to.eql(1);
 
       updateElement(ref, [Test, { key: 'x' }, [
         ['li', null, ['Test 4']],
@@ -234,7 +235,72 @@ describe('node', () => {
         ['li', null, ['Test 9']],
       ]]);
 
+      await tick();
       expect(el.outerHTML).to.eql('<ul><li>Test 3</li><li>Test 8</li><li>Test 9</li><li>Test M</li></ul>');
+      expect(el.nodeType).to.eql(11);
+      expect(ref.length).to.eql(2);
+
+      old = [
+        ['ul', null, [
+          ['li', null, ['Test 3']],
+          [Test, { key: 'x' }, [
+            ['li', null, ['Test 8']],
+            ['li', null, ['Test 9']],
+          ]],
+          ['li', null, ['Test M']],
+        ]],
+      ];
+
+      updateElement(document.body, old, old = [
+        ['ul', null, [
+          ['li', null, ['Test 3']],
+          [Test, { key: 'x' }, [
+            ['li', null, ['Test 8']],
+          ]],
+          ['li', null, ['Test M']],
+        ]],
+      ]);
+
+      await tick();
+      expect(el.outerHTML).to.eql('<ul><li>Test 3</li><li>Test 8</li><li>Test M</li></ul>');
+      expect(ref.length).to.eql(1);
+
+      updateElement(document.body, old, old = [
+        ['ul', null, [
+          ['li', null, ['Test 3']],
+          [Test, { key: 'x' }, []],
+          ['li', null, ['Test M']],
+        ]],
+      ]);
+
+      await tick();
+      expect(el.outerHTML).to.eql('<ul><li>Test 3</li><li>Test M</li></ul>');
+      expect(ref.length).to.eql(0);
+
+      updateElement(document.body, old, old = [
+        ['ul', null, [
+          ['li', null, ['Test 3']],
+          ['li', null, ['Test M']],
+        ]],
+      ]);
+
+      await tick();
+      expect(el.outerHTML).to.eql('<ul><li>Test 3</li><li>Test M</li></ul>');
+      expect(ref.length).to.eql(0);
+
+      updateElement(document.body, old, old = [
+        ['ul', null, [
+          ['li', null, ['Test 3']],
+          [Test, { key: 'x' }, [
+            ['li', null, ['Test X']],
+          ]],
+          ['li', null, ['Test M']],
+        ]],
+      ]);
+
+      await tick();
+      expect(el.outerHTML).to.eql('<ul><li>Test 3</li><li>Test X</li><li>Test M</li></ul>');
+      expect(ref.length).to.be.undefined;
     });
   });
 

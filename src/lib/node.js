@@ -134,7 +134,7 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
 
         if (el.childNodes[z + j] && el.childNodes[z + j]._anchored) {
           updateElement(el.childNodes[z + j]._anchored, x, y, svg, cb);
-          j += el.childNodes[z + j]._anchored.length;
+          if (el.childNodes[z + j]._anchored) j += el.childNodes[z + j]._anchored.length;
         } else {
           updateElement(el, x, y, svg, cb, z + j);
         }
@@ -146,15 +146,26 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
     } else if (isArray(prev) && isArray(next)) {
       if (isNode(prev) && isNode(next)) {
         if (target instanceof Fragment) {
+          if (prev[0] !== next[0]) {
+            target.root.insertBefore(createElement(next, svg, cb), target.anchor);
+            target.remove();
+            return;
+          }
+
           if (isFunction(target.onupdate)) target.onupdate(target, next[1]);
           if (isFunction(target.update)) target.update(next[1]);
+
+          let c = 0;
           sortedZip(prev.slice(2), next.slice(2), (x, y, z) => {
+            if (isUndef(y)) c += 1;
             if (x === null && z >= prev.length - 2) {
+              target.length += 1;
               target.root.insertBefore(createElement(y, svg, cb), target.getNodeAt(z));
             } else {
               updateElement(target.getNodeAt(z), x, y, svg, cb);
             }
           });
+          setTimeout(() => { target.length -= c; });
         } else if (target.tagName === next[0].toUpperCase()) {
           if (updateProps(target, prev[1] || {}, next[1] || {}, svg, cb)) {
             if (isFunction(target.onupdate)) target.onupdate(target);
@@ -178,15 +189,16 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
             && target.getNodeAt(z + j).nodeType !== 1
           ) j += 1;
 
-          if (isUndef(y)) {
-            target.length -= 1;
-          } else if (x === null && z >= prev.length - 2) {
+          if (isUndef(y)) target.length -= 1;
+          else if (x === null && z >= prev.length - 2) {
+            target.length += 1;
             target.root.insertBefore(createElement(y, svg, cb), target.getNodeAt(z + j));
           } else {
             let anchor = target.getNodeAt(z + j);
             if (!anchor) {
               anchor = target.getNodeAt(z + j - 1);
               target.root.insertBefore(createElement(y, svg, cb), anchor);
+              target.length += 1;
             } else {
               updateElement(anchor, x, y, svg, cb);
             }
