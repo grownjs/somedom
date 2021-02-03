@@ -1,5 +1,3 @@
-browser ?= chrome
-
 help: Makefile
 	@awk -F':.*?##' '/^[a-z0-9\\%!:-]+:.*##/{gsub("%","*",$$1);gsub("\\\\",":*",$$1);printf "\033[36m%8s\033[0m %s\n",$$1,$$2}' $<
 
@@ -10,7 +8,7 @@ dev: src deps ## Start dev tasks
 	@npm run dev & npm run serve
 
 e2e: src deps ## Run E2E tests locally
-	@BROWSER=$(browser) npm run test:e2e -- tests/e2e/cases
+	@npm run test:e2e -- tests/e2e/cases
 
 test: src deps ## Start dev+testing flow
 	@npm run watch

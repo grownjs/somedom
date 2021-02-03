@@ -40,7 +40,9 @@
     }
 
     getNodeAt(nth) {
-      return this.parentNode.childNodes[nth + this.offset + 1];
+      return !this.parentNode
+        ? this.childNodes[nth]
+        : this.parentNode.childNodes[nth + this.offset + 1];
     }
 
     remove() {
@@ -67,7 +69,7 @@
       this.parentNode = target;
 
       if (!(target instanceof Fragment)) {
-        this.anchor._anchored = target._anchored = this;
+        this.anchor._anchored = this;
       }
 
       const doc = document.createDocumentFragment();
@@ -94,12 +96,7 @@
       if (this.childNodes.length) {
         return this.childNodes.map(node => node.outerHTML || node.nodeValue).join('');
       }
-
-      const target = this.root || this.parentNode;
-
-      return target instanceof Fragment
-        ? target.outerHTML
-        : target.innerHTML;
+      return this.root.innerHTML;
     }
 
     get children() {
@@ -149,22 +146,23 @@
   const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
   const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
 
-  const isDiff = (prev, next) => {
-    if (isFunction(prev) || isFunction(next) || typeof prev !== typeof next) return true;
+  const isDiff = (prev, next, isWeak) => {
+    if (isWeak && prev === next && (isFunction(prev) || isFunction(next))) return true;
+    if (typeof prev !== typeof next) return true;
     if (isArray(prev)) {
       if (prev.length !== next.length) return true;
 
       for (let i = 0; i < next.length; i += 1) {
-        if (isDiff(prev[i], next[i])) return true;
+        if (isDiff(prev[i], next[i], isWeak)) return true;
       }
     } else if (isPlain(prev) && isPlain(next)) {
       const a = Object.keys(prev).sort();
       const b = Object.keys(next).sort();
 
-      if (isDiff(a, b)) return true;
+      if (isDiff(a, b, isWeak)) return true;
 
       for (let i = 0; i < a.length; i += 1) {
-        if (isDiff(prev[a[i]], next[b[i]])) return true;
+        if (isDiff(prev[a[i]], next[b[i]], isWeak)) return true;
       }
     } else return prev !== next;
   };
@@ -250,29 +248,12 @@
     return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
   };
 
-  function offsetAt(target, cb) {
-    let offset = -1;
-    for (let i = 0; i < target.childNodes.length; i += 1) {
-      if (cb(target.childNodes[i])) {
-        offset = i;
-        break;
-      }
-    }
-    return offset;
-  }
-
-  function sortedZip(prev, next, cb, t) {
+  function sortedZip(prev, next, cb) {
     const length = Math.max(prev.length, next.length);
-
-    let o = -1;
-    if (typeof t === 'number') o = t;
-    else if (t && t._anchored) {
-      o = offsetAt(t, x => x.nodeType === 3 && x._anchored);
-    }
 
     for (let i = 0; i < length; i += 1) {
       if (isDiff(prev[i], next[i])) {
-        cb(prev[i] || null, !isUndef(next[i]) ? next[i] : null, i + o + 1);
+        cb(prev[i] || null, !isUndef(next[i]) ? next[i] : null, i);
       }
     }
   }
@@ -344,13 +325,13 @@
     return vnode;
   }
 
-  function fixProps(vnode, re) {
+  function fixProps(vnode) {
     if (isScalar(vnode) || !isNode(vnode)) return vnode;
 
     const children = vnode.slice(isArray(vnode[1]) ? 1 : 2)
       .reduce((memo, it) => {
-        if (re && isNode(it)) {
-          memo.push(fixProps(it, re));
+        if (isNode(it)) {
+          memo.push(fixProps(it));
         } else {
           return memo.concat(it);
         }
@@ -432,7 +413,7 @@
       if (k in prev && !(k in next)) {
         all[k] = null;
         changed = true;
-      } else if (isDiff(prev[k], next[k])) {
+      } else if (isDiff(prev[k], next[k], true)) {
         all[k] = next[k];
         changed = true;
       }
@@ -460,7 +441,7 @@
         : value;
     }
 
-    let fixedVNode = fixProps(value, true);
+    let fixedVNode = fixProps(value);
 
     if (cb && cb.tags && cb.tags[fixedVNode[0]]) {
       fixedVNode[0] = cb.tags[fixedVNode[0]];
@@ -554,44 +535,80 @@
       prev = fixProps(prev);
       next = fixProps(next);
 
-      function zipNodes(a, b, c, d) { // eslint-disable-line
+      function zipNodes(a, b, c) { // eslint-disable-line
         let j = 0;
         sortedZip(a, b, (x, y, z) => {
-          while (isNode(x)
-            && target.childNodes[z + j]
-            && target.childNodes[z + j].nodeType !== 1
+          const ok = isNode(x);
+          const el = c || target;
+
+          while (ok
+            && el.childNodes[z + j]
+            && !el.childNodes[z + j]._anchored
+            && el.childNodes[z + j].nodeType !== 1
           ) j += 1;
 
-          updateElement(d || target, x, y, svg, cb, z + j);
-        }, c);
+          if (el.childNodes[z + j] && el.childNodes[z + j]._anchored) {
+            updateElement(el.childNodes[z + j]._anchored, x, y, svg, cb);
+            j += el.childNodes[z + j]._anchored.length;
+          } else {
+            updateElement(el, x, y, svg, cb, z + j);
+          }
+        });
       }
 
-      if (target instanceof Fragment) {
-        if (!target.root) {
-          sortedZip(prev, next, (x, y, z) => {
-            delete target.childNodes[z]._dirty;
-            updateElement(target.childNodes[z], x, y, svg, cb, null);
-            target.childNodes[z]._dirty = true;
-          });
-        } else {
-          zipNodes(prev, next, target.offset, target.parentNode);
-        }
+      if (isUndef(next)) {
+        destroyElement(target);
       } else if (isArray(prev) && isArray(next)) {
         if (isNode(prev) && isNode(next)) {
-          if (target.tagName === next[0].toUpperCase()) {
+          if (target instanceof Fragment) {
+            if (isFunction(target.onupdate)) target.onupdate(target, next[1]);
+            if (isFunction(target.update)) target.update(next[1]);
+            sortedZip(prev.slice(2), next.slice(2), (x, y, z) => {
+              if (x === null && z >= prev.length - 2) {
+                target.root.insertBefore(createElement(y, svg, cb), target.getNodeAt(z));
+              } else {
+                updateElement(target.getNodeAt(z), x, y, svg, cb);
+              }
+            });
+          } else if (target.tagName === next[0].toUpperCase()) {
             if (updateProps(target, prev[1] || {}, next[1] || {}, svg, cb)) {
               if (isFunction(target.onupdate)) target.onupdate(target);
               if (isFunction(target.update)) target.update();
             }
-
-            zipNodes(prev.slice(2), next.slice(2), target);
+            zipNodes(prev.slice(2), next.slice(2));
           } else {
             detach(target, createElement(next, svg, cb));
           }
         } else if (isNode(prev)) {
           detach(target, createElement(next, svg, cb));
+        } else if (target.firstChild && target.firstChild._anchored) {
+          updateElement(target.firstChild._anchored, prev, next, svg, cb);
+        } else if (target instanceof Fragment) {
+          let j = 0;
+          sortedZip(prev, next, (x, y, z) => {
+            const ok = isNode(x);
+
+            while (ok
+              && target.getNodeAt(z + j)
+              && target.getNodeAt(z + j).nodeType !== 1
+            ) j += 1;
+
+            if (isUndef(y)) {
+              target.length -= 1;
+            } else if (x === null && z >= prev.length - 2) {
+              target.root.insertBefore(createElement(y, svg, cb), target.getNodeAt(z + j));
+            } else {
+              let anchor = target.getNodeAt(z + j);
+              if (!anchor) {
+                anchor = target.getNodeAt(z + j - 1);
+                target.root.insertBefore(createElement(y, svg, cb), anchor);
+              } else {
+                updateElement(anchor, x, y, svg, cb);
+              }
+            }
+          });
         } else {
-          zipNodes(prev, next, target);
+          zipNodes(prev, next);
         }
       } else if (target.nodeType !== 3) {
         detach(target, createElement(next, svg, cb));

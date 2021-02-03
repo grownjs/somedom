@@ -352,14 +352,14 @@ describe('hooks', () => {
       await $(app.target).withText('truth').dispatch('click');
 
       expect(stack.join('.')).to.eql('3.AFTER.2.CLEAN.DIV.AFTER');
-      // expect(app.target.outerHTML).to.contains('<span>value: 42, OSOM</span>');
+      expect(app.target.outerHTML).to.contains('<span>value: 42, OSOM</span>');
 
-      // global.prompt = () => 'WAT';
+      global.prompt = () => 'WAT';
 
-      // await $(app.target).withText('ask').dispatch('click');
+      await $(app.target).withText('ask').dispatch('click');
 
-      // expect(stack.join('.')).to.eql('3.AFTER.2.CLEAN.DIV.AFTER.1.CLEAN.DIV.AFTER');
-      // expect(app.target.outerHTML).to.contains('<span>value: 42, WAT</span>');
+      expect(stack.join('.')).to.eql('3.AFTER.2.CLEAN.DIV.AFTER.1.CLEAN.DIV.AFTER');
+      expect(app.target.outerHTML).to.contains('<span>value: 42, WAT</span>');
     });
   });
 });

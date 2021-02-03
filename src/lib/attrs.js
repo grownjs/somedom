@@ -55,13 +55,13 @@ export function fixTree(vnode) {
   return vnode;
 }
 
-export function fixProps(vnode, re) {
+export function fixProps(vnode) {
   if (isScalar(vnode) || !isNode(vnode)) return vnode;
 
   const children = vnode.slice(isArray(vnode[1]) ? 1 : 2)
     .reduce((memo, it) => {
-      if (re && isNode(it)) {
-        memo.push(fixProps(it, re));
+      if (isNode(it)) {
+        memo.push(fixProps(it));
       } else {
         return memo.concat(it);
       }
@@ -143,7 +143,7 @@ export function updateProps(target, prev, next, svg, cb) {
     if (k in prev && !(k in next)) {
       all[k] = null;
       changed = true;
-    } else if (isDiff(prev[k], next[k])) {
+    } else if (isDiff(prev[k], next[k], true)) {
       all[k] = next[k];
       changed = true;
     }

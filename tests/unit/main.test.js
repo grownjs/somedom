@@ -25,7 +25,7 @@ describe('somedom', () => {
       expect(h('grab')).to.eql(['grab', null]);
       expect(h('grab', 'a')).to.eql(['grab', null, 'a']);
       expect(h('grab', 'a', 'beer')).to.eql(['grab', null, 'a', 'beer']);
-      expect(h('grab', h('a', 'beer'))).to.eql(['grab', null, 'a', null, 'beer']);
+      expect(h('grab', h('a', 'beer'))).to.eql(['grab', null, ['a', null, 'beer']]);
       expect(h('grab', [h('a', 'beer')])).to.eql(['grab', null, ['a', null, 'beer']]);
       expect(h('grab', [h('a', ['beer', 'with', 'friends'])])).to.eql(['grab', null, ['a', null, 'beer', 'with', 'friends']]);
     });
@@ -109,6 +109,79 @@ describe('somedom', () => {
 
       patch(div, [['test', null, [1]]], [['test', null, [2]]], null, $$);
       expect(div.outerHTML).to.eql('<div><a>2</a></div>');
+    });
+
+    it('should append and remove childNodes as needed', () => {
+      mount(document.body, ['\n']);
+
+      const c = ['\n'];
+      const d = ['\n', ['p', { class: 'ok' }, ['OSOM']], '\n'];
+
+      patch(document.body, c, d);
+      expect(document.body.outerHTML).to.eql('<body><p class="ok">OSOM</p>\n\n</body>');
+      while (document.body.firstChild) document.body.removeChild(document.body.firstChild);
+
+      mount(document.body, ['\n']);
+      patch(document.body, d, c);
+      expect(document.body.outerHTML).to.eql('<body>\n</body>');
+    });
+
+    it('should patch childNodes from live fragments', async () => {
+      function Fragment(props, children) {
+        const el = document.createDocumentFragment();
+        mount(el, children);
+        return el;
+      }
+
+      const $$ = bind(render, [{
+        fragment(props, children) {
+          return Fragment(props, children);
+        },
+      }]);
+
+      const prev = [
+        '\n',
+        ['nav', null, [
+          ['ul', null, [
+            ['li', null, ['Home']],
+            ['fragment', { key: 'user-menu' }, [
+              '\n',
+              ['li', null, ['Profile']],
+              '\n',
+            ]],
+          ]],
+        ]],
+        ['fragment', { key: 'flash-info' }, ['\n']],
+        ['main', null, ['MARKUP']],
+      ];
+
+      const next = [
+        '\n',
+        ['nav', null, [
+          ['ul', null, [
+            ['li', null, ['Home']],
+            ['fragment', { key: 'user-menu' }, ['\n']],
+          ]],
+        ]],
+        ['fragment', { key: 'flash-info' }, [['p', null, 'Done.'], '\n']],
+        ['main', null, ['FORM']],
+      ];
+
+      mount(document.body, prev, $$);
+      expect(document.body.outerHTML).to.eql(`<body>
+<nav><ul><li>Home</li>
+<li>Profile</li>
+</ul></nav>
+<main>MARKUP</main></body>`);
+
+      patch(document.body, prev, next, null, $$);
+      await tick();
+
+      expect(document.body.outerHTML).to.eql(`<body>
+<nav><ul><li>Home</li>
+</ul></nav>
+<p>Done.</p>
+<main>FORM</main></body>`);
     });
   });
 

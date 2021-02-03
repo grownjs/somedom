@@ -17,22 +17,23 @@ export const isPlain = value => value !== null && Object.prototype.toString.call
 export const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
 export const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
 
-export const isDiff = (prev, next) => {
-  if (isFunction(prev) || isFunction(next) || typeof prev !== typeof next) return true;
+export const isDiff = (prev, next, isWeak) => {
+  if (isWeak && prev === next && (isFunction(prev) || isFunction(next))) return true;
+  if (typeof prev !== typeof next) return true;
   if (isArray(prev)) {
     if (prev.length !== next.length) return true;
 
     for (let i = 0; i < next.length; i += 1) {
-      if (isDiff(prev[i], next[i])) return true;
+      if (isDiff(prev[i], next[i], isWeak)) return true;
     }
   } else if (isPlain(prev) && isPlain(next)) {
     const a = Object.keys(prev).sort();
     const b = Object.keys(next).sort();
 
-    if (isDiff(a, b)) return true;
+    if (isDiff(a, b, isWeak)) return true;
 
     for (let i = 0; i < a.length; i += 1) {
-      if (isDiff(prev[a[i]], next[b[i]])) return true;
+      if (isDiff(prev[a[i]], next[b[i]], isWeak)) return true;
     }
   } else return prev !== next;
 };
@@ -118,29 +119,12 @@ export const clone = value => {
   return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
 };
 
-export function offsetAt(target, cb) {
-  let offset = -1;
-  for (let i = 0; i < target.childNodes.length; i += 1) {
-    if (cb(target.childNodes[i])) {
-      offset = i;
-      break;
-    }
-  }
-  return offset;
-}
-
-export function sortedZip(prev, next, cb, t) {
+export function sortedZip(prev, next, cb) {
   const length = Math.max(prev.length, next.length);
-
-  let o = -1;
-  if (typeof t === 'number') o = t;
-  else if (t && t._anchored) {
-    o = offsetAt(t, x => x.nodeType === 3 && x._anchored);
-  }
 
   for (let i = 0; i < length; i += 1) {
     if (isDiff(prev[i], next[i])) {
-      cb(prev[i] || null, !isUndef(next[i]) ? next[i] : null, i + o + 1);
+      cb(prev[i] || null, !isUndef(next[i]) ? next[i] : null, i);
     }
   }
 }

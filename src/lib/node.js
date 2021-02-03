@@ -26,7 +26,7 @@ export function createElement(value, svg, cb) {
       : value;
   }
 
-  let fixedVNode = fixProps(value, true);
+  let fixedVNode = fixProps(value);
 
   if (cb && cb.tags && cb.tags[fixedVNode[0]]) {
     fixedVNode[0] = cb.tags[fixedVNode[0]];
@@ -120,44 +120,80 @@ export function updateElement(target, prev, next, svg, cb, i = null) {
     prev = fixProps(prev);
     next = fixProps(next);
 
-    function zipNodes(a, b, c, d) { // eslint-disable-line
+    function zipNodes(a, b, c) { // eslint-disable-line
       let j = 0;
       sortedZip(a, b, (x, y, z) => {
-        while (isNode(x)
-          && target.childNodes[z + j]
-          && target.childNodes[z + j].nodeType !== 1
+        const ok = isNode(x);
+        const el = c || target;
+
+        while (ok
+          && el.childNodes[z + j]
+          && !el.childNodes[z + j]._anchored
+          && el.childNodes[z + j].nodeType !== 1
         ) j += 1;
 
-        updateElement(d || target, x, y, svg, cb, z + j);
-      }, c);
+        if (el.childNodes[z + j] && el.childNodes[z + j]._anchored) {
+          updateElement(el.childNodes[z + j]._anchored, x, y, svg, cb);
+          j += el.childNodes[z + j]._anchored.length;
+        } else {
+          updateElement(el, x, y, svg, cb, z + j);
+        }
+      });
     }
 
-    if (target instanceof Fragment) {
-      if (!target.root) {
-        sortedZip(prev, next, (x, y, z) => {
-          delete target.childNodes[z]._dirty;
-          updateElement(target.childNodes[z], x, y, svg, cb, null);
-          target.childNodes[z]._dirty = true;
-        });
-      } else {
-        zipNodes(prev, next, target.offset, target.parentNode);
-      }
+    if (isUndef(next)) {
+      destroyElement(target);
     } else if (isArray(prev) && isArray(next)) {
       if (isNode(prev) && isNode(next)) {
-        if (target.tagName === next[0].toUpperCase()) {
+        if (target instanceof Fragment) {
+          if (isFunction(target.onupdate)) target.onupdate(target, next[1]);
+          if (isFunction(target.update)) target.update(next[1]);
+          sortedZip(prev.slice(2), next.slice(2), (x, y, z) => {
+            if (x === null && z >= prev.length - 2) {
+              target.root.insertBefore(createElement(y, svg, cb), target.getNodeAt(z));
+            } else {
+              updateElement(target.getNodeAt(z), x, y, svg, cb);
+            }
+          });
+        } else if (target.tagName === next[0].toUpperCase()) {
           if (updateProps(target, prev[1] || {}, next[1] || {}, svg, cb)) {
             if (isFunction(target.onupdate)) target.onupdate(target);
             if (isFunction(target.update)) target.update();
           }
-
-          zipNodes(prev.slice(2), next.slice(2), target);
+          zipNodes(prev.slice(2), next.slice(2));
         } else {
           detach(target, createElement(next, svg, cb));
         }
       } else if (isNode(prev)) {
         detach(target, createElement(next, svg, cb));
+      } else if (target.firstChild && target.firstChild._anchored) {
+        updateElement(target.firstChild._anchored, prev, next, svg, cb);
+      } else if (target instanceof Fragment) {
+        let j = 0;
+        sortedZip(prev, next, (x, y, z) => {
+          const ok = isNode(x);
+
+          while (ok
+            && target.getNodeAt(z + j)
+            && target.getNodeAt(z + j).nodeType !== 1
+          ) j += 1;
+
+          if (isUndef(y)) {
+            target.length -= 1;
+          } else if (x === null && z >= prev.length - 2) {
+            target.root.insertBefore(createElement(y, svg, cb), target.getNodeAt(z + j));
+          } else {
+            let anchor = target.getNodeAt(z + j);
+            if (!anchor) {
+              anchor = target.getNodeAt(z + j - 1);
+              target.root.insertBefore(createElement(y, svg, cb), anchor);
+            } else {
+              updateElement(anchor, x, y, svg, cb);
+            }
+          }
+        });
       } else {
-        zipNodes(prev, next, target);
+        zipNodes(prev, next);
       }
     } else if (target.nodeType !== 3) {
       detach(target, createElement(next, svg, cb));

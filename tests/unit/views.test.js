@@ -230,10 +230,9 @@ describe('views', () => {
       const view2 = createView(callback, null, [42])();
 
       expect(view2.target.nodeType).to.eql(3);
+      expect(view2.target.nodeValue).to.be.eql('{}');
       expect(view2.target.childNodes).to.be.undefined;
-      expect([view2.target]).to.eql([
-        { nodeType: 3, nodeValue: '{}', parentNode: document.body },
-      ]);
+      expect(view2.target.parentNode).to.be.eql(document.body);
     });
 
     it('should allow to update ViewFragments', async () => {

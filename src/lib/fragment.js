@@ -15,7 +15,9 @@ export default class Fragment {
   }
 
   getNodeAt(nth) {
-    return this.parentNode.childNodes[nth + this.offset + 1];
+    return !this.parentNode
+      ? this.childNodes[nth]
+      : this.parentNode.childNodes[nth + this.offset + 1];
   }
 
   remove() {
@@ -42,7 +44,7 @@ export default class Fragment {
     this.parentNode = target;
 
     if (!(target instanceof Fragment)) {
-      this.anchor._anchored = target._anchored = this;
+      this.anchor._anchored = this;
     }
 
     const doc = document.createDocumentFragment();
@@ -69,12 +71,7 @@ export default class Fragment {
     if (this.childNodes.length) {
       return this.childNodes.map(node => node.outerHTML || node.nodeValue).join('');
     }
-
-    const target = this.root || this.parentNode;
-
-    return target instanceof Fragment
-      ? target.outerHTML
-      : target.innerHTML;
+    return this.root.innerHTML;
   }
 
   get children() {

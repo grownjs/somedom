@@ -3,6 +3,10 @@ import { tick, isScalar } from '../lib/util';
 
 import Fragment from '../lib/fragment';
 
+export function remove() {
+  this.parentNode.removeChild(this);
+}
+
 export function withText(value, key) {
   return this.findText(value)[key || 0];
 }
@@ -62,6 +66,7 @@ export function createElement(name) {
     className: '',
     attributes: {},
     childNodes: [],
+    remove,
     dispatchEvent,
     addEventListener,
     removeEventListener,
@@ -90,7 +95,11 @@ export function createElement(name) {
       return el.childNodes[0];
     },
     get innerHTML() {
-      return el.childNodes.map(node => node.outerHTML || node.nodeValue).join('');
+      return el.childNodes.map(node => {
+        return node.nodeType === 8
+          ? `<!--${node.nodeValue}-->`
+          : node.outerHTML || node.nodeValue;
+      }).join('');
     },
     get outerHTML() {
       const props = Object.keys(el.attributes).reduce((prev, cur) => {
@@ -111,7 +120,7 @@ export function createElement(name) {
       return `<${name}${props.join('')}>${el.innerHTML}</${name}>`;
     },
     dispatch(type, params) {
-      return tick(() => this.dispatchEvent({ type, ...params }));
+      return tick(() => el.dispatchEvent({ type, ...params }));
     },
     replaceChild(n, o) {
       n.parentNode = el;
@@ -122,7 +131,12 @@ export function createElement(name) {
     },
     insertBefore(n, o) {
       n.parentNode = el;
-      el.childNodes.splice(el.childNodes.indexOf(o), 0, n);
+
+      if (o instanceof Fragment && !o.anchor) {
+        o.appendChild(n);
+      } else {
+        el.childNodes.splice(el.childNodes.indexOf(o), 0, n);
+      }
     },
     appendChild(n) {
       n.parentNode = el;
@@ -166,7 +180,11 @@ export function createElementNS(ns, name) {
 }
 
 export function createTextNode(content) {
-  return { nodeType: 3, nodeValue: String(content) };
+  return { remove, nodeType: 3, nodeValue: String(content) };
+}
+
+export function createComment(content) {
+  return { nodeType: 8, nodeValue: String(content) };
 }
 
 export function patchDocument() {
@@ -175,6 +193,7 @@ export function patchDocument() {
     createElementNS,
     createElement,
     createTextNode,
+    createComment,
     querySelector() {},
     createDocumentFragment,
   };

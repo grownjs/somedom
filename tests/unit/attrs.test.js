@@ -46,8 +46,7 @@ describe('attrs', () => {
       expect(fixProps(['grab'])).to.eql(['grab']);
       expect(fixProps(['grab', 'a', 'beer'])).to.eql(['grab', 'a', 'beer']);
       expect(fixProps(['grab', ['a', 'beer']])).to.eql(['grab', null, 'a', 'beer']);
-      expect(fixProps(['grab', ['a', ['beer']]])).to.eql(['grab', null, 'a', ['beer']]);
-      expect(fixProps(['grab', ['a', ['beer']]], 1)).to.eql(['grab', null, ['a', null, 'beer']]);
+      expect(fixProps(['grab', ['a', ['beer']]])).to.eql(['grab', null, ['a', null, 'beer']]);
     });
 
     it('should fix emmet-like syntax tagName', () => {
