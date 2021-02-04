@@ -1,6 +1,6 @@
 {
   "name": "somedom",
-  "version": "0.2.15",
+  "version": "0.2.16",
   "description": "Building blocks for the DOM.",
   "main": "dist/somedom.js",
   "module": "dist/somedom.es.js",
