@@ -22,7 +22,7 @@ import Fragment from '../../src/lib/fragment';
 import { tick, trim, format } from '../../src/lib/util';
 import { bindHelpers as $ } from '../../src/ssr';
 
-import doc from './fixtures/document';
+import doc from '../../src/ssr/jsdom';
 
 /* global beforeEach, afterEach, describe, it */
 
@@ -209,30 +209,37 @@ describe('views', () => {
 
       const view = createView(callback, null, actions)();
 
-      await view.fun();
+      await view.defer(view.fun());
       expect(td.explain(callback).callCount).to.eql(2);
-      expect(view.target.nodeValue).to.eql('{"x":42}');
+      expect(view.target.innerHTML).to.eql('{"x":42}');
 
-      await view.fun(-1);
+      await view.defer(view.fun(-1));
       expect(td.explain(callback).callCount).to.eql(3);
-      expect(view.target.nodeValue).to.eql('{"x":-1}');
+      expect(view.target.innerHTML).to.eql('{"x":-1}');
 
-      await view.fun(42);
-      expect(td.explain(callback).callCount).to.eql(3);
-
-      await view.fun(1);
+      await view.defer(view.fun(42));
       expect(td.explain(callback).callCount).to.eql(3);
 
-      await view.fun(2);
+      await view.defer(view.fun(1));
+      expect(td.explain(callback).callCount).to.eql(3);
+
+      await view.defer(view.fun(2));
       expect(td.explain(callback).callCount).to.eql(4);
-      expect(view.target.nodeValue).to.eql('{"x":2}');
+      expect(view.target.innerHTML).to.eql('{"x":2}');
+    });
 
-      const view2 = createView(callback, null, [42])();
+    it('should allow to mount views on Document fragments', () => {
+      const callback = td.func('render');
 
-      expect(view2.target.nodeType).to.eql(3);
-      expect(view2.target.nodeValue).to.be.eql('{}');
-      expect(view2.target.childNodes).to.be.undefined;
-      expect(view2.target.parentNode).to.be.eql(document.body);
+      td.when(callback(td.matchers.anything(), td.matchers.anything()))
+        .thenDo(props => [JSON.stringify(props)]);
+
+      const _doc = document.createDocumentFragment();
+      const view2 = createView(callback, null, [42])(_doc);
+
+      expect(view2.target.nodeType).to.eql(11);
+      expect(view2.target.root).to.be.undefined;
+      expect(view2.target.childNodes[0].nodeValue).to.eql('{}');
     });
 
     it('should allow to update ViewFragments', async () => {
@@ -242,13 +249,14 @@ describe('views', () => {
       const app = view(document.body);
 
       expect(app.target.outerHTML).to.eql('<b></b>');
-      await app.action();
+      await app.defer(app.action());
+
       expect(app.target.outerHTML).to.eql('<b value="0"></b>');
 
-      await app.action();
+      await app.defer(app.action());
       expect(app.target.outerHTML).to.eql('<b value="1"></b>');
 
-      await app.action();
+      await app.defer(app.action());
       expect(app.target.outerHTML).to.eql('<b value="2"></b>');
     });
 
@@ -259,13 +267,13 @@ describe('views', () => {
       td.when(callback(td.matchers.anything()))
         .thenDo(ok => ok({ value: i++ })); // eslint-disable-line
 
-      const view = createView(props => ['a', props], callback);
+      const view = createView(props => [['a', props]], callback);
       const app = view(document.body);
 
       expect(i).to.eql(43);
       expect(app.state).to.eql({ value: 42 });
       expect(app.target).not.to.be.undefined;
-      expect(app.target.outerHTML).to.eql('<a value="42"></a>');
+      expect(app.target.innerHTML).to.eql('<a value="42"></a>');
       expect(td.explain(callback).callCount).to.eql(1);
 
       const view2 = createView(props => ['b', props], null, null, callback);
@@ -289,11 +297,11 @@ describe('views', () => {
       expect(createView()).not.to.be.undefined;
       expect(createView(tag, null)).not.to.be.undefined;
 
-      const app = createView(tag, null)(props, children);
+      const app = createView(tag, null)();
 
       expect(td.explain(tag).callCount).to.eql(1);
-      expect(app.target.childNodes).to.be.undefined;
-      expect(app.target.parentNode.tagName).to.eql('BODY');
+      expect(app.target.childNodes.length).to.eql(0);
+      expect(app.target.tagName).to.eql('BODY');
     });
 
     it('should call createContext() if only a function is given', () => {
@@ -302,8 +310,8 @@ describe('views', () => {
 
       expect(typeof el.subscribe).to.eql('function');
       expect(typeof el.unmount).to.eql('function');
+      expect(el.target.tagName).to.eql('BODY');
       expect(el.state).to.eql({ data: [] });
-      expect(el.target).to.be.undefined;
     });
 
     it('should allow to subscribe to state changes', async () => {
@@ -317,16 +325,16 @@ describe('views', () => {
       const app = view();
 
       const teardown = app.subscribe(callback);
-      await app.test();
+      await app.defer(app.test());
 
       expect(app.state).to.eql({ x: 42 });
-      expect(app.target.outerHTML).to.eql('<pre>{"x":42}</pre>');
+      expect(app.target.innerHTML).to.eql('{"x":42}');
 
-      await app.test();
+      await app.defer(app.test());
       expect(td.explain(callback).callCount).to.eql(2);
 
       teardown();
-      await app.test();
+      await app.defer(app.test());
       expect(td.explain(callback).callCount).to.eql(2);
     });
 
@@ -335,7 +343,7 @@ describe('views', () => {
       }
 
       Class.prototype.render = function $render() {
-        return ['div', [this.state.value]];
+        return [['div', null, [this.state.value]]];
       };
 
       Class.prototype.update = function $update() {
@@ -349,7 +357,7 @@ describe('views', () => {
       expect(el.instance.update()).to.eql({ value: 'OSOM!' });
 
       await tick();
-      expect(el.target.outerHTML).to.eql('<div>OSOM!</div>');
+      expect(el.target.innerHTML).to.eql('<div>OSOM!</div>');
     });
 
     it('should call destroyElement() as result of unmount() calls', async () => {
@@ -381,9 +389,10 @@ describe('views', () => {
         const app = createView(subject, { value }, [description]);
         const el = app(body, bind(render, listeners()));
 
-        await $(body).withText(description).dispatch('click');
+        $(body).withText(description).dispatch('click');
+        await tick();
 
-        expect(el.target.outerHTML).to.eql(`<button>${description}</button><span>Got: ${result} (${result * 2})</span>`);
+        expect(el.target.innerHTML).to.eql(`<button>${description}</button><span>Got: ${result} (${result * 2})</span>`);
       }
 
       it('can create views from plain objects and classes', async () => {
@@ -395,7 +404,7 @@ describe('views', () => {
 
           render: (state, _actions, children) => [[
             ['button', { onclick: _actions.doStuff }, children],
-            ['span', ['Got: ', state.result || '?', ' (', state.value, ')']],
+            ['span', null, ['Got: ', state.result || '?', ' (', state.value, ')']],
           ]],
 
           doStuff: () => async ({ value }) => ({
@@ -420,12 +429,12 @@ describe('views', () => {
         const el = app();
 
         expect(el.state).to.eql({ foo: 'BAR' });
-        expect(el.target.outerHTML).to.eql('<a>BAR</a>');
+        expect(el.target.innerHTML).to.eql('<a>BAR</a>');
 
         await el.setFoo('OK');
 
         expect(el.state).to.eql({ foo: 'OK' });
-        expect(el.target.outerHTML).to.eql('<a>OK</a>');
+        expect(el.target.innerHTML).to.eql('<a>OK</a>');
       });
     });
   });
@@ -539,10 +548,10 @@ describe('views', () => {
       let ctx;
 
       function CounterView(props = {}) {
-        return createView(({ value }, { setValue }) => ['span', [
+        return createView(({ value }, { setValue }) => ['span', null, [
           ['button', { onclick: () => setValue(value - Math.random()) }, '--'],
           ['button', { onclick: () => setValue(value + Math.random()) }, '++'],
-          ['span', ['value: ', value]],
+          ['span', null, ['value: ', value]],
         ]], {
           value: props.value || Math.random(),
         }, {
@@ -551,7 +560,7 @@ describe('views', () => {
       }
 
       function Main(props) {
-        return ['fieldset', [[[['legend', ['Example:']]], [[[[[MyCounter, props]]]]]]]];
+        return ['fieldset', null, [[[['legend', null, ['Example:']]], [[[[[MyCounter, props]]]]]]]];
       }
 
       beforeEach(() => {
@@ -564,11 +573,13 @@ describe('views', () => {
         const view = new CounterView({ value: 42 });
         const app = view();
 
-        await app.setValue(-1);
-        expect(app.target.outerHTML).to.contains('value: -1');
+        await app.defer(app.setValue(-1));
+        expect(app.target.outerHTML).to.not.contains('<span>value: Infinity</span>');
+        expect(app.target.outerHTML).to.contains('<span>value: -1</span>');
 
-        await app.setValue(Infinity);
-        expect(app.target.outerHTML).to.contains('value: Infinity');
+        await app.defer(app.setValue(Infinity));
+        expect(app.target.outerHTML).to.not.contains('<span>value: -1</span>');
+        expect(app.target.outerHTML).to.contains('<span>value: Infinity</span>');
       });
 
       it('should render wrapped views', () => {
@@ -594,18 +605,18 @@ describe('views', () => {
         }
 
         expect(depth).to.eql(2);
-        expect(node.childNodes.length).to.eql(3);
-        expect(node.childNodes[2].childNodes.length).to.eql(3);
+        expect(node.childNodes.length).to.eql(2);
+        expect(node.childNodes[1].childNodes.length).to.eql(3);
       });
 
       it('should reference mounted views', async () => {
         await ctx.mount(document.createElement('body'));
 
-        await ctx.refs.CounterView[0].setValue('OSOMS');
+        await ctx.defer(ctx.refs.CounterView[0].setValue('OSOMS'));
         expect(ctx.source.target.innerHTML).to.contains('value: OSOMS');
         expect(ctx.source.target.innerHTML).to.contains('<legend>Example:</legend><span><button>');
 
-        await ctx.refs.CounterView[0].unmount();
+        await ctx.defer(ctx.refs.CounterView[0].unmount());
         expect(ctx.source.target.innerHTML).to.eql('<legend>Example:</legend>');
         expect(ctx.refs.CounterView).to.be.undefined;
       });
@@ -617,16 +628,19 @@ describe('views', () => {
 
         await ctx.mount(body, vnode);
         await ctx.mount(body, vnode);
+        await ctx.patch(body, vnode, []);
 
-        expect(td.explain(ondestroy).callCount).to.eql(1);
+        expect(td.explain(ondestroy).callCount).to.eql(2);
       });
 
       it('should patch fragments from views', async () => {
         const { view } = bind(render, listeners());
+        const seq = Array.from({ length: Math.random() * 10 + 1 })
+          .map((_, i) => Math.random() * 10 + i | 0); // eslint-disable-line
 
         let inc = 0;
         const Other = view(function Random() {
-          return ['OK: ', inc++]; // eslint-disable-line
+          return ['OK: ', ...seq, inc++].concat(inc === 2 ? -1 : []); // eslint-disable-line
         });
 
         const Counter = createView(class CounterView2 {
@@ -641,8 +655,8 @@ describe('views', () => {
 
           render() {
             return [
-              ['p', [
-                ['span', ['value: ', this.state.value]],
+              ['p', null, [
+                ['span', null, ['value: ', this.state.value]],
               ]],
               this.children,
             ];
@@ -651,21 +665,27 @@ describe('views', () => {
 
         const div = document.createElement('div');
         const app = Counter(div);
+        const prefix = seq.join('');
 
-        expect(div.outerHTML).to.eql('<div><p><span>value: 42</span></p>OK: 0</div>');
+        expect(div.outerHTML).to.eql(`<div><p><span>value: 42</span></p>OK: ${prefix}0</div>`);
+        expect(app.target.outerHTML).to.eql(`<div><p><span>value: 42</span></p>OK: ${prefix}0</div>`);
 
-        await app.instance.inc();
+        expect(inc).to.eql(1);
+        await app.defer(app.instance.inc());
         const a = div.outerHTML;
 
-        await app.instance.inc();
+        expect(inc).to.eql(2);
+        await app.defer(app.instance.inc());
         const b = div.outerHTML;
 
-        await app.instance.inc();
+        expect(inc).to.eql(3);
+        await app.defer(app.instance.inc());
         const c = div.outerHTML;
 
-        expect(a).to.eql('<div><p><span>value: 43</span></p>OK: 1</div>');
-        expect(b).to.eql('<div><p><span>value: 44</span></p>OK: 2</div>');
-        expect(c).to.eql('<div><p><span>value: 45</span></p>OK: 3</div>');
+        expect(inc).to.eql(4);
+        expect(a).to.eql(`<div><p><span>value: 43</span></p>OK: ${prefix}1-1</div>`);
+        expect(b).to.eql(`<div><p><span>value: 44</span></p>OK: ${prefix}2</div>`);
+        expect(c).to.eql(`<div><p><span>value: 45</span></p>OK: ${prefix}3</div>`);
       });
     });
   });

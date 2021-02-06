@@ -1,4 +1,4 @@
-import { isUndef, isDiff, clone } from './util';
+import { isNot, isDiff, clone } from './util';
 import { getContext } from './ctx';
 
 export { createContext } from './ctx';
@@ -17,7 +17,7 @@ export function useMemo(callback, inputs) {
 
   const prev = scope.d[key];
 
-  if (isUndef(prev) || isDiff(prev, inputs)) {
+  if (isNot(prev) || isDiff(prev, inputs)) {
     scope.v[key] = callback();
     scope.d[key] = inputs;
   }
@@ -45,7 +45,7 @@ export function useState(fallback) {
   scope.key += 1;
   scope.val = scope.val || [];
 
-  if (isUndef(scope.val[key])) {
+  if (isNot(scope.val[key])) {
     scope.val[key] = fallback;
   }
 

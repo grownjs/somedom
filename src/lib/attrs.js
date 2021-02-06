@@ -4,88 +4,29 @@ import {
 
 import { XLINK_NS, ELEM_REGEX } from './shared';
 
-import Fragment from './fragment';
-
-export function fixTree(vnode) {
-  if (isArray(vnode)) {
-    if (isNode(vnode)) {
-      if (isArray(vnode[1])) {
-        vnode[1] = vnode[1].map(fixTree);
-      }
-      if (isFunction(vnode[0])) {
-        return fixTree(vnode[0](vnode[1], vnode.slice(2)));
-      }
-      if (vnode.length > 2) {
-        const nextTree = vnode.slice(2).reduce((memo, it) => {
-          const subTree = fixTree(it);
-
-          if (isArray(subTree) && !isNode(subTree)) {
-            memo.push(...subTree);
-          } else {
-            memo.push(subTree);
-          }
-          return memo;
-        }, []);
-
-        vnode.length = 2;
-        vnode.push(...nextTree);
-      }
-      return vnode;
-    }
-
-    let newTree = vnode.reduce((memo, el) => {
-      const lastNode = memo[memo.length - 1];
-      const newNode = fixTree(el);
-
-      if (typeof lastNode === 'string' && typeof newNode === 'string') {
-        memo[memo.length - 1] += newNode;
-      } else {
-        memo.push(newNode);
-      }
-      return memo;
-    }, []);
-
-    if (!newTree.some(x => isArray(x) || x instanceof Fragment)) {
-      return newTree.join('');
-    }
-
-    while (newTree.length === 1) newTree = newTree[0];
-    return newTree;
-  }
-  return vnode;
-}
-
 export function fixProps(vnode) {
-  if (isScalar(vnode) || !isNode(vnode)) return vnode;
+  if (isArray(vnode) && isArray(vnode[1])) {
+    vnode[2] = vnode[1];
+    vnode[1] = null;
+  }
 
-  const children = vnode.slice(isArray(vnode[1]) ? 1 : 2)
-    .reduce((memo, it) => {
-      if (isNode(it)) {
-        memo.push(fixProps(it));
-      } else {
-        return memo.concat(it);
-      }
-      return memo;
-    }, []);
+  if (!isNode(vnode) || isFunction(vnode[0])) return vnode;
 
   let attrs = isPlain(vnode[1])
     ? { ...vnode[1] }
     : null;
 
-  if (isFunction(vnode[0])) {
-    return [vnode[0], attrs, ...children];
-  }
-
   const matches = vnode[0].match(ELEM_REGEX);
-  const tag = matches[1] || 'div';
+
+  vnode[0] = matches[1] || 'div';
 
   if (matches[2]) {
-    attrs = attrs || {};
+    attrs = vnode[1] = attrs || {};
     attrs.id = matches[2].substr(1);
   }
 
   if (matches[3]) {
-    attrs = attrs || {};
+    attrs = vnode[1] = attrs || {};
 
     const classes = matches[3].substr(1).split('.');
 
@@ -102,7 +43,7 @@ export function fixProps(vnode) {
     }
   }
 
-  return [tag, attrs, ...children];
+  return vnode;
 }
 
 export function assignProps(target, attrs, svg, cb) {
@@ -116,12 +57,16 @@ export function assignProps(target, attrs, svg, cb) {
       return;
     }
 
-    if (isObject(attrs[prop])) {
-      attrs[prop] = (isFunction(cb) && cb(target, prop, attrs[prop])) || null;
+    let value = attrs[prop] !== true ? attrs[prop] : prop;
+    if (isObject(value)) {
+      value = (isFunction(cb) && cb(target, prop, value)) || value;
+      value = value !== target ? value : null;
+      value = isArray(value)
+        ? value.join('')
+        : value;
     }
 
-    const removed = isEmpty(attrs[prop]);
-    const value = attrs[prop] === true ? prop : attrs[prop];
+    const removed = isEmpty(value);
     const name = prop.replace(/^xlink:?/, '');
 
     if (svg && prop !== name) {
@@ -131,7 +76,7 @@ export function assignProps(target, attrs, svg, cb) {
     }
 
     if (removed) target.removeAttribute(prop);
-    else target.setAttribute(prop, value);
+    else if (isScalar(value)) target.setAttribute(prop, value);
   });
 }
 

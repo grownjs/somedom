@@ -12,7 +12,7 @@ export const isArray = value => Array.isArray(value);
 export const isString = value => typeof value === 'string';
 export const isFunction = value => typeof value === 'function';
 export const isSelector = value => isString(value) && ELEM_REGEX.test(value);
-export const isUndef = value => typeof value === 'undefined' || value === null;
+export const isNot = value => typeof value === 'undefined' || value === null;
 export const isPlain = value => value !== null && Object.prototype.toString.call(value) === '[object Object]';
 export const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
 export const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
@@ -43,12 +43,12 @@ export const isEmpty = value => {
   if (isArray(value)) return value.length === 0;
   if (isPlain(value)) return Object.keys(value).length === 0;
 
-  return isUndef(value) || value === '' || value === false;
+  return isNot(value) || value === '' || value === false;
 };
 
 export const isNode = x => isArray(x)
   && ((typeof x[0] === 'string' && isSelector(x[0])) || isFunction(x[0]))
-  && (typeof x[1] === 'object' || isFunction(x[0]));
+  && (x[1] === null || isPlain(x[1]) || isFunction(x[0]));
 
 export const getMethods = obj => {
   const stack = [];
@@ -76,6 +76,67 @@ export const getMethods = obj => {
 export const dashCase = value => value.replace(/[A-Z]/g, '-$&').toLowerCase();
 export const toArray = value => (!isEmpty(value) && !isArray(value) ? [value] : value) || [];
 export const filter = (value, cb) => value.filter(cb || (x => !isEmpty(x)));
+
+export const defer = tasks => {
+  return tasks.reduce((prev, [x, fn, ...args]) => prev.then(() => fn(...args)).catch(e => {
+    throw new Error(`Failed at ${x}\n${e.stack.replace(/^Error:\s+/, '')}`);
+  }), Promise.resolve());
+};
+
+export const tree = value => {
+  if (isNode(value)) {
+    let children = [];
+    for (let i = 2; i < value.length; i += 1) {
+      children = children.concat(isNode(value[i]) ? [value[i]] : value[i]);
+    }
+    value.length = 2;
+    value.push(children);
+  } else if (isArray(value)) {
+    return value.map(tree);
+  }
+  return value;
+};
+
+export const flat = value => {
+  return !isArray(value) ? tree(value) : value.reduce((memo, n) => memo.concat(isNode(n) ? [tree(n)] : flat(n)), []);
+};
+
+export const zip = (prev, next, cb, o = 0, p = []) => {
+  const c = Math.max(prev.length, next.length);
+  const q = [];
+
+  for (let i = 0; i < c; i += 1) {
+    const x = flat(prev[i]);
+    const y = flat(next[i]);
+
+    if (!isArray(x) && !isArray(y)) {
+      q.push([`Node(${JSON.stringify(x)}, ${JSON.stringify(y)})`, cb, x, y, i + o]);
+      continue; // eslint-disable-line
+    }
+
+    if (isNode(x)) {
+      q.push([`Node(${x[0]})`, cb, tree(x), tree(y), i + o]);
+    } else if (isArray(x)) {
+      if (isNode(y)) {
+        q.push(['Zip', zip, x, [y], cb, i + o, p.concat(y[0])]);
+      } else if (isArray(y)) {
+        q.push(['Zip', zip, x, y, cb, i + o, p]);
+      } else {
+        q.push(['Zip', zip, x, [y], cb, i + o, p]);
+      }
+    } else {
+      q.push(['Node', cb, x, y, i + o]);
+    }
+  }
+  return defer(q);
+};
+
+export const plain = (target, re) => {
+  if (typeof target === 'object' && 'length' in target && !target.nodeType) return Array.from(target).map(x => plain(x, re));
+  if (re && target.nodeType === 1) return target.outerHTML;
+  if (target.nodeType === 3) return target.nodeValue;
+  return Array.from(target.childNodes).map(x => plain(x, true));
+};
 
 export const format = markup => {
   let formatted = '';
@@ -119,23 +180,13 @@ export const clone = value => {
   return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
 };
 
-export function sortedZip(prev, next, cb) {
-  const length = Math.max(prev.length, next.length);
-
-  for (let i = 0; i < length; i += 1) {
-    if (isDiff(prev[i], next[i])) {
-      cb(prev[i] || null, !isUndef(next[i]) ? next[i] : null, i);
-    }
-  }
-}
-
 export const apply = (cb, length, options = {}) => (...args) => length === args.length && cb(...args, options);
 export const raf = cb => ((typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout)(cb);
-export const tick = cb => Promise.resolve(cb && cb()).then(() => new Promise(done => raf(done)));
+export const tick = cb => Promise.resolve().then(cb).then(() => new Promise(done => raf(done)));
 
 export const remove = (target, node) => target && target.removeChild(node);
+export const replace = (target, node, i) => target.replaceChild(node, target.childNodes[i]);
 export const append = (target, node) => (node instanceof Fragment ? node.mount(target) : target.appendChild(node));
-export const replace = (target, node, i) => (node instanceof Fragment ? node.replace(target, i) : target.replaceChild(node, target.childNodes[i]));
 
 export const detach = (target, node) => {
   if (node) {

@@ -3,7 +3,7 @@ import {
 } from './node';
 
 import {
-  getMethods, isFunction, isObject, isPlain, isArray, clone,
+  getMethods, isFunction, isObject, isPlain, isArray, clone, raf,
 } from './util';
 
 import {
@@ -11,8 +11,6 @@ import {
 } from './shared';
 
 import Fragment from './fragment';
-
-import { fixTree } from './attrs';
 import { createContext } from './ctx';
 
 export function getDecorated(Tag, state, actions, children) {
@@ -80,16 +78,13 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
     const data = clone(state || {});
     const fns = [];
 
-    let childNode;
     let vnode;
     let $;
 
-    function sync(result) {
-      return Promise.all(fns.map(fn => fn(data, $)))
-        .then(() => {
-          updateElement(childNode, vnode, vnode = fixTree(Tag(clone(data), $)), null, cb);
-        })
-        .then(() => result);
+    async function sync(result) {
+      await Promise.all(fns.map(fn => fn(data, $)));
+      $.target = await updateElement($.target, vnode, vnode = Tag(clone(data), $), null, cb);
+      return result;
     }
 
     if (hook) {
@@ -136,16 +131,15 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
       };
     };
 
-    $.unmount = _cb => destroyElement(childNode, _cb);
+    $.defer = _cb => new Promise(_ => raf(_)).then(_cb);
+    $.unmount = _cb => destroyElement($.target, _cb || false);
+    $.target = mountElement(el, vnode = Tag(clone(data), $), null, cb);
 
     Object.defineProperty($, 'state', {
       configurable: false,
       enumerable: true,
       get: () => data,
     });
-
-    childNode = mountElement(el, vnode = fixTree(Tag(clone(data), $)), cb);
-    $.target = childNode;
 
     if (instance) {
       $.instance = instance;
@@ -154,13 +148,20 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
   };
 }
 
-export function createThunk(vnode, cb = createElement) {
+export function createThunk(vnode, svg, cb = createElement) {
+  if (typeof svg === 'function') {
+    cb = svg;
+    svg = null;
+  }
+
   const ctx = {
     refs: {},
     render: cb,
     source: null,
     vnode: vnode || ['div', null],
     thunk: createView(() => ctx.vnode, null),
+    defer: _cb => new Promise(_ => raf(_)).then(_cb),
+    patch: (target, prev, next) => updateElement(target, prev, next, svg, cb),
   };
 
   ctx.unmount = async _cb => {
@@ -175,7 +176,7 @@ export function createThunk(vnode, cb = createElement) {
     await Promise.all(tasks);
 
     if (ctx.source) {
-      await destroyElement(ctx.source.target, _cb);
+      destroyElement(ctx.source.target, _cb || false);
     }
   };
 

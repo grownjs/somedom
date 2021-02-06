@@ -26,18 +26,16 @@ import {
 } from './lib/props';
 
 import {
-  apply, format, filter, isUndef, isScalar, isArray, toArray, isFunction, isPlain,
+  apply, format, filter, isNot, isScalar, isArray, isFunction, isPlain,
 } from './lib/util';
 
+import { addEvents } from './lib/events';
 import Fragment from './lib/fragment';
 
-import { fixProps } from './lib/attrs';
-import { addEvents } from './lib/events';
-
 export const h = (tag = 'div', attrs = null, ...children) => {
-  if (isScalar(attrs)) return fixProps([tag, null, attrs, children]);
-  if (isArray(attrs)) return fixProps([tag, null, attrs]);
-  return fixProps([tag, attrs || null, children]);
+  if (isScalar(attrs)) return [tag, null, [attrs].concat(children).filter(x => !isNot(x))];
+  if (isArray(attrs)) return [tag, null, attrs];
+  return [tag, attrs || null, children];
 };
 
 export const pre = (vnode, svg, cb = render) => {
@@ -61,14 +59,14 @@ export const bind = (tag, ...hooks) => {
 
   cb.view = (Tag, name) => {
     function Factory(ref, props, children) {
-      if (this instanceof Factory) {
-        if (isUndef(children) && (isScalar(props) || isArray(props))) {
-          children = toArray(props);
-          props = ref;
-          ref = null;
-        }
+      if (!children && isArray(props)) {
+        children = props;
+        props = ref || null;
+        ref = null;
+      }
 
-        if (isUndef(props)) {
+      if (this instanceof Factory) {
+        if (isNot(props)) {
           props = ref;
           ref = null;
         }
@@ -76,11 +74,7 @@ export const bind = (tag, ...hooks) => {
         return view(Tag)(props, children)(ref, cb);
       }
 
-      if (isUndef(children)) {
-        return view(Tag)(ref, props)($(), cb).target;
-      }
-
-      return view(Tag)(props, children)(ref, cb);
+      return view(Tag)(props, children)(ref || $(), cb);
     }
 
     Object.defineProperty(Factory, 'name', {

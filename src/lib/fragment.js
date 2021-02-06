@@ -2,6 +2,7 @@ export default class Fragment {
   constructor() {
     this.childNodes = [];
     this.nodeType = 11;
+    this.length = 0;
   }
 
   appendChild(node) {
@@ -11,56 +12,43 @@ export default class Fragment {
       });
     } else {
       this.childNodes.push(node);
+      this.length += 1;
     }
   }
 
-  getNodeAt(nth) {
-    return !this.parentNode
-      ? this.childNodes[nth]
-      : this.parentNode.childNodes[nth + this.offset + 1];
-  }
-
-  remove() {
-    const offset = this.offset + 1;
-    const target = this.root;
-
-    return (async () => {
-      for (let i = offset + this.length; i >= offset; i -= 1) {
-        if (target.childNodes[i]) await target.childNodes[i].remove(); // eslint-disable-line
-      }
-    })();
-  }
-
-  replace(target, i) {
+  getDocumentFragment() {
     const doc = document.createDocumentFragment();
 
     this.flush(doc);
-    target.replaceChild(doc, target.childNodes[i]);
+    return doc;
+  }
+
+  remove(wait) {
+    wait = wait || (cb => cb());
+    return Promise.resolve().then(() => wait(() => this.children.map(sub => sub && sub.remove())));
   }
 
   mount(target, node) {
-    this.anchor = document.createTextNode('');
-    this.length = this.childNodes.length;
-    this.parentNode = target;
+    Object.defineProperty(this, 'parentNode', { configurable: true, value: target });
 
-    if (!(target instanceof Fragment)) {
-      this.anchor._anchored = this;
-    }
-
-    const doc = document.createDocumentFragment();
-
-    this.flush(doc);
+    const doc = this.getDocumentFragment();
 
     if (node) {
-      target.insertBefore(this.anchor, node);
       target.insertBefore(doc, node);
     } else {
-      target.appendChild(this.anchor);
       target.appendChild(doc);
     }
   }
 
   flush(target) {
+    if (!this.childNodes.length) {
+      this.anchor = document.createTextNode('');
+      this.childNodes.push(this.anchor);
+      this.length = 1;
+    }
+
+    this.anchor = this.childNodes[0];
+    this.anchor._anchored = this;
     this.childNodes.forEach(sub => {
       target.appendChild(sub);
     });
@@ -68,27 +56,33 @@ export default class Fragment {
   }
 
   get outerHTML() {
-    if (this.childNodes.length) {
-      return this.childNodes.map(node => node.outerHTML || node.nodeValue).join('');
-    }
-    return this.root.innerHTML;
+    return this.children.map(node => node.outerHTML || node.nodeValue).join('');
   }
 
   get children() {
-    const out = [];
-    for (let i = 0; i < this.length; i += 1) out.push(this.getNodeAt(i));
-    return out;
+    if (this.root) {
+      const childNodes = [];
+      const { offset } = this;
+
+      for (let i = 0; i < this.length; i += 1) {
+        childNodes.push(this.root.childNodes[i + offset]);
+      }
+      return childNodes;
+    }
+    return this.childNodes;
   }
 
   get offset() {
-    let offset = -1;
-    for (let i = 0; i < this.parentNode.childNodes.length; i += 1) {
-      if (this.parentNode.childNodes[i] === this.anchor) {
-        offset = i;
+    const children = this.root.childNodes;
+
+    let c = 0;
+    for (let i = 0; i < children.length; i += 1) {
+      if (children[i] === this.anchor) {
+        c = i;
         break;
       }
     }
-    return offset;
+    return c;
   }
 
   get root() {
@@ -97,17 +91,13 @@ export default class Fragment {
     return root;
   }
 
-  static from(value, cb) {
+  static from(render, value) {
     const target = new Fragment();
 
+    target.vnode = value;
     value.forEach(vnode => {
-      if (vnode instanceof Fragment) {
-        vnode.mount(target);
-      } else {
-        target.appendChild(cb(vnode));
-      }
+      target.appendChild(render(vnode));
     });
-
     return target;
   }
 }

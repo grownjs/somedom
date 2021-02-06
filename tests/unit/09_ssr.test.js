@@ -12,7 +12,7 @@ import {
   bindHelpers as $,
 } from '../../src/ssr';
 
-import doc from './fixtures/document';
+import doc from '../../src/ssr/jsdom';
 
 /* global beforeEach, afterEach, describe, it */
 
@@ -30,8 +30,8 @@ function main() {
     count: 0,
   };
 
-  const $view = (state, actions) => ['div', [
-    ['h1', [state.count]],
+  const $view = (state, actions) => ['div', null, [
+    ['h1', null, [state.count]],
     ['button',
       { onclick: () => actions.down(1) }, '-'],
     ['button',
@@ -100,7 +100,7 @@ describe('SSR', () => {
       const app = renderToString(main());
 
       doc.enable();
-      await app.up(nth);
+      await app.defer(app.up(nth));
 
       const html = await app();
 
@@ -110,7 +110,7 @@ describe('SSR', () => {
 
   describe('document', () => {
     it('does not support querySelector', () => {
-      expect(document.querySelector()).to.be.undefined;
+      expect(document.querySelector).to.throw();
     });
 
     it('works fine with classList', () => {
@@ -137,24 +137,28 @@ describe('SSR', () => {
     });
 
     it('should handle self-closing tags', () => {
-      expect(document.createElement('img').outerHTML).to.eql('<img/>');
+      expect(document.createElement('img').outerHTML).to.eql('<img>');
     });
 
     it('should handle event-listeners too', () => {
       const a = document.createElement('a');
       const fn = td.func('callback');
+      const noop = td.func('noop');
 
       a.addEventListener('test', fn);
-      a.removeEventListener('undef');
+      a.removeEventListener('undef', noop);
 
-      a.dispatchEvent({ type: 'test' });
-      a.dispatchEvent({ type: 'undef' });
+      a.dispatchEvent(new Event('test'));
+      a.dispatchEvent(new Event('undef'));
 
       expect(td.explain(fn).callCount).to.eql(1);
-
+      expect(td.explain(noop).callCount).to.eql(0);
       a.removeEventListener('test', fn);
 
-      expect(a.eventListeners).to.eql({ test: [] });
+      a.dispatchEvent(new Event('test'));
+      a.dispatchEvent(new Event('undef'));
+      expect(td.explain(fn).callCount).to.eql(1);
+      expect(td.explain(noop).callCount).to.eql(0);
     });
   });
 });

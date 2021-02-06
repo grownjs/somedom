@@ -9,8 +9,8 @@ function summarize(script) {
     .replace(/test\(\s*\([^=()]*\)\s*=>\s*\{/, '')
     .replace(/\}\)\s*;$/, '');
 
-  mount(parentNode, ['details', [
-    ['summary', ['View executed code']],
+  mount(parentNode, ['details', null, [
+    ['summary', null, ['View executed code']],
     ['pre', { class: 'highlight' }, format(code)],
   ]]);
 }

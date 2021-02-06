@@ -3,10 +3,11 @@
 import td from 'testdouble';
 import { expect } from 'chai';
 import {
+  zip,
   clone,
   apply,
   filter,
-  isUndef,
+  isNot,
   isArray,
   isSelector,
   isFunction,
@@ -22,16 +23,34 @@ import {
   remove,
   append,
   detach,
-  sortedZip,
 } from '../../src/lib/util';
 
-import doc from './fixtures/document';
+import doc from '../../src/ssr/jsdom';
 
 /* global beforeEach, afterEach, describe, it */
 
 describe('util', () => {
   beforeEach(doc.enable);
   afterEach(doc.disable);
+
+  describe('zip', () => {
+    async function check(a, b, cb, msg) {
+      let err;
+      try {
+        await zip(a, b, cb);
+      } catch (e) {
+        err = e;
+      }
+
+      expect(err).not.to.be.undefined;
+      expect(err.message).to.contains(msg);
+    }
+
+    it('should report errors in the called stack', async () => {
+      await check([], [1], () => { throw new Error(); }, 'Failed at Node(undefined, 1)');
+      await check([], [['p', null, [42]]], () => { throw new Error(); }, 'Failed at Node');
+    });
+  });
 
   describe('clone', () => {
     it('should copy most common values', () => {
@@ -81,18 +100,18 @@ describe('util', () => {
     });
   });
 
-  describe('isUndef', () => {
+  describe('isNot', () => {
     it('should assert for undefined or null values', () => {
-      expect(isUndef).not.to.throw();
-      expect(isUndef()).to.be.true;
-      expect(isUndef(0)).to.be.false;
-      expect(isUndef(NaN)).to.be.false;
-      expect(isUndef([])).to.be.false;
-      expect(isUndef({})).to.be.false;
-      expect(isUndef(false)).to.be.false;
-      expect(isUndef('')).to.be.false;
-      expect(isUndef(Infinity)).to.be.false;
-      expect(isUndef(undefined)).to.be.true;
+      expect(isNot).not.to.throw();
+      expect(isNot()).to.be.true;
+      expect(isNot(0)).to.be.false;
+      expect(isNot(NaN)).to.be.false;
+      expect(isNot([])).to.be.false;
+      expect(isNot({})).to.be.false;
+      expect(isNot(false)).to.be.false;
+      expect(isNot('')).to.be.false;
+      expect(isNot(Infinity)).to.be.false;
+      expect(isNot(undefined)).to.be.true;
     });
   });
 
@@ -153,7 +172,7 @@ describe('util', () => {
       expect(isNode(['x'])).to.be.false;
       expect(isNode(['x', 'y'])).to.be.false;
       expect(isNode(['x', 'y', 'z'])).to.be.false;
-      expect(isNode(['x', ['y', 'z']])).to.be.true;
+      expect(isNode(['x', ['y', 'z']])).to.be.false;
       expect(isNode(['a', undefined])).to.be.false;
       expect(isNode(['a', null])).to.be.true;
       expect(isNode(['a', {}])).to.be.true;
@@ -205,20 +224,6 @@ describe('util', () => {
       expect(toArray(null)).to.eql([]);
       expect(toArray(false)).to.eql([]);
       expect(toArray(undefined)).to.eql([]);
-    });
-  });
-
-  describe('sortedZip', () => {
-    it('it should drop items from head', () => {
-      const a = [null, { a: 1 }, { a: 2 }];
-      const b = [{ a: 2 }, { a: 1 }];
-      const c = [];
-
-      sortedZip(a, b, (x, y, z) => c.push([x, y, z]));
-      expect(c).to.eql([
-        [null, { a: 2 }, 0],
-        [{ a: 2 }, null, 2],
-      ]);
     });
   });
 

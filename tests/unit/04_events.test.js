@@ -8,7 +8,7 @@ import {
   addEvents,
 } from '../../src/lib/events';
 
-import doc from './fixtures/document';
+import doc from '../../src/ssr/jsdom';
 
 /* global beforeEach, afterEach, describe, it */
 
@@ -98,7 +98,7 @@ describe('events', () => {
       addEvents(div, 'onclick', cb);
       addEvents(div, 'onclick', cb);
 
-      expect(div.eventListeners.click.length).to.eql(1);
+      expect(div.events.click.length).to.eql(1);
     });
 
     it('can detach events through the teardown() hook', () => {
@@ -107,16 +107,13 @@ describe('events', () => {
       addEvents(div, 'onclick', cb);
 
       div.teardown();
-      expect(div.eventListeners.click).to.eql([]);
+      expect(div.events.click).to.eql([]);
     });
 
     it('will invoke attached events through a proxy-handler', () => {
       addEvents(div, 'onclick', cb);
 
-      div.dispatchEvent({
-        type: 'click',
-        currentTarget: div,
-      });
+      div.dispatchEvent(new Event('click'));
 
       expect(td.explain(cb).callCount).to.eql(1);
     });
