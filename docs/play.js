@@ -589,9 +589,8 @@
         }
       }
 
-      while (target && (target._dirty || ![1, 3].includes(target.nodeType))) {
-        j += 1;
-        target = el.childNodes[z + j];
+      while (target && target._dirty) {
+        target = el.childNodes[z + ++j]; // eslint-disable-line
       }
 
       if (target) {

@@ -588,14 +588,5 @@ describe('node', () => {
       expect(div.innerHTML).to.eql('<a><del><em>OSOM!</em></del></a>');
       expect(body.innerHTML).to.eql('<div><a><del><em>OSOM!</em></del></a></div>');
     });
-
-    it('should skip over unhandled childNodes', async () => {
-      a.appendChild(document.createComment('OK'));
-      a.appendChild(document.createTextNode('|'));
-      a.appendChild(document.createElement('b'));
-
-      await updateElement(a, ['a', null, ['|', ['b', null]]], ['a', null, ['|', ['b', null, [42]]]]);
-      expect(a.outerHTML).to.eql('<a><!--OK-->|<b>42</b></a>');
-    });
   });
 });
