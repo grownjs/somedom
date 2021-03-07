@@ -12,7 +12,8 @@ import {
   applyAnimations,
 } from '../../src/lib/props';
 
-import doc from './fixtures/document';
+import { tick } from '../../src/lib/util';
+import doc from '../../src/ssr/jsdom';
 
 /* global beforeEach, afterEach, describe, it */
 
@@ -100,7 +101,7 @@ describe('props', () => {
       td.replace(div.classList, 'add', td.func('addClass'));
       td.replace(div.classList, 'remove', td.func('removeClass'));
 
-      setTimeout(() => div.dispatchEvent({ type: 'animationend' }), 10);
+      setTimeout(() => div.dispatchEvent(new Event('animationend')), 10);
 
       await run();
 
@@ -160,9 +161,9 @@ describe('props', () => {
       td.replace(div.classList, 'add', td.func('addClass'));
       td.replace(div.classList, 'remove', td.func('removeClass'));
 
-      setTimeout(() => div.dispatchEvent({ type: 'animationend' }), 10);
+      setTimeout(() => div.dispatchEvent(new Event('animationend')), 10);
 
-      await div.myHook();
+      await tick(() => div.myHook());
 
       expect(td.explain(div.classList.add).callCount).to.eql(1);
       expect(td.explain(div.classList.remove).callCount).to.eql(1);

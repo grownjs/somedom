@@ -88,10 +88,10 @@
           <p>Use this function to debug <i>vnodes</i> and <b>tag</b> functions.</p>
           <small>output:</small>
           <script>test(({ pre }, appendChild) => {
-            appendChild(pre(['root', [
+            appendChild(pre(['root', null, [
               ['children', { boolean: true }, [
                 ['node', { string: 'value' }],
-                ['node', [
+                ['node', null, [
                   '\nSome text: ',
                   ['subnode', { number: 1 }],
                   'More text here.\n'
@@ -209,15 +209,15 @@
               count: 0
             };
 
-            var $view = (state, actions) => [[[[['div', [
-              ['h1', [[state.count]]],
+            var $view = (state, actions) => ['div', null, [
+              ['h1', null, [[state.count]]],
               ['button',
                 { onclick: () => actions.down(1) }, '-'],
               ['button',
                 { onclick: () => actions.up(1) }, '+'],
               ['button',
                 { onclick: () => actions.unmount() }, 'Remove me'],
-            ]]]]]];
+            ]];
 
             var app = view($view, $state, $actions);
             var tag = bind(render, listeners());
@@ -227,7 +227,7 @@
             }
 
             mount('#target', ['button',
-              { onclick: append }, 'Add counter'], tag);
+              { onclick: append }, 'Add counter'], null, tag);
             appendChild();
           });</script>
           <p><small>Available props and methods:</small></p>
@@ -247,7 +247,7 @@
           <fieldset id="target3"></fieldset>
           <script>test(({ view, bind, render, listeners }, appendChild) => {
             var heading = view({
-              render: () => ['h1', ['It works?']],
+              render: () => ['h1', null, ['It works?']],
             });
 
             var counter = view(class {
@@ -262,9 +262,9 @@
               render() {
                 var { state: { value }, update } = this;
 
-                return ['div', [
+                return ['div', null, [
                   ['button', { onclick: update }, 'Click me.'],
-                  value && ['span', ['Value: ', value]],
+                  value && ['span', null, ['Value: ', value]],
                 ]];
               }
             });
@@ -302,7 +302,7 @@
                 if (fun === '42') alert(ref.current.outerHTML);
               }, [fun]);
 
-              return ['div', [
+              return ['div', null, [
                 ['button', { onclick: () => check(prompt('Value?')) }, 'insight'],
                 ['button', { onclick: () => check('OSOM') }, 'truth'],
                 ['p', { ref }, [['Your answer: ', fun]]],
@@ -312,10 +312,10 @@
             function CounterView(props = {}) {
               var [val, set] = useState(props.value || -1);
 
-              return ['div', [
+              return ['div', null, [
                 ['button', { onclick: () => set(val - Math.random()) }, '--'],
                 ['button', { onclick: () => set(val + Math.random()) }, '++'],
-                ['p', ['Value: ', val]],
+                ['p', null, ['Value: ', val]],
               ]];
             }
 
@@ -347,15 +347,15 @@
           </blockquote>
           <fieldset id="output"></fieldset>
           <script>test(({ view, bind, thunk, render, listeners }, appendChild) => {
-            var $ = thunk(['main'],
+            var $ = thunk([],
               bind(render, listeners()));
 
             function Counter(props = {}) {
               return view(({ num }, { dec, inc }) =>
-                ['span', [
+                ['span', null, [
                   ['button', { onclick: dec  }, '--'],
                   ['button', { onclick: inc }, '++'],
-                  ['span', ['value: ', num]],
+                  ['span', null, ['value: ', num]],
                 ]], {
                   num: props.value || Math.random(),
                 }, {
@@ -372,7 +372,7 @@
 
             function Main(props) {
               return [[
-                ['legend', [
+                ['legend', null, [
                   'Example(',
                   ['button', {
                     style: 'border: 0',
@@ -414,15 +414,15 @@
           <script>test(({ mount, render }, appendChild) => {
             mount(test1, 'Mounted at #test1');
 
-            mount('.test2', ['span',
-              ['Mounted at ', ['code', '.test2']],
+            mount('.test2', ['span', null,
+              ['Mounted at ', ['code', null, '.test2']],
             ]);
 
             var target = document
               .querySelector('[name=my-target]');
 
             mount(target,
-              render(['code', 'Mounted at `[name=my-target]`']));
+              render(['code', null, 'Mounted at `[name=my-target]`']));
             appendChild();
           });</script>
         </dd>
@@ -435,12 +435,12 @@
 
             mount(test6, [
               'Some text ',
-              ['strong', ['before HTML']],
+              ['strong', null, ['before HTML']],
               ': ',
               [
                 'because',
                 ' ',
-                ['em', ['it is']],
+                ['em', null, ['it is']],
                 [' ', [['strong', { style }, 'possible!']]],
               ],
             ]);
@@ -459,7 +459,7 @@
           <fieldset id="test"></fieldset>
           <script>test(({ mount, patch }, appendChild) => {
             function view(counter) {
-              return ['span', ['Count: ', counter]];
+              return ['span', null, ['Count: ', counter]];
             }
 
             var inc = 0;
@@ -521,7 +521,7 @@
             }
 
             function view() {
-              return [['ul', shuffle(getItems())]];
+              return [['ul', null, shuffle(getItems())]];
             }
 
             var dom = view();
@@ -533,16 +533,17 @@
               if (timer) {
                 timer = clearTimeout(timer);
               } else {
-                timer = setInterval(() => {
+                ;(async function loop() {
                   var old = dom;
                   var next = (dom = view());
 
-                  patch(test0, old, next, null, tag);
-                }, 2000);
+                  await patch(test0, old, next, null, tag);
+                  timer = setTimeout(loop, 2000);
+                }());
               }
             }
 
-            appendChild(tag(['label', [
+            appendChild(tag(['label', null, [
               ['input', {
                 onclick: toggle,
                 type: 'checkbox'
@@ -580,8 +581,8 @@
           <p>You can render single or nested <i>vnodes</i>, attributes are supported as well.</p>
           <small>output:</small>
           <script>test(({ render }, appendChild) => {
-            appendChild(render(['b', ['Bold, ']]));
-            appendChild(render(['em', [['span', 'Italic ']]]));
+            appendChild(render(['b', null, ['Bold, ']]));
+            appendChild(render(['em', null, [['span', null, 'Italic ']]]));
             appendChild(render(['span', { style: 'color:red' }, '& Colored.']));
           });</script>
         </dd>
@@ -590,7 +591,7 @@
           <p>As it'll use objects as props dont' forget to bind <code>attributes</code> to make'em work together.</p>
           <small>output:</small>
           <script>test(({ pre, bind, render, attributes, classes }, appendChild) => {
-            appendChild(pre(['button#a.b.c', 'No props']));
+            appendChild(pre(['button#a.b.c', null, 'No props']));
 
             appendChild(pre(['button#a.b.c',
               { id: 'x' }, 'Override ID']));
@@ -647,10 +648,10 @@
             var Em = Array.prototype.concat.bind(['em']);
 
             function Del(props, children) {
-              return ['del', [[Em, props, children]]];
+              return ['del', null, [[Em, props, children]]];
             }
 
-            appendChild(render([Del, 'OSOM!']));
+            appendChild(render([Del, null, 'OSOM!']));
           });</script>
         </dd>
       </dl>
@@ -682,7 +683,7 @@
             }
 
             function append() {
-              var node = tag(['li', [
+              var node = tag(['li', null, [
                 new Date().toISOString(),
                 Button('Remove', () => remove(node))
               ]]);
@@ -692,7 +693,7 @@
 
             var button = Button('Add item', append);
 
-            mount('#test3', tag(['li', [button]]));
+            mount('#test3', tag(['li', null, [button]]));
             appendChild();
           });</script>
         </dd>
@@ -821,7 +822,7 @@
                   { onclick: () => {
                     unmount(item);
                   } }, 'Remove'],
-                ['span', ['EXAMPLE']],
+                ['span', null, ['EXAMPLE']],
               ]]);
 
               mount('#test4', item);
@@ -830,7 +831,7 @@
             var button = ['button',
               { onclick: append }, 'Add item'];
 
-            mount('#test4', tag(['li', [button]]));
+            mount('#test4', tag(['li', null, [button]]));
             appendChild();
           });</script>
         </dd>
@@ -928,7 +929,7 @@ $root.withText('Click me.').dispatch('click');</pre>
           <pre class="highlight">var button = $root.findText(/Click me/)[0];
 
 // `dispatch()` actually calls this method
-button.dispatchEvent({ type: 'click' });</pre>
+button.dispatchEvent(new Event('click'));</pre>
         </dd>
       </dl>
     </details>

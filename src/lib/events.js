@@ -25,7 +25,12 @@ export function addEvents(el, name, value, globals) {
     el.events = el.events || {};
 
     if (!el.teardown) {
-      el.teardown = () => Object.keys(el.events).map(x => el.removeEventListener(x, eventListener));
+      el.teardown = () => {
+        Object.keys(el.events).forEach(x => {
+          el.removeEventListener(x, eventListener);
+          el.events[x] = [];
+        });
+      };
     }
 
     if (name.substr(0, 2) === 'on' && EE_SUPPORTED.indexOf(name) === -1) {

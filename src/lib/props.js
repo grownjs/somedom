@@ -1,14 +1,14 @@
 import {
-  dashCase, isFunction, isObject, isScalar, isArray, isUndef, filter, raf,
+  dashCase, isFunction, isObject, isScalar, isArray, isNot, filter, raf,
 } from './util';
 
 export function values(attrs, cb) {
-  if (isUndef(attrs)) return [];
+  if (isNot(attrs)) return [];
   if (!isObject(attrs)) return attrs;
   if (isArray(attrs)) return filter(attrs);
 
   return filter(Object.keys(attrs).reduce((prev, cur) => {
-    if (!isUndef(attrs[cur])) prev.push(cb(attrs[cur], cur));
+    if (!isNot(attrs[cur])) prev.push(cb(attrs[cur], cur));
 
     return prev;
   }, []));

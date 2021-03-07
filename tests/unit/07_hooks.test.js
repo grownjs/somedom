@@ -25,9 +25,10 @@ import {
 } from '../../src/lib/ctx';
 
 import { tick } from '../../src/lib/util';
+import Fragment from '../../src/lib/fragment';
 import { bindHelpers as $ } from '../../src/ssr';
 
-import doc from './fixtures/document';
+import doc from '../../src/ssr/jsdom';
 
 /* global beforeEach, afterEach, describe, it */
 
@@ -92,7 +93,7 @@ describe('hooks', () => {
 
       function wrap(tag) {
         return (props, children) => {
-          const target = document.createDocumentFragment();
+          const target = new Fragment();
           tag(props, children)(target);
           return target;
         };
@@ -100,35 +101,39 @@ describe('hooks', () => {
 
       const C = wrap(createContext((props, children) => {
         a = useState(3);
-        return ['c', props, [children, a[0]]];
+        return [['c', props, [children, a[0]]]];
       }, createView));
 
       const B = wrap(createContext((props, children) => {
         b = useState(2);
-        return ['b', [[C, props, children, b[0]]]];
+        return [['b', null, [C, props, [children, b[0]]]]];
       }, createView));
 
       const A = wrap(createContext((props, children) => {
         c = useState(1);
-        return ['a', [[B, props, [children, c[0]]]]];
+        return [['a', null, [B, props, [children, c[0]]]]];
       }, createView));
 
+      const div = document.createElement('div');
       const app = A(null, 0);
-      app.mount(document.body);
+      app.mount(div);
 
-      expect(document.body.innerHTML).to.eql('<a><b><c>0123</c></b></a>');
+      expect(div.innerHTML).to.eql('<a><b><c>0123</c></b></a>');
 
-      a[1]('0');
+      await a[1]('0');
       await tick();
-      expect(document.body.innerHTML).to.eql('<a><b><c>0120</c></b></a>');
 
-      b[1]('1');
-      await tick();
-      expect(document.body.innerHTML).to.eql('<a><b><c>0113</c></b></a>');
+      expect(div.innerHTML).to.eql('<a><b><c>0120</c></b></a>');
 
-      c[1]('2');
+      await b[1]('1');
       await tick();
-      expect(document.body.innerHTML).to.eql('<a><b><c>0223</c></b></a>');
+
+      expect(div.innerHTML).to.eql('<a><b><c>0113</c></b></a>');
+
+      await c[1]('2');
+      await tick();
+
+      expect(div.innerHTML).to.eql('<a><b><c>0223</c></b></a>');
     });
 
     it('should extend context through hooks', async () => {
@@ -176,7 +181,7 @@ describe('hooks', () => {
         error = e;
       }
 
-      const app = await createContext(() => {
+      const app = createContext(() => {
         useEffect(() => {
           process.on('unhandledRejection', callback);
           return () => {
@@ -339,7 +344,7 @@ describe('hooks', () => {
           ['button', { onclick: () => setValue(value + Math.random()) }, '++'],
           ['button', { onclick: () => setOther(prompt('Value?')) }, 'ask'], // eslint-disable-line
           ['button', { onclick: () => setOther('OSOM') }, 'truth'],
-          ['span', [['value: ', value, ', ', other]]],
+          ['span', null, [['value: ', value, ', ', other]]],
         ]]]]];
       }
 
@@ -349,14 +354,16 @@ describe('hooks', () => {
       const tag = bind(render, listeners());
       const app = counter(null, tag);
 
-      await $(app.target).withText('truth').dispatch('click');
+      $(app.target).withText('truth').dispatch('click');
+      await tick();
 
       expect(stack.join('.')).to.eql('3.AFTER.2.CLEAN.DIV.AFTER');
       expect(app.target.outerHTML).to.contains('<span>value: 42, OSOM</span>');
 
       global.prompt = () => 'WAT';
 
-      await $(app.target).withText('ask').dispatch('click');
+      $(app.target).withText('ask').dispatch('click');
+      await tick();
 
       expect(stack.join('.')).to.eql('3.AFTER.2.CLEAN.DIV.AFTER.1.CLEAN.DIV.AFTER');
       expect(app.target.outerHTML).to.contains('<span>value: 42, WAT</span>');

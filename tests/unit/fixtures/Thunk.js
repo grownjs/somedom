@@ -13,7 +13,7 @@ class Thunk extends Actions {
   render() {
     return [[
       ['button', { onclick: this.doStuff }, this.children],
-      ['span', ['Got: ', this.state.result || '?', ' (', this.state.value, ')']],
+      ['span', null, ['Got: ', this.state.result || '?', ' (', this.state.value, ')']],
     ]];
   }
 }

@@ -7,12 +7,9 @@ import {
   createElement, mountElement, destroyElement, updateElement,
 } from '../../src/lib/node';
 
+import doc from '../../src/ssr/jsdom';
 import Fragment from '../../src/lib/fragment';
-
-import { tick, trim, format } from '../../src/lib/util';
-import { fixTree } from '../../src/lib/attrs';
-
-import doc from './fixtures/document';
+import { trim, format } from '../../src/lib/util';
 
 /* global beforeEach, afterEach, describe, it */
 
@@ -21,27 +18,25 @@ describe('node', () => {
   afterEach(doc.disable);
 
   describe('DocumentFragment', () => {
-    it('should return children nodes after mount', () => {
-      const tmp = createElement([['foo', ['b', null, ['bar']]]]);
-      expect(tmp.children).to.eql([]);
+    it('should return fragments before mount', () => {
+      const tmp = createElement([['foo', null, ['b', null, ['bar']]]]);
 
-      tmp.mount(document.body);
-      expect(tmp.children).to.eql([
-        tmp.getNodeAt(0),
-      ]);
+      expect(tmp.childNodes[0].tagName).to.eql('FOO');
+      expect(tmp.childNodes[0].childNodes[0].tagName).to.eql('B');
+      expect(tmp.childNodes[0].childNodes[0].childNodes[0].nodeValue).to.eql('bar');
     });
 
     it('should flatten arrays as fragments', () => {
       const tree = createElement([
-        ['span', ['foo']],
-        ['span', ['bar']],
+        ['span', null, ['foo']],
+        ['span', null, ['bar']],
       ]);
 
       const div = document.createElement('div');
-      div.appendChild(tree);
 
-      expect(div.childNodes.some(x => x instanceof Fragment)).to.be.false;
+      tree.mount(div);
       expect(div.outerHTML).to.eql('<div><span>foo</span><span>bar</span></div>');
+      expect([].slice.call(div.childNodes).some(x => x instanceof Fragment)).to.be.false;
     });
 
     it('should invoke factories from fragments', () => {
@@ -51,8 +46,8 @@ describe('node', () => {
       }];
 
       expect(createElement([
-        ['p', [
-          ['span', ['value: ', value]],
+        ['p', null, [
+          ['span', null, ['value: ', value]],
         ]],
         children,
       ]).outerHTML).to.eql('<p><span>value: 42</span></p>OK: -1');
@@ -66,7 +61,7 @@ describe('node', () => {
       expect(createElement(['p', null, ['hola', 'mundo']]).childNodes.length).to.eql(2);
 
       expect(createElement(['p', null, [['hola', 'mundo']]]).outerHTML).to.eql('<p>holamundo</p>');
-      expect(createElement(['p', null, [['hola', 'mundo']]]).childNodes.length).to.eql(3);
+      expect(createElement(['p', null, [['hola', 'mundo']]]).childNodes.length).to.eql(2);
     });
 
     describe('updateElement', () => {
@@ -75,10 +70,10 @@ describe('node', () => {
       let y;
 
       const factory = (...children) => ({
-        vnode: fixTree([
-          ['span', ['OK']],
+        vnode: [
+          ['span', null, ['OK']],
           ...children,
-        ]),
+        ],
         result: `<div><span>OK</span>${children.reduce((memo, it) => memo.concat(it), []).join('')}</div>`,
       });
 
@@ -86,221 +81,104 @@ describe('node', () => {
         div = document.createElement('div');
       });
 
-      it('should allow to patch unmounted fragments', () => {
-        const a = createElement(['a', 'b', 'c']);
-
-        expect(a.outerHTML).to.eql('abc');
-        updateElement(a, ['a', 'b', 'c'], ['d', 'e', 'f']);
-        expect(a.outerHTML).to.eql('def');
-      });
-
-      it('should skip anchors while patching fragments', () => {
+      it('should skip anchors while patching fragments', async () => {
         x = factory('just: ', 'x');
         y = factory('just: ', 'y');
 
         const el = mountElement(div, x.vnode);
         expect(div.outerHTML).to.eql(x.result);
         expect(div.childNodes.length).to.eql(3);
-        expect(div.firstChild._anchored).to.eql(el);
         expect(x.result).to.contains(el.outerHTML);
 
-        updateElement(div, x.vnode, y.vnode);
+        await updateElement(div, x.vnode, y.vnode);
         expect(div.childNodes.length).to.eql(3);
         expect(div.outerHTML).to.eql(y.result);
       });
 
-      it('should skip anchors while patching fragments (mixed)', () => {
+      it('should skip anchors while patching fragments (mixed)', async () => {
         x = factory('just: ', 'x');
         y = factory(['just: ', 'y']);
 
         mountElement(div, x.vnode);
         expect(div.outerHTML).to.eql(x.result);
 
-        updateElement(div, x.vnode, y.vnode);
+        div = await updateElement(div, x.vnode, y.vnode);
         expect(div.outerHTML).to.eql(y.result);
       });
 
-      it('should skip anchors while patching fragments (nested)', () => {
+      it('should skip anchors while patching fragments (nested)', async () => {
         x = factory(['just: ', 'x']);
         y = factory(['just: ', 'y']);
 
         mountElement(div, x.vnode);
         expect(div.outerHTML).to.eql(x.result);
 
-        updateElement(div, x.vnode, y.vnode);
+        await updateElement(div, x.vnode, y.vnode);
         expect(div.outerHTML).to.eql(y.result);
       });
 
-      it('should flatten all nested Fragments into a single one', () => {
-        const vdom = value => fixTree([
+      it('should flatten all nested Fragments into a single one', async () => {
+        const vdom = value => [
           ['small', null, ['TEXT']],
           ['\n', '\n\n\n  PATH=/:id/edit\n  ', ['\n  ', value, ':\n'], '\n\n'],
           ['\n', '\n\n\n'],
-        ]);
+        ];
 
         const a = vdom('BEFORE');
         const b = vdom('AFTER');
 
         div = document.body;
         mountElement(div, a);
-        expect(div.childNodes.length).to.eql(3);
-        expect(div.childNodes.filter(n => !n._anchored).length).to.eql(2);
+        expect(div.childNodes.length).to.eql(9);
 
-        updateElement(div, a, b);
-        expect(div.childNodes.length).to.eql(3);
-        expect(div.childNodes.filter(n => !n._anchored).length).to.eql(2);
+        await updateElement(div, a, b);
+        expect(div.childNodes.length).to.eql(9);
       });
 
       it('should trigger onupdate/update methods on fragments', async () => {
         const callback = td.func('update');
 
+        let calls = 0;
         let ref;
         function Test(props, children) {
+          const old = ref && ref.root;
           ref = createElement(children);
+          ref.parentNode = old;
           ref.onupdate = callback;
           ref.update = callback;
+          calls += 1;
           return ref;
         }
 
         let old;
-        const el = mountElement(document.body, old = [
+        mountElement(document.body, old = [
           ['div', null, [
             [Test, { foo: 'bar' }, ['baz']],
           ]],
         ]);
 
-        expect(el.outerHTML).to.eql('<div>baz</div>');
+        expect(document.body.innerHTML).to.eql('<div>baz</div>');
         expect(td.explain(callback).callCount).to.eql(0);
+        expect(calls).to.eql(1);
+        expect(ref.length).to.eql(1);
 
-        updateElement(document.body, old, old = [
+        await updateElement(document.body, old, old = [
           ['div', null, [
             [Test, { baz: 'buzz' }, ['bazzinga']],
           ]],
         ]);
 
-        await tick();
-
-        expect(el.outerHTML).to.eql('<div>bazzinga</div>');
+        expect(calls).to.eql(2);
         expect(td.explain(callback).callCount).to.eql(2);
+        expect(document.body.innerHTML).to.eql('<div>bazzinga</div>');
 
-        updateElement(ref, [Test, { baz: 'buzz' }, ['bazzinga']], [Test, { key: 'x' }, ['yz']]);
+        ref = await updateElement(ref, [[Test, { baz: 'buzz' }, ['bazzinga']]], [[Test, { key: 'x' }, ['yz']]]);
+        expect(calls).to.eql(3);
+        expect(ref.outerHTML).to.eql('yz');
+        expect(document.body.innerHTML).to.eql('<div>yz</div>');
 
-        expect(el.outerHTML).to.eql('<div>yz</div>');
         expect(td.explain(callback).callCount).to.eql(4);
       });
-    });
-
-    it('should apply fragment patching on update', async () => {
-      let ref;
-      function Test(props, children) {
-        ref = createElement(children);
-        return ref;
-      }
-
-      let old;
-      const el = mountElement(document.body, old = [
-        ['ul', null, [
-          ['li', null, ['Test 0']],
-          [Test, { key: 'x' }, [
-            ['li', null, ['Test 1']],
-            ['li', null, ['Test 2']],
-          ]],
-          ['li', null, ['Test N']],
-        ]],
-      ]);
-
-      expect(el.outerHTML).to.eql('<ul><li>Test 0</li><li>Test 1</li><li>Test 2</li><li>Test N</li></ul>');
-      expect(el.nodeType).to.eql(11);
-      expect(ref.length).to.eql(2);
-
-      updateElement(document.body, old, old = [
-        ['ul', null, [
-          ['li', null, ['Test 3']],
-          [Test, { key: 'x' }, [
-            ['li', null, ['Test 4']],
-          ]],
-          ['li', null, ['Test M']],
-        ]],
-      ]);
-
-      await tick();
-      expect(el.outerHTML).to.eql('<ul><li>Test 3</li><li>Test 4</li><li>Test M</li></ul>');
-      expect(el.nodeType).to.eql(11);
-      expect(ref.length).to.eql(1);
-
-      updateElement(ref, [Test, { key: 'x' }, [
-        ['li', null, ['Test 4']],
-      ]], [Test, { key: 'x' }, [
-        ['li', null, ['Test 8']],
-        ['li', null, ['Test 9']],
-      ]]);
-
-      await tick();
-      expect(el.outerHTML).to.eql('<ul><li>Test 3</li><li>Test 8</li><li>Test 9</li><li>Test M</li></ul>');
-      expect(el.nodeType).to.eql(11);
-      expect(ref.length).to.eql(2);
-
-      old = [
-        ['ul', null, [
-          ['li', null, ['Test 3']],
-          [Test, { key: 'x' }, [
-            ['li', null, ['Test 8']],
-            ['li', null, ['Test 9']],
-          ]],
-          ['li', null, ['Test M']],
-        ]],
-      ];
-
-      updateElement(document.body, old, old = [
-        ['ul', null, [
-          ['li', null, ['Test 3']],
-          [Test, { key: 'x' }, [
-            ['li', null, ['Test 8']],
-          ]],
-          ['li', null, ['Test M']],
-        ]],
-      ]);
-
-      await tick();
-      expect(el.outerHTML).to.eql('<ul><li>Test 3</li><li>Test 8</li><li>Test M</li></ul>');
-      expect(ref.length).to.eql(1);
-
-      updateElement(document.body, old, old = [
-        ['ul', null, [
-          ['li', null, ['Test 3']],
-          [Test, { key: 'x' }, []],
-          ['li', null, ['Test M']],
-        ]],
-      ]);
-
-      await tick();
-      expect(el.outerHTML).to.eql('<ul><li>Test 3</li><li>Test M</li></ul>');
-      expect(ref.length).to.eql(0);
-
-      updateElement(document.body, old, old = [
-        ['ul', null, [
-          ['li', null, ['Test 3']],
-          ['li', null, ['Test M']],
-        ]],
-      ]);
-
-      await tick();
-      expect(el.outerHTML).to.eql('<ul><li>Test 3</li><li>Test M</li></ul>');
-      expect(ref.length).to.eql(0);
-
-      updateElement(document.body, old, old = [
-        ['ul', null, [
-          ['li', null, ['Test 3']],
-          [Test, { key: 'x' }, [
-            ['li', null, ['Test X']],
-          ]],
-          ['li', null, ['Test M']],
-        ]],
-      ]);
-
-      await tick();
-      expect(el.outerHTML).to.eql('<ul><li>Test 3</li><li>Test X</li><li>Test M</li></ul>');
-      expect(ref.length).to.be.undefined;
     });
   });
 
@@ -333,8 +211,8 @@ describe('node', () => {
 
       vdom.mount(document.createElement('div'));
 
-      td.replace(vdom.getNodeAt(0), 'remove', remove);
-      td.replace(vdom.getNodeAt(1), 'remove', remove2);
+      td.replace(vdom.children[0], 'remove', remove);
+      td.replace(vdom.children[1], 'remove', remove2);
 
       await vdom.remove();
 
@@ -345,7 +223,7 @@ describe('node', () => {
 
   describe('createElement', () => {
     it('should fail on invalid input', () => {
-      expect(createElement).to.throw(/Invalid vnode/);
+      expect(createElement()).to.be.undefined;
     });
 
     it('should return scalar values as text', () => {
@@ -357,7 +235,7 @@ describe('node', () => {
     });
 
     it('should handle svg-elements too', () => {
-      expect(createElement(['svg', null]).isSvg).to.be.true;
+      expect(createElement(['svg', null]).namespaceURI).to.contains('svg');
     });
 
     it('should call factories recursively', () => {
@@ -380,29 +258,22 @@ describe('node', () => {
 
       const target = createElement([Tag, { count: 0 }, 42]);
 
-      expect(target.outerHTML).to.eql('<stop count="3">42</stop>');
-    });
-
-    it('should handle children as 2nd argument', () => {
-      expect(createElement(['span', [1, 'foo']]).childNodes.map(x => x.nodeValue)).to.eql(['1', 'foo']);
-      expect(createElement(['span', ['TEXT']]).childNodes.map(x => x.nodeValue)).to.eql(['TEXT']);
-      expect(createElement(['span', [12.3]]).childNodes.map(x => x.nodeValue)).to.eql(['12.3']);
-      expect(createElement(['span', [false]]).childNodes).to.eql([]);
+      expect(target.outerHTML).to.eql('<stop count="4">42</stop>');
     });
 
     it('should wrap trees as DocumentFragment nodes', () => {
-      const tree = [[[[['p', [[[[['i', null]]]]]]]]]];
+      const tree = [[[[['p', null, [[[[['i', null]]]]]]]]]];
       const node = createElement(tree);
       node.mount(document.createElement('div'));
 
       expect(node.parentNode).not.to.be.undefined;
       expect(node.childNodes.length).to.eql(0);
       expect(node.outerHTML).to.eql('<p><i></i></p>');
-      expect(node.getNodeAt(0).tagName).to.eql('P');
-      expect(node.getNodeAt(0).childNodes.length).to.eql(2);
-      expect(node.getNodeAt(0).childNodes[0].nodeType).to.eql(3);
-      expect(node.getNodeAt(0).childNodes[1].tagName).to.eql('I');
-      expect(node.getNodeAt(0).childNodes[1].childNodes.length).to.eql(0);
+      expect(node.children[0].tagName).to.eql('P');
+      expect(node.children[0].childNodes.length).to.eql(1);
+      expect(node.children[0].childNodes[0].nodeType).to.eql(1);
+      expect(node.children[0].childNodes[0].tagName).to.eql('I');
+      expect(node.children[0].childNodes[0].childNodes.length).to.eql(0);
     });
 
     it('should pass created element to given callback', () => {
@@ -424,21 +295,9 @@ describe('node', () => {
     });
 
     it('should pass given attributes to assignProps()', () => {
-      expect(createElement(['code', { foo: 'bar' }]).attributes).to.eql({ foo: 'bar' });
-    });
+      const foo = createElement(['code', { foo: 'bar' }]).attributes.foo;
 
-    it('should append given nodes as childNodes', () => {
-      const node = createElement(['ul', [
-        ['li', ['1']],
-        ['li', ['2']],
-      ]]);
-
-      expect([node.tagName, node.childNodes.map(x => [x.tagName, x.childNodes.map(y => y.nodeValue)])]).to.eql([
-        'UL', [
-          ['LI', ['1']],
-          ['LI', ['2']],
-        ],
-      ]);
+      expect(foo.nodeValue || foo).to.eql('bar');
     });
 
     it('should invoke returned functions from hooks', () => {
@@ -478,7 +337,13 @@ describe('node', () => {
     });
 
     it('should append non-empty values only', () => {
-      expect(createElement(['div', [null, false, 0]]).outerHTML).to.eql('<div>0</div>');
+      expect(createElement(['div', null, [null, false, 0]]).outerHTML).to.eql('<div>false0</div>');
+    });
+
+    it('should transform selectors recursively', () => {
+      const x = createElement(['a.foo', null, ['b.bar', null, ['c.baz', null]]]).outerHTML;
+
+      expect(x).to.eql('<a class="foo"><b class="bar"><c class="baz"></c></b></a>');
     });
   });
 
@@ -490,8 +355,8 @@ describe('node', () => {
       expect(target.childNodes[0].tagName).to.eql('SPAN');
     }
 
-    it('returns nothing if nothing is given', () => {
-      expect(mountElement()).to.be.undefined;
+    it('returns something even if nothing is given', () => {
+      expect(mountElement().outerHTML).to.eql('<body></body>');
     });
 
     it('should help to mount given vnodes', () => {
@@ -536,7 +401,7 @@ describe('node', () => {
     });
 
     it('should create fragments from arrays', () => {
-      mountElement(null, [42, ['i', [-1]]]);
+      mountElement(null, [42, ['i', null, [-1]]]);
       expect(document.body.innerHTML).to.eql('42<i>-1</i>');
     });
 
@@ -545,13 +410,13 @@ describe('node', () => {
 
       mountElement(div, [
         'Some text ',
-        ['strong', ['before HTML']],
+        ['strong', null, ['before HTML']],
         ': ',
         [
           'because',
           ' ',
-          ['em', ['it is']],
-          [' ', [['strong', ['possible!']]]],
+          ['em', null, ['it is']],
+          [' ', [['strong', null, ['possible!']]]],
         ],
       ]);
 
@@ -559,10 +424,6 @@ describe('node', () => {
         <div>Some text <strong>before HTML</strong>: because <em>it is</em> <strong>possible!</strong>
         </div>
       `));
-    });
-
-    it('should fail on invalid targets', () => {
-      expect(() => mountElement('#undef', [])).to.throw(/Target '#undef' not found/);
     });
   });
 
@@ -582,146 +443,159 @@ describe('node', () => {
       expect(a.outerHTML).to.eql('<a></a>');
     });
 
-    it('should skip _dirty nodes', () => {
+    it('should skip _dirty nodes', async () => {
       div._dirty = true;
-      updateElement(div, ['div', null], ['b', null, 'OK!']);
+      await updateElement(div, ['div', null], ['b', null, 'OK!']);
       expect(body.innerHTML).to.eql('<div><a></a></div>');
     });
 
-    it('can reconcilliate childNodes', () => {
-      updateElement(div, ['div', null], ['b', null, 'OK!']);
+    it('can reconcilliate childNodes', async () => {
+      div = await updateElement(div, ['div', null], ['b', null, 'OK!']);
       expect(body.innerHTML).to.eql('<b>OK!</b>');
 
-      updateElement(div, ['b', null, 'OK!'], [['b', null, 'NOT']]);
+      div = await updateElement(div, ['b', null, 'OK!'], [['b', null, 'NOT']]);
       expect(body.innerHTML).to.eql('<b>NOT</b>');
     });
 
-    it('can reconcilliate root nodes', () => {
-      updateElement(div, ['div', null], ['b', null, 'OK']);
+    it('can reconcilliate root nodes', async () => {
+      expect([div.tagName, body.tagName]).to.eql(['DIV', 'BODY']);
+      div = await updateElement(div, ['div', null], ['b', null, 'OK']);
       expect(body.innerHTML).to.eql('<b>OK</b>');
+      expect(div.outerHTML).to.eql('<b>OK</b>');
 
-      updateElement(div, ['b', null, 'OK'], [['b', null, 'OK']]);
-      expect(body.innerHTML).to.eql('<b>OK</b>');
+      expect([div.tagName, body.tagName]).to.eql(['B', 'BODY']);
+      div = await updateElement(div, ['b', null, 'OK'], [['b', null, 'KO']]);
+      expect(body.innerHTML).to.eql('<b>KO</b>');
+      expect(div.outerHTML).to.eql('<b>KO</b>');
 
-      updateElement(div, [['b', null, 'OK']], [[[['b', null, 'OK']]]]);
-      expect(body.innerHTML).to.eql('<b>OK</b>');
+      expect([div.tagName, body.tagName]).to.eql(['B', 'BODY']);
+      div = await updateElement(div, [['b', null, 'KO']], [[['c', null, 'OSOM']]]);
+      expect(body.innerHTML).to.eql('<b><c>OSOM</c></b>');
+      expect(div.outerHTML).to.eql('<b><c>OSOM</c></b>');
 
-      updateElement(div, [[[['b', null, 'OK']]]], 'bar');
-      expect(body.innerHTML).to.eql('bar');
+      expect([div.tagName, body.tagName]).to.eql(['B', 'BODY']);
+      div = await updateElement(div, [[['c', null, 'OSOM']]], 'bar');
+      expect(body.innerHTML).to.eql('<b>bar</b>');
+      expect(div.outerHTML).to.eql('<b>bar</b>');
     });
 
-    it('can reconcilliate text nodes', () => {
-      updateElement(div, ['div', null], [['foo bar']]);
+    it('can reconcilliate text nodes', async () => {
+      div = await updateElement(div, ['div', null], [['foo bar']]);
       expect(body.innerHTML).to.eql('foo bar');
 
-      updateElement(div, [['foo bar']], [['some text', [[['b', null, 'OK']]]]]);
+      div = await updateElement(div, [['foo bar']], [['some text', [[['b', null, 'OK']]]]]);
       expect(div.innerHTML).to.eql('some text<b>OK</b>');
 
-      updateElement(div, [['some text', ['b', null, 'OK']]], ['foo ', 'barX']);
+      div = await updateElement(div, [['some text', ['b', null, 'OK']]], ['foo ', 'barX']);
       expect(div.innerHTML).to.eql('foo barX');
 
-      updateElement(div, ['foo ', 'barX'], ['a ', 'OK']);
+      div = await updateElement(div, ['foo ', 'barX'], ['a ', 'OK']);
       expect(div.innerHTML).to.eql('a OK');
 
-      updateElement(div, ['a ', 'OK'], ['a', null, 'OK']);
-      expect(div.innerHTML).to.eql('aOKOK');
+      div = await updateElement(div, ['a ', 'OK'], ['a', null, 'OK']);
+      expect(div.innerHTML).to.eql('OK');
     });
 
-    it('can reconcilliate between both text/nodes', () => {
-      updateElement(div, 'OLD', ['b', null, 'NEW']);
+    it('can reconcilliate between both text/nodes', async () => {
+      div = await updateElement(div, 'OLD', [['b', null, 'NEW']]);
+      expect(body.innerHTML).to.eql('<div><b>NEW</b></div>');
+
+      div = await updateElement(div, [['a', null]], 'FIXME');
+      expect(body.innerHTML).to.eql('<div>FIXME</div>');
+    });
+
+    it('can update nodes if they are the same', async () => {
+      div = await updateElement(div, ['div', null, ['a', null]], ['div', null, 'NEW']);
+      expect(div.outerHTML).to.eql('<div>NEW</div>');
+    });
+
+    it('can replace nodes if they are different', async () => {
+      await updateElement(div, ['div', null], ['b', null, 'NEW']);
       expect(body.outerHTML).to.eql('<body><b>NEW</b></body>');
-
-      updateElement(div, ['a', null], 'FIXME');
-      expect(body.outerHTML).to.eql('<body>FIXME</body>');
     });
 
-    it('can update nodes if they are the same', () => {
-      updateElement(div, ['div', null], ['div', null, 'NEW']);
-      expect(body.outerHTML).to.eql('<body><div>NEW</div></body>');
-    });
-
-    it('can replace nodes if they are different', () => {
-      updateElement(div, ['div', null], ['b', null, 'NEW']);
-      expect(body.outerHTML).to.eql('<body><b>NEW</b></body>');
-    });
-
-    it('can patch node attributes', () => {
-      updateElement(a, ['a', []], ['a', { href: '#' }]);
+    it('can patch node attributes', async () => {
+      await updateElement(a, ['a', null], ['a', { href: '#' }]);
       expect(a.outerHTML).to.eql('<a href="#"></a>');
     });
 
-    it('can update scalar values', () => {
-      updateElement(div, ['div', null, 1], ['div', null, 0]);
+    it('can update scalar values', async () => {
+      await updateElement(div, ['div', null, 1], ['div', null, 0]);
       expect(body.innerHTML).to.eql('<div>0</div>');
     });
 
-    it('will invoke hooks on update', () => {
+    it('will invoke hooks on update', async () => {
       a.onupdate = td.func('onupdate');
       a.update = td.func('update');
 
-      updateElement(a, ['a', null], ['a', { href: '#' }]);
+      await updateElement(a, ['a', null], ['a', { href: '#' }]);
 
       expect(td.explain(a.onupdate).callCount).to.eql(1);
       expect(td.explain(a.update).callCount).to.eql(1);
     });
 
-    it('can append childNodes', () => {
-      updateElement(a, ['a', null], ['a', [[[['c', null, 'd']]]]]);
-      expect(div.outerHTML).to.eql('<div><a><c>d</c></a></div>');
+    it('can append childNodes', async () => {
+      await updateElement(a, ['a', null], ['a', null, [[[['c', null, 'd']]]]]);
+      expect(div.innerHTML).to.eql('<a><c>d</c></a>');
     });
 
     it('can remove childNodes', async () => {
       a.appendChild(createElement(['b', null]));
 
-      updateElement(a, ['a', [[[['b', null]]]]], ['a', null]);
-      await tick();
+      await updateElement(a, [[[['b', null]]]], []);
 
       expect(div.outerHTML).to.eql('<div><a></a></div>');
     });
 
-    it('can update TextNodes', () => {
-      a.appendChild(document.createTextNode());
-      updateElement(a, ['a', ['old']], ['a', ['old']]);
-      updateElement(a, ['a', ['old']], ['a', ['new']]);
+    it('can update TextNodes', async () => {
+      a.appendChild(document.createTextNode('old'));
+
+      a = await updateElement(a, ['old'], ['new']);
       expect(div.outerHTML).to.eql('<div><a>new</a></div>');
+
+      a = await updateElement(a, ['new'], ['osom']);
+      expect(div.outerHTML).to.eql('<div><a>osom</a></div>');
     });
 
-    it('will iterate recursively', () => {
+    it('will iterate recursively', async () => {
       a.appendChild(createElement(['b', null]));
-      updateElement(a, ['a', [['b', null]]], ['a', [[[[['b', null]]]]]]);
+      await updateElement(a, ['a', null, [['b', null]]], ['a', null, [[[[['b', null]]]]]]);
       expect(a.outerHTML).to.eql('<a><b></b></a>');
     });
 
-    it('will append given children', () => {
-      updateElement(a, ['a', null], ['a', [['b', null]]]);
-      updateElement(a, ['a', [['b', null]]], ['a', [[['i', null], [[[['i', null]]]], [[[[['i', null]]]]]]]]);
+    it('will append given children', async () => {
+      a = await updateElement(a, ['a', null], ['a', null, [['b', null]]]);
+      expect(a.outerHTML).to.eql('<a><b></b></a>');
+
+      a = await updateElement(a, ['a', null, [['b', null]]], ['a', null, [[['i', null], [[[['i', null]]]], [[[[['i', null]]]]]]]]);
       expect(a.outerHTML).to.eql('<a><i></i><i></i><i></i></a>');
     });
 
-    it('patch over function values', () => {
-      const Em = Array.prototype.concat.bind(['em']);
+    it('patch over function values', async () => {
+      const Em = Array.prototype.concat.bind(['em', null]);
 
       function Del(props, children) {
-        return ['del', [[Em, props, children]]];
+        return ['del', null, [[Em, props, children]]];
       }
 
-      const $old = [[[Del, 'OK']]];
-      const $new = [[[[[Del, [[['OSOM!']]]]]]]];
+      const $old = [[[Del, null, 'OK']]];
+      const $new = [[[[[Del, null, [[['OSOM!']]]]]]]];
 
-      a.appendChild(createElement($old));
-      updateElement(a, $old, $new);
+      createElement($old).mount(a);
+      a = await updateElement(a, $old, $new);
 
       expect(a.innerHTML).to.eql('<del><em>OSOM!</em></del>');
       expect(div.innerHTML).to.eql('<a><del><em>OSOM!</em></del></a>');
       expect(body.innerHTML).to.eql('<div><a><del><em>OSOM!</em></del></a></div>');
     });
 
-    it('should skip over invalid childNodes', () => {
+    it('should skip over unhandled childNodes', async () => {
       a.appendChild(document.createComment('OK'));
-      a.appendChild(document.createTextNode(''));
+      a.appendChild(document.createTextNode('|'));
       a.appendChild(document.createElement('b'));
-      updateElement(a, ['a', [['b', null]]], ['a', [['b', [42]]]]);
-      expect(a.outerHTML).to.eql('<a><!--OK--><b>42</b></a>');
+
+      await updateElement(a, ['a', null, ['|', ['b', null]]], ['a', null, ['|', ['b', null, [42]]]]);
+      expect(a.outerHTML).to.eql('<a><!--OK-->|<b>42</b></a>');
     });
   });
 });

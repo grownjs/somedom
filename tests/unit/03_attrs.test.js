@@ -4,10 +4,10 @@ import td from 'testdouble';
 import { expect } from 'chai';
 
 import {
-  assignProps, updateProps, fixProps, fixTree,
+  assignProps, updateProps, fixProps,
 } from '../../src/lib/attrs';
 
-import doc from './fixtures/document';
+import doc from '../../src/ssr/jsdom';
 
 /* global beforeEach, afterEach, describe, it */
 
@@ -15,24 +15,9 @@ describe('attrs', () => {
   beforeEach(doc.enable);
   afterEach(doc.disable);
 
-  describe('fixTree', () => {
-    it('should flatten values from nested trees', () => {
-      expect(fixTree([[[1, 2, 3]]])).to.eql('123');
-      expect(fixTree([[[1, [2], 3]]])).to.eql('123');
-      expect(fixTree([[[1, [2], [[3]]]]])).to.eql('123');
-    });
-
-    it('will invoke tag functions recursively', () => {
-      const tree = [() => [() => ['span', null, 'O', [[() => ['em', null, 'k']], '!']]]];
-
-      expect(fixTree(tree)).to.eql(['span', null, 'O', ['em', null, 'k'], '!']);
-    });
-
-    it('should flatten nested children', () => {
-      const tree = [[[['span', null, 'O', [[['em', null, 'k']], '!']], '?']]];
-
-      expect(fixTree(tree)).to.eql([['span', null, 'O', ['em', null, 'k'], '!'], '?']);
-    });
+  let div;
+  beforeEach(() => {
+    div = document.createElement('div');
   });
 
   describe('fixProps', () => {
@@ -45,8 +30,7 @@ describe('attrs', () => {
     it('should normalize given vnodes', () => {
       expect(fixProps(['grab'])).to.eql(['grab']);
       expect(fixProps(['grab', 'a', 'beer'])).to.eql(['grab', 'a', 'beer']);
-      expect(fixProps(['grab', ['a', 'beer']])).to.eql(['grab', null, 'a', 'beer']);
-      expect(fixProps(['grab', ['a', ['beer']]])).to.eql(['grab', null, ['a', null, 'beer']]);
+      expect(fixProps(['grab', ['a', 'beer']])).to.eql(['grab', null, ['a', 'beer']]);
     });
 
     it('should fix emmet-like syntax tagName', () => {
@@ -65,20 +49,14 @@ describe('attrs', () => {
   });
 
   describe('assignProps', () => {
-    let div;
-
-    beforeEach(() => {
-      div = document.createElement('div');
-    });
-
     it('should append given attributes', () => {
       assignProps(div, { foo: 'bar' });
-      expect(div.attributes).to.eql({ foo: 'bar' });
+      expect(div.getAttribute('foo')).to.eql('bar');
     });
 
     it('should skip special attributes, like key', () => {
       assignProps(div, { key: 'bar' });
-      expect(div.attributes).to.eql({});
+      expect(div.getAttribute('key')).to.be.null;
     });
 
     it('should pass special attributes to given callback', () => {
@@ -90,18 +68,19 @@ describe('attrs', () => {
 
     it('should handle boolean attributes as expected', () => {
       assignProps(div, { test: true });
-      expect(div.attributes).to.eql({ test: 'test' });
+      expect(div.getAttribute('test')).to.eql('test');
     });
 
     it('should handle attributes from svg-elements too', () => {
       const svg = document.createElementNS('xmlns', 'svg');
 
       assignProps(svg, { 'xlink:href': 'z' }, true);
-      expect(svg.attributes).to.eql({ href: 'z' });
+      expect(svg.getAttribute('href')).to.eql('z');
     });
 
     it('should remove attributes on falsy values', () => {
-      div.attributes = { foo: 'bar', href: 'baz' };
+      div.setAttribute('foo', 'bar');
+      div.setAttribute('hrez', 'baz');
 
       assignProps(div, {
         foo: false,
@@ -110,18 +89,22 @@ describe('attrs', () => {
         emptyValue: '',
       }, true);
 
-      expect(div.attributes).to.eql({ notFalsy: 0 });
+      expect(div.getAttribute('foo')).to.eql(null);
+      expect(div.getAttribute('href')).to.eql(null);
+      expect(div.getAttribute('notFalsy')).to.eql('0');
+      expect(div.getAttribute('emptyValue')).to.eql(null);
     });
   });
 
   describe('updateProps', () => {
     it('should update changed values only', () => {
-      const div = document.createElement('div');
-
-      div.attributes = { a: 'b', foo: 'bar', href: 'baz' };
+      div.setAttribute('a', 'b');
+      div.setAttribute('foo', 'bar');
+      div.setAttribute('href', 'baz');
 
       updateProps(div, div.attributes, { foo: 'BAR', a: 'b' });
-      expect(div.attributes).to.eql({ foo: 'BAR', a: 'b' });
+      expect(div.getAttribute('foo')).to.eql('BAR');
+      expect(div.getAttribute('a')).to.eql('b');
     });
   });
 });
