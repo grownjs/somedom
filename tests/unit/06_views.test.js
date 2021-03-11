@@ -304,14 +304,13 @@ describe('views', () => {
       expect(app.target.tagName).to.eql('BODY');
     });
 
-    it('should call createContext() if only a function is given', () => {
+    it('should call withContext() if only a function is given', () => {
       const view = createView(() => null);
       const el = view()();
 
       expect(typeof el.subscribe).to.eql('function');
       expect(typeof el.unmount).to.eql('function');
       expect(el.target.tagName).to.eql('BODY');
-      expect(el.state).to.eql({ data: [] });
     });
 
     it('should allow to subscribe to state changes', async () => {

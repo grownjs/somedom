@@ -1,73 +1,18 @@
-import { isNot, isDiff, clone } from './util';
-import { getContext } from './ctx';
+import {
+  createContext,
+} from 'nohooks';
 
-export { createContext } from './ctx';
+export {
+  onError,
+  useMemo,
+  useRef,
+  useState,
+  useEffect,
+  getContext,
+} from 'nohooks';
 
-export function onError(callback) {
-  getContext().onError = callback;
-}
-
-export function useMemo(callback, inputs) {
-  const scope = getContext();
-  const key = scope.m;
-
-  scope.m += 1;
-  scope.v = scope.v || [];
-  scope.d = scope.d || [];
-
-  const prev = scope.d[key];
-
-  if (isNot(prev) || isDiff(prev, inputs)) {
-    scope.v[key] = callback();
-    scope.d[key] = inputs;
-  }
-
-  return scope.v[key];
-}
-
-export function useRef(result) {
-  return useMemo(() => {
-    let value = clone(result);
-
-    return Object.defineProperty({}, 'current', {
-      configurable: false,
-      enumerable: true,
-      set: ref => { value = ref; },
-      get: () => value,
-    });
-  }, []);
-}
-
-export function useState(fallback) {
-  const scope = getContext();
-  const key = scope.key;
-
-  scope.key += 1;
-  scope.val = scope.val || [];
-
-  if (isNot(scope.val[key])) {
-    scope.val[key] = fallback;
-  }
-
-  return [scope.val[key], v => {
-    scope.val[key] = v;
-    scope.sync();
-  }];
-}
-
-export function useEffect(callback, inputs) {
-  const scope = getContext();
-  const key = scope.fx;
-
-  scope.fx += 1;
-  scope.in = scope.in || [];
-  scope.get = scope.get || [];
-
-  const prev = scope.in[key];
-  const enabled = inputs ? isDiff(prev, inputs) : true;
-
-  scope.in[key] = inputs;
-  scope.get[key] = scope.get[key] || {};
-
-  Object.assign(scope.get[key], { cb: callback, on: enabled });
+export function withContext(tag, view) {
+  return createContext(tag, (fn, set) => {
+    return view((...args) => fn(...args).result, set);
+  });
 }

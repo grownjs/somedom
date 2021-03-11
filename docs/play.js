@@ -21,8 +21,6 @@
     'props',
   ];
 
-  const SHARED_CONTEXT = [];
-
   class Fragment {
     constructor() {
       this.childNodes = [];
@@ -614,43 +612,91 @@
     });
   }
 
-  function pop(scope) {
-    SHARED_CONTEXT[SHARED_CONTEXT.indexOf(scope)] = null;
-  }
-
-  function push(scope) {
-    SHARED_CONTEXT.push(scope);
-  }
+  const contextStack = [];
 
   function getContext() {
-    const scope = SHARED_CONTEXT[SHARED_CONTEXT.length - 1];
+    const scope = contextStack[contextStack.length - 1];
 
     if (!scope) {
-      throw new Error('Cannot call getContext() outside views');
+      throw new Error('Cannot invoke hooks outside createContext()');
     }
-
     return scope;
   }
 
-  function createContext(tag, view) {
-    return (props, children) => {
-      let deferred;
+  function pop(scope) {
+    contextStack[contextStack.indexOf(scope)] = null;
+  }
 
-      const scope = {};
+  function push(scope) {
+    contextStack.push(scope);
+  }
+
+  function isObj(value) {
+    return value !== null && typeof value === 'object';
+  }
+
+  function undef(value) {
+    return typeof value === 'undefined' || value === null;
+  }
+
+  function clone$1(value) {
+    if (!value || !isObj(value)) return value;
+    if (Array.isArray(value)) return value.map(x => clone$1(x));
+    if (value instanceof Date) return new Date(value.getTime());
+    if (value instanceof RegExp) return new RegExp(value.source, value.flags);
+    return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone$1(value[k]) }), {});
+  }
+
+  function equals(a, b) {
+    if (typeof a !== typeof b) return;
+    if (a instanceof Array) {
+      if (a.length !== b.length) return;
+      for (let i = 0; i < a.length; i += 1) {
+        if (!equals(a[i], b[i])) return;
+      }
+      return true;
+    }
+    if (a && b && a.constructor === Object) {
+      const x = Object.keys(a).sort();
+      if (!equals(x, Object.keys(b).sort())) return;
+      for (let i = 0; i < x.length; i += 1) {
+        if (!equals(a[x[i]], b[x[i]])) return;
+      }
+      return true;
+    }
+    return a === b;
+  }
+
+  function createContext(render, callback = fn => fn()) {
+    if (typeof render !== 'function' || typeof callback !== 'function') {
+      throw new TypeError('Invalid input for createContext()');
+    }
+
+    return (...args) => {
+      const scope = { c: 0 };
 
       function end(skip) {
-        return scope.get.reduce((prev, fx) => {
-          return prev.then(() => fx.off && fx.off())
-            .then(() => !skip && fx.on && fx.cb())
-            .then(x => {
-              if (isFunction(x)) fx.off = x;
-            });
-        }, Promise.resolve());
+        try {
+          scope.get.forEach(fx => {
+            if (fx.off) fx.off();
+            if (!skip && fx.on && fx.cb) {
+              const retval = fx.cb();
+
+              if (typeof retval === 'function') {
+                fx.off = retval;
+              }
+              fx.on = false;
+            }
+          });
+        } catch (e) {
+          return Promise.reject(e);
+        }
       }
 
+      let deferred;
       function next(promise) {
-        return promise.catch(e => {
-          if (scope.get) raf(() => end(true));
+        promise.catch(e => {
+          if (scope.get) setTimeout(() => end(true));
           if (scope.onError) {
             scope.onError(e);
           } else {
@@ -662,52 +708,145 @@
       }
 
       function after() {
-        if (!scope.get) return;
-        if (deferred) return deferred.then(after);
-        deferred = next(end());
+        if (scope.get) next(Promise.resolve(end()));
       }
 
-      scope.sync = () => Promise.resolve().then(() => {
-        if (deferred) return deferred.then(scope.sync);
+      scope.sync = () => {
         deferred = next(scope.set());
-      });
-
-      const factory = view(() => {
-        scope.key = 0;
-        scope.fx = 0;
-        scope.m = 0;
-
-        push(scope);
-
-        try {
-          const retval = tag(props, children);
-          const key = [scope.key, scope.fx, scope.m].join('.');
-
-          if (!scope.hash) {
-            scope.hash = key;
-          } else if (scope.hash !== key) {
-            throw new Error('Hooks must be called in a predictable way');
-          }
-
-          return retval;
-        } catch (e) {
-          throw new Error(`${tag.name || 'View'}: ${e.message}`);
-        } finally {
-          pop(scope);
-          after();
-        }
-      }, sync => { scope.set = sync; });
-
-      return (...args) => {
-        const view$ = factory(...args);
-
-        view$.subscribe(ctx => {
-          Object.assign(ctx, { data: scope.val || [] });
-        });
-
-        return view$;
+        return deferred;
       };
+
+      return callback(() => {
+  (function loop() { // eslint-disable-line
+          scope.set = scope.set || (() => Promise.resolve().then(() => {
+            if (!equals(scope.val, scope.old)) loop();
+          }));
+
+          scope.old = clone$1(scope.val);
+          scope.key = 0;
+          scope.fx = 0;
+          scope.m = 0;
+          scope.c += 1;
+
+          push(scope);
+
+          try {
+            scope.result = render(...args);
+
+            const key = [scope.key, scope.fx, scope.m].join('.');
+
+            if (!scope.hash) {
+              scope.hash = key;
+            } else if (scope.hash !== key) {
+              throw new Error('Hooks must be called in a predictable way');
+            }
+            return scope.result;
+          } catch (e) {
+            throw new Error(`Unexpected failure in context\n${e.message}`);
+          } finally {
+            pop(scope);
+            after();
+          }
+        })();
+
+        scope.defer = ms => Promise.resolve()
+          .then(() => new Promise(ok => setTimeout(() => ok(scope), ms)));
+
+        return scope;
+      }, sync => { scope.set = sync; });
     };
+  }
+
+  function onError(callback) {
+    getContext().onError = callback;
+  }
+
+  function useMemo(callback, inputs) {
+    const scope = getContext();
+    const key = scope.m;
+
+    scope.m += 1;
+    scope.v = scope.v || [];
+    scope.d = scope.d || [];
+
+    const prev = scope.d[key];
+
+    if (undef(prev) || !equals(prev, inputs)) {
+      scope.v[key] = callback();
+      scope.d[key] = inputs;
+    }
+    return scope.v[key];
+  }
+
+  function useRef(result) {
+    return useMemo(() => {
+      let value = clone$1(result);
+
+      return Object.defineProperty({}, 'current', {
+        configurable: false,
+        enumerable: true,
+        set: ref => { value = ref; },
+        get: () => value,
+      });
+    }, []);
+  }
+
+  function useState(fallback) {
+    const scope = getContext();
+    const key = scope.key;
+
+    scope.key += 1;
+    scope.val = scope.val || [];
+
+    if (undef(scope.val[key])) {
+      scope.val[key] = fallback;
+    }
+
+    return [scope.val[key], v => {
+      scope.val[key] = v;
+      scope.sync();
+    }];
+  }
+
+  function useEffect(callback, inputs) {
+    const scope = getContext();
+    const key = scope.fx;
+
+    scope.fx += 1;
+    scope.in = scope.in || [];
+    scope.get = scope.get || [];
+
+    const prev = scope.in[key];
+    const enabled = inputs ? !equals(prev, inputs) : true;
+
+    scope.in[key] = inputs;
+    scope.get[key] = scope.get[key] || {};
+
+    Object.assign(scope.get[key], { cb: callback, on: enabled });
+  }
+
+  var nohooks = {
+    clone: clone$1,
+    equals,
+    getContext,
+    createContext,
+    onError,
+    useMemo,
+    useRef,
+    useState,
+    useEffect,
+  };
+  var nohooks_4 = nohooks.createContext;
+  var nohooks_5 = nohooks.onError;
+  var nohooks_6 = nohooks.useMemo;
+  var nohooks_7 = nohooks.useRef;
+  var nohooks_8 = nohooks.useState;
+  var nohooks_9 = nohooks.useEffect;
+
+  function withContext(tag, view) {
+    return nohooks_4(tag, (fn, set) => {
+      return view((...args) => fn(...args).result, set);
+    });
   }
 
   function getDecorated(Tag, state, actions, children) {
@@ -768,7 +907,7 @@
     } = getDecorated(Factory, initialState, userActions, children);
 
     if (!instance && isFunction(Factory) && arguments.length === 1) {
-      return createContext(Factory, createView);
+      return withContext(Factory, createView);
     }
 
     return (el, cb = createElement, hook = refreshCallback) => {
@@ -914,75 +1053,6 @@
     };
 
     return ctx;
-  }
-
-  function onError(callback) {
-    getContext().onError = callback;
-  }
-
-  function useMemo(callback, inputs) {
-    const scope = getContext();
-    const key = scope.m;
-
-    scope.m += 1;
-    scope.v = scope.v || [];
-    scope.d = scope.d || [];
-
-    const prev = scope.d[key];
-
-    if (isNot(prev) || isDiff(prev, inputs)) {
-      scope.v[key] = callback();
-      scope.d[key] = inputs;
-    }
-
-    return scope.v[key];
-  }
-
-  function useRef(result) {
-    return useMemo(() => {
-      let value = clone(result);
-
-      return Object.defineProperty({}, 'current', {
-        configurable: false,
-        enumerable: true,
-        set: ref => { value = ref; },
-        get: () => value,
-      });
-    }, []);
-  }
-
-  function useState(fallback) {
-    const scope = getContext();
-    const key = scope.key;
-
-    scope.key += 1;
-    scope.val = scope.val || [];
-
-    if (isNot(scope.val[key])) {
-      scope.val[key] = fallback;
-    }
-
-    return [scope.val[key], v => {
-      scope.val[key] = v;
-      scope.sync();
-    }];
-  }
-
-  function useEffect(callback, inputs) {
-    const scope = getContext();
-    const key = scope.fx;
-
-    scope.fx += 1;
-    scope.in = scope.in || [];
-    scope.get = scope.get || [];
-
-    const prev = scope.in[key];
-    const enabled = inputs ? isDiff(prev, inputs) : true;
-
-    scope.in[key] = inputs;
-    scope.get[key] = scope.get[key] || {};
-
-    Object.assign(scope.get[key], { cb: callback, on: enabled });
   }
 
   function values(attrs, cb) {
@@ -1182,11 +1252,11 @@
     classes: applyClasses,
     animation: applyAnimations,
 
-    onError,
-    useRef,
-    useMemo,
-    useState,
-    useEffect,
+    onError: nohooks_5,
+    useRef: nohooks_7,
+    useMemo: nohooks_6,
+    useState: nohooks_8,
+    useEffect: nohooks_9,
   };
 
   function summarize(script) {

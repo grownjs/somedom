@@ -11,7 +11,7 @@ import {
 } from './shared';
 
 import Fragment from './fragment';
-import { createContext } from './ctx';
+import { withContext } from './hooks';
 
 export function getDecorated(Tag, state, actions, children) {
   if (isPlain(Tag) && isFunction(Tag.render)) {
@@ -71,7 +71,7 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
   } = getDecorated(Factory, initialState, userActions, children);
 
   if (!instance && isFunction(Factory) && arguments.length === 1) {
-    return createContext(Factory, createView);
+    return withContext(Factory, createView);
   }
 
   return (el, cb = createElement, hook = refreshCallback) => {
