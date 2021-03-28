@@ -4,6 +4,7 @@ help: Makefile
 ci: src deps ## Run CI scripts
 	@USE_JSDOM=1 npm run test:unit
 	@npm run test:ci
+	@npm run codecov
 
 dev: src deps ## Start dev tasks
 	@npm run dev & npm run serve
