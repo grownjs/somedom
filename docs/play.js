@@ -282,12 +282,12 @@
     return value.replace(new RegExp(`^ {${depth}}`, 'mg'), '').trim();
   };
 
-  const clone = value => {
+  const clone$1 = value => {
     if (!value || !isObject(value)) return value;
-    if (isArray(value)) return value.map(x => clone(x));
+    if (isArray(value)) return value.map(x => clone$1(x));
     if (value instanceof Date) return new Date(value.getTime());
     if (value instanceof RegExp) return new RegExp(value.source, value.flags);
-    return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
+    return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone$1(value[k]) }), {});
   };
 
   const apply = (cb, length, options = {}) => (...args) => length === args.length && cb(...args, options);
@@ -512,7 +512,7 @@
       await updateElement(target.root, target.vnode, target.vnode = next, svg, cb, target.offset); // eslint-disable-line;
       if (isFunction(target.onupdate)) await target.onupdate(target);
       if (isFunction(target.update)) await target.update();
-      destroyElement(target.anchor, false);
+      await destroyElement(target.anchor, false);
       return target;
     }
     if (isArray(prev) && isArray(next)) {
@@ -555,7 +555,7 @@
           rm.push(leaf);
           leaf = leaf.nextSibling;
         }
-        rm.forEach(x => destroyElement(x, false));
+        await Promise.all(rm.map(x => destroyElement(x, false)));
       } else {
         if (target._anchored) await target._anchored.remove();
         target.replaceWith(newNode);
@@ -639,12 +639,12 @@
     return typeof value === 'undefined' || value === null;
   }
 
-  function clone$1(value) {
+  function clone(value) {
     if (!value || !isObj(value)) return value;
-    if (Array.isArray(value)) return value.map(x => clone$1(x));
+    if (Array.isArray(value)) return value.map(x => clone(x));
     if (value instanceof Date) return new Date(value.getTime());
     if (value instanceof RegExp) return new RegExp(value.source, value.flags);
-    return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone$1(value[k]) }), {});
+    return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
   }
 
   function equals(a, b) {
@@ -722,7 +722,7 @@
             if (!equals(scope.val, scope.old)) loop();
           }));
 
-          scope.old = clone$1(scope.val);
+          scope.old = clone(scope.val);
           scope.key = 0;
           scope.fx = 0;
           scope.m = 0;
@@ -780,7 +780,7 @@
 
   function useRef(result) {
     return useMemo(() => {
-      let value = clone$1(result);
+      let value = clone(result);
 
       return Object.defineProperty({}, 'current', {
         configurable: false,
@@ -826,7 +826,7 @@
   }
 
   var nohooks = {
-    clone: clone$1,
+    clone,
     equals,
     getContext,
     createContext,
@@ -871,7 +871,7 @@
       && (Tag.constructor === Function && Tag.prototype.constructor !== Function)
     ) {
       instance = new Tag(state, children);
-      instance.props = clone(state || {});
+      instance.props = clone$1(state || {});
 
       Tag = _state => (instance.state = _state, instance.render()); // eslint-disable-line
 
@@ -911,7 +911,7 @@
     }
 
     return (el, cb = createElement, hook = refreshCallback) => {
-      const data = clone(state || {});
+      const data = clone$1(state || {});
       const fns = [];
 
       let vnode;
@@ -919,7 +919,7 @@
 
       async function sync(result) {
         await Promise.all(fns.map(fn => fn(data, $)));
-        $.target = await updateElement($.target, vnode, vnode = Tag(clone(data), $), null, cb);
+        $.target = await updateElement($.target, vnode, vnode = Tag(clone$1(data), $), null, cb);
         return result;
       }
 
@@ -969,7 +969,7 @@
 
       $.defer = _cb => new Promise(_ => raf(_)).then(_cb);
       $.unmount = _cb => destroyElement($.target, _cb || false);
-      $.target = mountElement(el, vnode = Tag(clone(data), $), null, cb);
+      $.target = mountElement(el, vnode = Tag(clone$1(data), $), null, cb);
 
       Object.defineProperty($, 'state', {
         configurable: false,

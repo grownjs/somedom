@@ -118,7 +118,7 @@ export async function updateElement(target, prev, next, svg, cb, i) {
     await updateElement(target.root, target.vnode, target.vnode = next, svg, cb, target.offset); // eslint-disable-line;
     if (isFunction(target.onupdate)) await target.onupdate(target);
     if (isFunction(target.update)) await target.update();
-    destroyElement(target.anchor, false);
+    await destroyElement(target.anchor, false);
     return target;
   }
   if (isArray(prev) && isArray(next)) {
@@ -161,7 +161,7 @@ export async function patchNode(target, prev, next, svg, cb) {
         rm.push(leaf);
         leaf = leaf.nextSibling;
       }
-      rm.forEach(x => destroyElement(x, false));
+      await Promise.all(rm.map(x => destroyElement(x, false)));
     } else {
       if (target._anchored) await target._anchored.remove();
       target.replaceWith(newNode);
