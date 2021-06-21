@@ -99,6 +99,10 @@ export const listeners = opts => apply(addEvents, 3, opts);
 export const attributes = opts => apply(invokeProps, 3, opts);
 
 export {
+  raf, tick,
+} from './lib/util';
+
+export {
   mountElement as mount,
   updateElement as patch,
   createElement as render,
