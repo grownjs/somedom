@@ -3,8 +3,11 @@ help: Makefile
 
 ci: src deps ## Run CI scripts
 	@USE_JSDOM=1 npm run test:unit
+	@touch src/lib/*.js
 	@npm run test:ci
+ifneq ($(CI),)
 	@npm run codecov
+endif
 
 dev: src deps ## Start dev tasks
 	@npm run dev & npm run serve
@@ -16,8 +19,7 @@ test: src deps ## Start dev+testing flow
 	@npm run watch
 
 check: src deps ## Run coverage checks locally
-	@npm run coverage
-	@npm run report -- -r html
+	@LCOV_OUTPUT=html npm run test:ci
 
 deps: package*.json
 	@(((ls node_modules | grep .) > /dev/null 2>&1) || npm i) || true

@@ -15,4 +15,4 @@ jobs:
       - uses: actions/checkout@v1
       - uses: tacoss/nodejs@master
         with:
-          args: make ci CODECOV_TOKEN=${{ secrets.CODECOV_TOKEN }}
+          args: make ci CODECOV_TOKEN=${{ secrets.USE_CODECOV_TOKEN }}

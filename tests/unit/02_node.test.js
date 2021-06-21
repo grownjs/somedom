@@ -223,7 +223,7 @@ describe('node', () => {
 
   describe('createElement', () => {
     it('should fail on invalid input', () => {
-      expect(createElement()).to.be.undefined;
+      expect(createElement).to.throw(/Invalid vnode, given 'undefined'/);
     });
 
     it('should return scalar values as text', () => {
@@ -441,12 +441,6 @@ describe('node', () => {
       div.appendChild(a);
 
       expect(a.outerHTML).to.eql('<a></a>');
-    });
-
-    it('should skip _dirty nodes', async () => {
-      div._dirty = true;
-      await updateElement(div, ['div', null], ['b', null, 'OK!']);
-      expect(body.innerHTML).to.eql('<div><a></a></div>');
     });
 
     it('can reconcilliate childNodes', async () => {

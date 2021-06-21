@@ -17,6 +17,7 @@ export function destroyElement(target, wait = cb => cb()) {
 }
 
 export function createElement(vnode, svg, cb) {
+  if (isNot(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
   if (!isNode(vnode)) {
     if (isArray(vnode)) {
       return Fragment.from(v => createElement(v, svg, cb), vnode);
@@ -113,7 +114,6 @@ export function mountElement(target, view, svg, cb) {
 }
 
 export async function updateElement(target, prev, next, svg, cb, i) {
-  if (target._dirty) return target;
   if (target instanceof Fragment) {
     await updateElement(target.root, target.vnode, target.vnode = next, svg, cb, target.offset); // eslint-disable-line;
     if (isFunction(target.onupdate)) await target.onupdate(target);
@@ -135,10 +135,8 @@ export async function updateElement(target, prev, next, svg, cb, i) {
     } else {
       await zipNodes([prev], next, target.parentNode || target, svg, cb, i);
     }
-  } else if (target.nodeType !== 3) {
-    await zipNodes(toArray(prev), toArray(next), target, svg, cb, i);
   } else {
-    target.nodeValue = next.toString();
+    await zipNodes(toArray(prev), toArray(next), target, svg, cb, i);
   }
   return target;
 }
@@ -191,10 +189,6 @@ export function zipNodes(a, b, el, svg, cb, off = 0) {
         while (!el.childNodes[z + j] && (z + j) > 0) j -= 1;
         target = el.childNodes[z + j];
       }
-    }
-
-    while (target && target._dirty) {
-      target = el.childNodes[z + ++j]; // eslint-disable-line
     }
 
     if (target) {
