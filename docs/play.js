@@ -405,9 +405,9 @@
   }
 
   function destroyElement(target, wait = cb => cb()) {
-    return wait === false
-      ? target.remove()
-      : Promise.resolve().then(() => wait(() => target && target.remove()));
+    const rm = () => target && target.remove();
+
+    return wait === false ? rm() : Promise.resolve().then(() => wait(rm));
   }
 
   function createElement(vnode, svg, cb) {
@@ -512,7 +512,7 @@
       await updateElement(target.root, target.vnode, target.vnode = next, svg, cb, target.offset); // eslint-disable-line;
       if (isFunction(target.onupdate)) await target.onupdate(target);
       if (isFunction(target.update)) await target.update();
-      await destroyElement(target.anchor, false);
+      destroyElement(target.anchor, false);
       return target;
     }
     if (isArray(prev) && isArray(next)) {
@@ -553,7 +553,7 @@
           rm.push(leaf);
           leaf = leaf.nextSibling;
         }
-        await Promise.all(rm.map(x => destroyElement(x, false)));
+        rm.forEach(x => destroyElement(x, false));
       } else {
         if (target._anchored) await target._anchored.remove();
         target.replaceWith(newNode);
