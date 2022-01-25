@@ -450,6 +450,11 @@
       el = cb(el, tag, props, children) || el;
     }
 
+    if (props && props['@html']) {
+      el.innerHTML = props['@html'];
+      delete props['@html'];
+    }
+
     if (isFunction(el)) return createElement(el(), isSvg, cb);
     if (el.nodeType === 1) {
       if (!isEmpty(props)) assignProps(el, props, isSvg, cb);
