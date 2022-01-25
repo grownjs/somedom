@@ -32,6 +32,8 @@ import {
 import { addEvents } from './lib/events';
 import Fragment from './lib/fragment';
 
+export { default as FragmentNode } from './lib/fragment-node';
+
 export const h = (tag = 'div', attrs = null, ...children) => {
   if (isScalar(attrs)) return [tag, null, [attrs].concat(children).filter(x => !isNot(x))];
   if (isArray(attrs)) return [tag, null, attrs];
