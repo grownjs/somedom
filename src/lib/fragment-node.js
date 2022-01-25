@@ -108,7 +108,7 @@ export default class FragmentNode {
       [].slice.call(div.childNodes).forEach(node => {
         doc.appendChild(node);
       });
-      return doc;
+      return { target: doc };
     } else {
       const name = `#${props.key}`;
 
