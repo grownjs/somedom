@@ -360,6 +360,11 @@
         return;
       }
 
+      if (prop === '@html') {
+        target.innerHTML = attrs[prop];
+        return;
+      }
+
       let value = attrs[prop] !== true ? attrs[prop] : prop;
       if (isObject(value)) {
         value = (isFunction(cb) && cb(target, prop, value)) || value;
@@ -448,11 +453,6 @@
 
     if (isFunction(cb)) {
       el = cb(el, tag, props, children) || el;
-    }
-
-    if (props && props['@html']) {
-      el.innerHTML = props['@html'];
-      delete props['@html'];
     }
 
     if (isFunction(el)) return createElement(el(), isSvg, cb);

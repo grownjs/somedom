@@ -57,6 +57,11 @@ export function assignProps(target, attrs, svg, cb) {
       return;
     }
 
+    if (prop === '@html') {
+      target.innerHTML = attrs[prop];
+      return;
+    }
+
     let value = attrs[prop] !== true ? attrs[prop] : prop;
     if (isObject(value)) {
       value = (isFunction(cb) && cb(target, prop, value)) || value;
