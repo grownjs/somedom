@@ -49,6 +49,11 @@ describe('attrs', () => {
   });
 
   describe('assignProps', () => {
+    it('should keep empty attributes', () => {
+      assignProps(div, { foo: '' });
+      expect(div.getAttribute('foo')).to.eql('');
+    });
+
     it('should append given attributes', () => {
       assignProps(div, { foo: 'bar' });
       expect(div.getAttribute('foo')).to.eql('bar');
@@ -92,7 +97,7 @@ describe('attrs', () => {
       expect(div.getAttribute('foo')).to.eql(null);
       expect(div.getAttribute('href')).to.eql(null);
       expect(div.getAttribute('notFalsy')).to.eql('0');
-      expect(div.getAttribute('emptyValue')).to.eql(null);
+      expect(div.getAttribute('emptyValue')).to.eql('');
     });
   });
 

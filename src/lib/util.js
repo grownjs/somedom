@@ -43,7 +43,7 @@ export const isEmpty = value => {
   if (isArray(value)) return value.length === 0;
   if (isPlain(value)) return Object.keys(value).length === 0;
 
-  return isNot(value) || value === '' || value === false;
+  return isNot(value) || value === false;
 };
 
 export const isNode = x => isArray(x)

@@ -186,7 +186,7 @@ describe('util', () => {
       expect(isEmpty()).to.be.true;
       expect(isEmpty(1)).to.be.false;
       expect(isEmpty(0)).to.be.false;
-      expect(isEmpty('')).to.be.true;
+      expect(isEmpty('')).to.be.false;
       expect(isEmpty([])).to.be.true;
       expect(isEmpty({})).to.be.true;
       expect(isEmpty(Function)).to.be.false;
