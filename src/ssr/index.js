@@ -8,7 +8,11 @@ import {
   dropWindow,
 } from './doc';
 
-export { bindHelpers } from './doc';
+export {
+  bindHelpers,
+} from './doc';
+
+export * from '..';
 
 export function useWindow(cb) {
   try {
@@ -39,3 +43,5 @@ export function renderToString(vnode, cb = createElement) {
     return render;
   });
 }
+
+export default { useWindow, renderToString };
