@@ -89,12 +89,12 @@ export default class FragmentNode {
   }
 
   get root() {
-    return this.target.parentNode;
+    return this.target
+      && this.target.parentNode;
   }
 
   get mounted() {
     return this.root
-      && this.target
       && this.root.isConnected
       && this.target.isConnected;
   }
