@@ -93,7 +93,10 @@ export default class FragmentNode {
   }
 
   get mounted() {
-    return this.target.isConnected && this.root.isConnected;
+    return this.root
+      && this.target
+      && this.root.isConnected
+      && this.target.isConnected;
   }
 
   static from(props, children, render, context) {
