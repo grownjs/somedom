@@ -101,7 +101,7 @@ export default class FragmentNode {
     if (typeof props === 'string') {
       frag = FragmentNode[`#${props}`];
     } else if (props['@html']) {
-      const doc = new DocumentFragment();
+      const doc = document.createDocumentFragment();
       const div = document.createElement('div');
 
       div.innerHTML = props['@html'];

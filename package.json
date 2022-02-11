@@ -7,6 +7,7 @@
   "browser": "dist/somedom.umd.js",
   "files": [
     "dist/*.*",
+    "test.js",
     "ssr.js"
   ],
   "scripts": {
@@ -39,12 +40,13 @@
     "eslint-plugin-import": "^2.14.0",
     "esm": ">=3.1.0",
     "express": ">=3.11.0",
-    "glob-parent": ">=5.1.2",
     "fresh": ">=0.5.2",
+    "glob-parent": ">=5.1.2",
     "js-yaml": ">=3.13.1",
-    "jsdom": "^16.4.0",
+    "jsdom": "^16.7.0",
     "kind-of": ">=6.0.3",
     "lodash": ">=4.17.13",
+    "lodash.sortby": "^4.7.0",
     "mime": ">=1.4.1",
     "minimist": ">=1.2.3",
     "mocha": "^8.1.3",

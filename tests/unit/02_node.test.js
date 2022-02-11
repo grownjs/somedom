@@ -7,9 +7,9 @@ import {
   createElement, mountElement, destroyElement, updateElement,
 } from '../../src/lib/node';
 
-import doc from '../../src/ssr/jsdom';
-import Fragment from '../../src/lib/fragment';
 import { trim, format } from '../../src/lib/util';
+import Fragment from '../../src/lib/fragment';
+import doc from '../../src/ssr/jsdom';
 
 /* global beforeEach, afterEach, describe, it */
 

@@ -138,30 +138,33 @@ export function createElementNode(name, props) {
       contains: value => self.className.split(/\W/).indexOf(value) !== -1,
     },
     get firstChild() {
-      return this.childNodes[0];
+      return self.childNodes[0];
+    },
+    set innerHTML(value) {
+      self.__html = value;
     },
     get innerHTML() {
-      return this.childNodes.map(node => {
+      return self.__html || self.childNodes.map(node => {
         return node.nodeType === 8
           ? `<!--${node.nodeValue}-->`
           : node.outerHTML || node.nodeValue;
       }).join('');
     },
     get outerHTML() {
-      const _props = Object.keys(this.attributes).reduce((prev, cur) => {
-        prev.push(` ${cur}="${encodeText(this.attributes[cur])}"`);
+      const _props = Object.keys(self.attributes).reduce((prev, cur) => {
+        prev.push(` ${cur}="${encodeText(self.attributes[cur])}"`);
         return prev;
       }, []);
 
-      if (this.className) {
-        _props.push(` class="${this.className}"`);
+      if (self.className) {
+        _props.push(` class="${self.className}"`);
       }
 
       if (CLOSE_TAGS.indexOf(name) !== -1) {
         return `<${name}${_props.join('')}>`;
       }
 
-      return `<${name}${_props.join('')}>${this.innerHTML}</${name}>`;
+      return `<${name}${_props.join('')}>${self.innerHTML}</${name}>`;
     },
     dispatch(type, params) {
       return tick(() => self.dispatchEvent(new Event(type, params)));
@@ -201,8 +204,8 @@ export function createElementNode(name, props) {
         });
         n.childNodes = [];
       } else {
-        if (this.childNodes.length) {
-          this.childNodes[this.childNodes.length - 1].nextSibling = n;
+        if (self.childNodes.length) {
+          self.childNodes[self.childNodes.length - 1].nextSibling = n;
         }
 
         if (self.tagName === 'PRE') {

@@ -20,10 +20,9 @@ import {
   bind, render, listeners,
 } from '../../src';
 
-import { tick } from '../../src/lib/util';
-import Fragment from '../../src/lib/fragment';
 import { bindHelpers as $ } from '../../src/ssr';
-
+import Fragment from '../../src/lib/fragment';
+import { tick } from '../../src/lib/util';
 import doc from '../../src/ssr/jsdom';
 
 /* global beforeEach, afterEach, describe, it */
