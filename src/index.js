@@ -122,6 +122,7 @@ export {
   useMemo,
   useState,
   useEffect,
+  createContext,
 } from './lib/hooks';
 
 export {

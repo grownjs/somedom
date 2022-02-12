@@ -9,6 +9,7 @@ export {
   useState,
   useEffect,
   getContext,
+  createContext,
 } from 'nohooks';
 
 export function withContext(tag, view) {

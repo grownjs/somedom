@@ -70,6 +70,8 @@
         this.length = 1;
       }
 
+      console.log(target.__vdom, '?!');
+
       this.anchor = this.childNodes[0];
       this.anchor._anchored = this;
       this.childNodes.forEach(sub => {
@@ -920,6 +922,10 @@
 
       let vnode;
       let $;
+
+      console.log('HOW TO GET PREVIOUS VDOM?', { el });
+      // if (el.nodeType === 11) {
+      // }
 
       async function sync(result) {
         await Promise.all(fns.map(fn => fn(data, $)));
