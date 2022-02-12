@@ -70,8 +70,6 @@
         this.length = 1;
       }
 
-      console.log(target.__vdom, '?!');
-
       this.anchor = this.childNodes[0];
       this.anchor._anchored = this;
       this.childNodes.forEach(sub => {
@@ -515,7 +513,9 @@
   }
 
   async function updateElement(target, prev, next, svg, cb, i) {
-    if (target.__dirty) return target;
+    if (target.__dirty) {
+      return target.__update ? target.__update(target, prev, next, svg, cb, i) : target;
+    }
     if (target instanceof Fragment) {
       await updateElement(target.root, target.vnode, target.vnode = next, svg, cb, target.offset); // eslint-disable-line;
       if (isFunction(target.onupdate)) await target.onupdate(target);
@@ -922,10 +922,6 @@
 
       let vnode;
       let $;
-
-      console.log('HOW TO GET PREVIOUS VDOM?', { el });
-      // if (el.nodeType === 11) {
-      // }
 
       async function sync(result) {
         await Promise.all(fns.map(fn => fn(data, $)));

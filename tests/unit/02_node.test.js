@@ -446,7 +446,12 @@ describe('node', () => {
     it('should skip _dirty nodes', async () => {
       div.__dirty = true;
       await updateElement(div, ['div', null], ['b', null, 'OK!']);
+
+      div.__update = td.func('patch');
+      await updateElement(div, ['div', null], ['b', null, 'OK!']);
+
       expect(body.innerHTML).to.eql('<div><a></a></div>');
+      expect(td.explain(div.__update).callCount).to.eql(1);
     });
 
     it('can reconcilliate childNodes', async () => {
