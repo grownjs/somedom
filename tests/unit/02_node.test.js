@@ -443,6 +443,12 @@ describe('node', () => {
       expect(a.outerHTML).to.eql('<a></a>');
     });
 
+    it('should skip _dirty nodes', async () => {
+      div.__dirty = true;
+      await updateElement(div, ['div', null], ['b', null, 'OK!']);
+      expect(body.innerHTML).to.eql('<div><a></a></div>');
+    });
+
     it('can reconcilliate childNodes', async () => {
       div = await updateElement(div, ['div', null], ['b', null, 'OK!']);
       expect(body.innerHTML).to.eql('<b>OK!</b>');

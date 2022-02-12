@@ -513,6 +513,7 @@
   }
 
   async function updateElement(target, prev, next, svg, cb, i) {
+    if (target.__dirty) return target;
     if (target instanceof Fragment) {
       await updateElement(target.root, target.vnode, target.vnode = next, svg, cb, target.offset); // eslint-disable-line;
       if (isFunction(target.onupdate)) await target.onupdate(target);
@@ -588,6 +589,10 @@
           while (!el.childNodes[z + j] && (z + j) > 0) j -= 1;
           target = el.childNodes[z + j];
         }
+      }
+
+      while (target && target.__dirty) {
+        target = el.childNodes[z + ++j]; // eslint-disable-line
       }
 
       if (target) {
