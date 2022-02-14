@@ -62,7 +62,7 @@
     "serialize-javascript": ">=2.1.1",
     "set-value": ">=2.0.1",
     "sirv-cli": "^1.0.6",
-    "testcafe": "^1.8.4",
+    "testcafe": "^1.18.3",
     "testdouble": "^3.11.0",
     "tough-cookie": ">=2.3.3",
     "uglify-js": ">=2.6.0",
