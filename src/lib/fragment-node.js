@@ -131,14 +131,10 @@ export default class FragmentNode {
 
   static with(id, cb) {
     return FragmentNode.for(id).then(frag => {
-      try {
-        const fn = cb(frag);
+      const fn = cb(frag);
 
-        if (typeof fn === 'function') {
-          effects.push(fn);
-        }
-      } catch (e) {
-        console.error('E_EFF', e);
+      if (typeof fn === 'function') {
+        effects.push(fn);
       }
       return frag;
     });
