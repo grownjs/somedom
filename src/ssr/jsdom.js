@@ -1,6 +1,6 @@
 /* istanbul ignore file */
 
-import { JSDOM } from 'jsdom';
+import { Window } from 'happy-dom';
 
 import {
   patchDocument,
@@ -17,9 +17,9 @@ export * from '..';
 
 function enable() {
   if (process.env.USE_JSDOM) {
-    const { window } = new JSDOM('');
-    const { document } = window;
-    global.document = document;
+    const window = new Window();
+
+    global.document = window.document;
     global.window = window;
     global.Event = window.Event;
   } else {

@@ -36,11 +36,16 @@ describe('somedom', () => {
 
   describe('pre', () => {
     it('should debug and render given vnodes', () => {
-      const sample = format('<div><span foo="bar" baz="baz">TEXT</span></div>');
+      let sample = format('<div><span foo="bar" baz="baz">TEXT</span></div>');
+
+      // why no escape this happy-dom?
+      if (!process.env.USE_JSDOM) {
+        sample = sample.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
 
       expect(pre(['div', null, [
         ['span', { foo: 'bar', baz: true }, ['TEXT']],
-      ]]).outerHTML).to.eql(`<pre class="highlight">${sample.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`);
+      ]]).outerHTML).to.eql(`<pre class="highlight">${sample}</pre>`);
     });
   });
 

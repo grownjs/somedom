@@ -248,7 +248,7 @@ describe('node', () => {
         }
 
         if (count > 3) {
-          return ['stop', props, children];
+          return ['b', props, children];
         }
 
         count += 1;
@@ -258,7 +258,7 @@ describe('node', () => {
 
       const target = createElement([Tag, { count: 0 }, 42]);
 
-      expect(target.outerHTML).to.eql('<stop count="4">42</stop>');
+      expect(target.outerHTML).to.eql('<b count="4">42</b>');
     });
 
     it('should wrap trees as DocumentFragment nodes', () => {
@@ -297,7 +297,7 @@ describe('node', () => {
     it('should pass given attributes to assignProps()', () => {
       const foo = createElement(['code', { foo: 'bar' }]).attributes.foo;
 
-      expect(foo.nodeValue || foo).to.eql('bar');
+      expect(foo.nodeValue || foo.value || foo).to.eql('bar');
     });
 
     it('should invoke returned functions from hooks', () => {

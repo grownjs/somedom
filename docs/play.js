@@ -421,7 +421,7 @@
       if (isArray(vnode)) {
         return Fragment.from(v => createElement(v, svg, cb), vnode);
       }
-      return (isScalar(vnode) && document.createTextNode(vnode)) || vnode;
+      return (isScalar(vnode) && document.createTextNode(String(vnode))) || vnode;
     }
 
     vnode = tree(vnode);
