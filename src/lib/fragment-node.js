@@ -66,24 +66,20 @@ export default class FragmentNode {
       this.last = direction;
       this.vnode.length += frag.length;
 
-      try {
-        let anchor;
-        if (direction < 0) {
-          this.anchor = this.anchor || this.vnode.anchor;
-          anchor = frag.childNodes[0];
-          frag.mount(this.root, this.anchor);
-          this.vnode.anchor = anchor;
-        } else {
-          const offset = Math.min(this.vnode.offset + this.vnode.length, this.root.childNodes.length);
+      let anchor;
+      if (direction < 0) {
+        this.anchor = this.anchor || this.vnode.anchor;
+        anchor = frag.childNodes[0];
+        frag.mount(this.root, this.anchor);
+        this.vnode.anchor = anchor;
+      } else {
+        const offset = Math.min(this.vnode.offset + this.vnode.length, this.root.childNodes.length);
 
-          this.anchor = this.anchor || this.root.childNodes[offset - 1];
-          anchor = frag.childNodes[frag.childNodes.length - 1];
-          frag.mount(this.root, this.anchor);
-        }
-        this.anchor = anchor;
-      } catch (e) {
-        console.log('E_SYNC', e);
+        this.anchor = this.anchor || this.root.childNodes[offset - 1];
+        anchor = frag.childNodes[frag.childNodes.length - 1];
+        frag.mount(this.root, this.anchor);
       }
+      this.anchor = anchor;
     }
     return this;
   }
