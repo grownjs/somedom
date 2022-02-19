@@ -1,16 +1,14 @@
 import {
-  isEmpty, isObject, isFunction, isScalar, isPlain, isDiff, isNode, isArray,
+  isEmpty, isObject, isFunction, isScalar, isPlain, isDiff, isBlock, isArray,
 } from './util';
 
 import { XLINK_NS, ELEM_REGEX } from './shared';
 
 export function fixProps(vnode) {
-  if (isArray(vnode) && isArray(vnode[1])) {
-    vnode[2] = vnode[1];
-    vnode[1] = null;
-  }
+  if (isBlock(vnode)) return vnode;
 
-  if (!isNode(vnode) || isFunction(vnode[0])) return vnode;
+  vnode[2] = vnode.slice(2);
+  vnode.length = 3;
 
   let attrs = isPlain(vnode[1])
     ? { ...vnode[1] }
@@ -42,7 +40,6 @@ export function fixProps(vnode) {
       attrs.class = classes;
     }
   }
-
   return vnode;
 }
 

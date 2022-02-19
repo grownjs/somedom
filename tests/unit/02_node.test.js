@@ -174,7 +174,7 @@ describe('node', () => {
 
         ref = await updateElement(ref, [[Test, { baz: 'buzz' }, ['bazzinga']]], [[Test, { key: 'x' }, ['yz']]]);
         expect(calls).to.eql(3);
-        expect(ref.outerHTML).to.eql('yz');
+        expect(ref.root.outerHTML).to.eql('<div>yz</div>');
         expect(document.body.innerHTML).to.eql('<div>yz</div>');
 
         expect(td.explain(callback).callCount).to.eql(4);
@@ -289,7 +289,7 @@ describe('node', () => {
 
       const Spy = td.func('Component');
 
-      td.when(Spy(attrs, nodes)).thenReturn(['div', null]);
+      td.when(Spy(attrs, [nodes])).thenReturn(['div', null]);
 
       expect(createElement([Spy, attrs, nodes]).tagName).to.eql('DIV');
     });
@@ -452,6 +452,18 @@ describe('node', () => {
 
       expect(body.innerHTML).to.eql('<div><a></a></div>');
       expect(td.explain(div.__update).callCount).to.eql(1);
+
+      delete div.__dirty;
+      delete div.__update;
+
+      await updateElement(div, ['div', null], ['div', null, ['b', null, 42]]);
+
+      const fix = createElement(['em', null, 'OSOM']);
+      fix.__dirty = true;
+      div.insertBefore(fix, div.childNodes[0]);
+
+      await updateElement(div, ['div', null], ['div', null, ['b', null, 43]]);
+      expect(div.outerHTML).to.eql('<div><em>OSOM</em><b>43</b></div>');
     });
 
     it('can reconcilliate childNodes', async () => {
@@ -486,7 +498,7 @@ describe('node', () => {
 
     it('can reconcilliate text nodes', async () => {
       div = await updateElement(div, ['div', null], [['foo bar']]);
-      expect(body.innerHTML).to.eql('foo bar');
+      expect(body.innerHTML).to.eql('<div>foo bar</div>');
 
       div = await updateElement(div, [['foo bar']], [['some text', [[['b', null, 'OK']]]]]);
       expect(div.innerHTML).to.eql('some text<b>OK</b>');
@@ -592,6 +604,26 @@ describe('node', () => {
       expect(a.innerHTML).to.eql('<del><em>OSOM!</em></del>');
       expect(div.innerHTML).to.eql('<a><del><em>OSOM!</em></del></a>');
       expect(body.innerHTML).to.eql('<div><a><del><em>OSOM!</em></del></a></div>');
+    });
+
+    it('should handle vnodes from factories', async () => {
+      function T() {
+        return ['b', null];
+      }
+
+      await updateElement(a, ['a', null], ['a', null, [T]]);
+      await updateElement(a, ['a', null, [T]], ['a', null, [T]]);
+      await updateElement(a, ['a', null, [T]], ['a', null, [T]]);
+      expect(a.outerHTML).to.eql('<a><b></b></a>');
+
+      function T2() {
+        return [['b', null]];
+      }
+
+      await updateElement(a, ['a', null, [T]], ['a', null, [T2]]);
+      await updateElement(a, ['a', null, [T2]], ['a', null, [T2]]);
+      await updateElement(a, ['a', null, [T2]], ['a', null, [T2]]);
+      expect(a.outerHTML).to.eql('<a><b></b></a>');
     });
   });
 });

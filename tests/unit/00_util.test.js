@@ -3,7 +3,6 @@
 import td from 'testdouble';
 import { expect } from 'chai';
 import {
-  zip,
   clone,
   apply,
   filter,
@@ -32,25 +31,6 @@ import doc from '../../src/ssr/jsdom';
 describe('util', () => {
   beforeEach(doc.enable);
   afterEach(doc.disable);
-
-  describe('zip', () => {
-    async function check(a, b, cb, msg) {
-      let err;
-      try {
-        await zip(a, b, cb);
-      } catch (e) {
-        err = e;
-      }
-
-      expect(err).not.to.be.undefined;
-      expect(err.message).to.contains(msg);
-    }
-
-    it('should report errors in the called stack', async () => {
-      await check([], [1], () => { throw new Error(); }, 'Failed at Node(undefined, 1)');
-      await check([], [['p', null, [42]]], () => { throw new Error(); }, 'Failed at Node');
-    });
-  });
 
   describe('clone', () => {
     it('should copy most common values', () => {
@@ -294,8 +274,9 @@ describe('util', () => {
 
     describe('detach', () => {
       it('should detach childNodes', () => {
-        detach(b);
-        expect(a.outerHTML).to.eql('<a></a>');
+        const x = document.createElement('x');
+        detach(b, x);
+        expect(a.outerHTML).to.eql('<a><x></x></a>');
       });
     });
   });

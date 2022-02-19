@@ -9,6 +9,7 @@ import {
 
 import { tick, trim, format } from '../../src/lib/util';
 import { bindHelpers as $ } from '../../src/ssr';
+import { encodeText } from '../../src/ssr/doc';
 
 import Fragment from '../../src/lib/fragment';
 import doc from '../../src/ssr/jsdom';
@@ -39,8 +40,8 @@ describe('somedom', () => {
       let sample = format('<div><span foo="bar" baz="baz">TEXT</span></div>');
 
       // why no escape this happy-dom?
-      if (!process.env.USE_JSDOM) {
-        sample = sample.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      if (!process.env.HAPPY_DOM) {
+        sample = encodeText(sample, false);
       }
 
       expect(pre(['div', null, [

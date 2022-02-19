@@ -21,30 +21,24 @@ describe('attrs', () => {
   });
 
   describe('fixProps', () => {
-    it('should fail on invalid or missing input', () => {
-      expect(fixProps).not.to.throw();
-      expect(() => fixProps([])).not.to.throw();
-      expect(() => fixProps([''])).not.to.throw();
-    });
-
     it('should normalize given vnodes', () => {
       expect(fixProps(['grab'])).to.eql(['grab']);
       expect(fixProps(['grab', 'a', 'beer'])).to.eql(['grab', 'a', 'beer']);
-      expect(fixProps(['grab', ['a', 'beer']])).to.eql(['grab', null, ['a', 'beer']]);
+      expect(fixProps(['grab', ['a', 'beer']])).to.eql(['grab', ['a', 'beer']]);
     });
 
     it('should fix emmet-like syntax tagName', () => {
-      expect(fixProps(['#a', null])).to.eql(['div', { id: 'a' }]);
-      expect(fixProps(['div#a', null])).to.eql(['div', { id: 'a' }]);
-      expect(fixProps(['div.b.c', null])).to.eql(['div', { class: ['b', 'c'] }]);
-      expect(fixProps(['div#a.b.c', null])).to.eql(['div', { id: 'a', class: ['b', 'c'] }]);
+      expect(fixProps(['#a', null])).to.eql(['div', { id: 'a' }, []]);
+      expect(fixProps(['div#a', null])).to.eql(['div', { id: 'a' }, []]);
+      expect(fixProps(['div.b.c', null])).to.eql(['div', { class: ['b', 'c'] }, []]);
+      expect(fixProps(['div#a.b.c', null])).to.eql(['div', { id: 'a', class: ['b', 'c'] }, []]);
     });
 
     it('should merge given classes with static ones', () => {
-      expect(fixProps(['div#a.b.c', { class: undefined }])).to.eql(['div', { id: 'a', class: ['b', 'c'] }]);
-      expect(fixProps(['div#a.b.c', { class: 'd' }])).to.eql(['div', { id: 'a', class: ['b', 'c', 'd'] }]);
-      expect(fixProps(['div#a.b.c', { class: ['c', 'd'] }])).to.eql(['div', { id: 'a', class: ['b', 'c', 'd'] }]);
-      expect(fixProps(['div#a.b.c', { class: { d: 1 } }])).to.eql(['div', { id: 'a', class: { b: 1, c: 1, d: 1 } }]);
+      expect(fixProps(['div#a.b.c', { class: undefined }])).to.eql(['div', { id: 'a', class: ['b', 'c'] }, []]);
+      expect(fixProps(['div#a.b.c', { class: 'd' }])).to.eql(['div', { id: 'a', class: ['b', 'c', 'd'] }, []]);
+      expect(fixProps(['div#a.b.c', { class: ['c', 'd'] }])).to.eql(['div', { id: 'a', class: ['b', 'c', 'd'] }, []]);
+      expect(fixProps(['div#a.b.c', { class: { d: 1 } }])).to.eql(['div', { id: 'a', class: { b: 1, c: 1, d: 1 } }, []]);
     });
   });
 
@@ -98,6 +92,14 @@ describe('attrs', () => {
       expect(div.getAttribute('href')).to.eql(null);
       expect(div.getAttribute('notFalsy')).to.eql('0');
       expect(div.getAttribute('emptyValue')).to.eql('');
+    });
+
+    it('should handle the @html prop', () => {
+      assignProps(div, {
+        '@html': '<b>OSOM</b>',
+      }, true);
+
+      expect(div.outerHTML).to.eql('<div><b>OSOM</b></div>');
     });
   });
 

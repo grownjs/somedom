@@ -603,8 +603,8 @@ describe('views', () => {
         }
 
         expect(depth).to.eql(2);
-        expect(node.childNodes.length).to.eql(2);
-        expect(node.childNodes[1].childNodes.length).to.eql(3);
+        expect(node.childNodes.length).to.eql(4);
+        expect(node.childNodes[2].childNodes.length).to.eql(3);
       });
 
       it('should reference mounted views', async () => {
