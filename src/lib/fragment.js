@@ -1,3 +1,8 @@
+/* eslint-disable no-plusplus */
+
+export const BEGIN = Symbol('BEGIN');
+export const END = Symbol('END');
+
 export default class Fragment {
   constructor() {
     this.childNodes = [];
@@ -23,6 +28,23 @@ export default class Fragment {
     return doc;
   }
 
+  upgrade(next) {
+    const q = [];
+
+    let c = this.begin.__length;
+    let i = this.offset;
+    while (c-- > 0) {
+      q.push(this.root.childNodes[i++]);
+    }
+
+    this.begin.__length = next.length;
+    next.childNodes.forEach(node => {
+      this.root.insertBefore(node, this.end);
+    });
+
+    return Promise.all(q.map(node => node.remove()));
+  }
+
   remove(wait) {
     wait = wait || (cb => cb());
     return Promise.resolve().then(() => wait(() => this.children.map(sub => sub && sub.remove())));
@@ -41,17 +63,17 @@ export default class Fragment {
   }
 
   flush(target) {
-    if (!this.childNodes.length) {
-      this.anchor = document.createTextNode('');
-      this.childNodes.push(this.anchor);
-      this.length = 1;
-    }
+    this.begin = document.createTextNode('');
+    this.end = document.createTextNode('');
 
-    this.anchor = this.childNodes[0];
-    this.anchor._anchored = this;
-    this.childNodes.forEach(sub => {
-      target.appendChild(sub);
-    });
+    this.begin.__length = this.childNodes.length;
+    this.begin.__mark = BEGIN;
+    this.begin.__self = this;
+    this.end.__mark = END;
+
+    target.appendChild(this.begin);
+    this.childNodes.forEach(sub => target.appendChild(sub));
+    target.appendChild(this.end);
     this.childNodes = [];
   }
 
@@ -77,8 +99,8 @@ export default class Fragment {
 
     let c = 0;
     for (let i = 0; i < children.length; i += 1) {
-      if (children[i] === this.anchor) {
-        c = i;
+      if (children[i] === this.begin) {
+        c = i + 1;
         break;
       }
     }

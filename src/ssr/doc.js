@@ -16,6 +16,11 @@ export class Node {
       Object.defineProperty(this, key, Object.getOwnPropertyDescriptor(props, key));
     });
   }
+
+  get nextSibling() {
+    const offset = this.parentNode.childNodes.indexOf(this);
+    return this.parentNode.childNodes[offset + 1] || null;
+  }
 }
 
 export class Text extends Node {}
@@ -78,11 +83,16 @@ export function bindHelpers(target) {
   return Object.assign(target, { withText, findText });
 }
 
-export function encodeText(value) {
-  return String(value)
+export function encodeText(value, quotes) {
+  value = String(value)
+    .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/>/g, '&gt;');
+
+  if (quotes !== false) {
+    value = value.replace(/"/g, '&quot;');
+  }
+  return value;
 }
 
 export function dispatchEvent(e) {
@@ -175,11 +185,8 @@ export function createElementNode(name, props) {
       self.childNodes.splice(self.childNodes.indexOf(o), 1, n);
     },
     removeChild(n) {
-      self.childNodes = self.childNodes.reduce((prev, cur, i) => {
-        if (cur !== n) {
-          if (prev[i - 1]) prev[i - 1].nextSibling = cur;
-          prev.push(cur);
-        }
+      self.childNodes = self.childNodes.reduce((prev, cur) => {
+        if (cur !== n) prev.push(cur);
         return prev;
       }, []);
     },
@@ -191,8 +198,16 @@ export function createElementNode(name, props) {
           self.insertBefore(sub, o);
         });
         n.childNodes = [];
+      } else if (o === null) {
+        self.appendChild(n);
       } else {
-        self.childNodes.splice(self.childNodes.indexOf(o), 0, n);
+        const offset = self.childNodes.indexOf(o);
+
+        if (offset === -1) {
+          self.appendChild(n);
+        } else {
+          self.childNodes.splice(self.childNodes.indexOf(o), 0, n);
+        }
       }
     },
     appendChild(n) {
@@ -203,17 +218,11 @@ export function createElementNode(name, props) {
           self.appendChild(sub);
         });
         n.childNodes = [];
+      } else if (self.tagName === 'PRE') {
+        n.nodeValue = encodeText(n.nodeValue, false);
+        self.childNodes.push(n);
       } else {
-        if (self.childNodes.length) {
-          self.childNodes[self.childNodes.length - 1].nextSibling = n;
-        }
-
-        if (self.tagName === 'PRE') {
-          n.nodeValue = n.nodeValue.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          self.childNodes.push(n);
-        } else {
-          self.childNodes.push(n);
-        }
+        self.childNodes.push(n);
       }
     },
     getAttribute(k) {

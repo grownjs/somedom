@@ -2,8 +2,10 @@ import { destroyElement } from './node';
 import { raf } from './util';
 
 let effects = [];
-export default class FragmentNode {
+export default class FragmentList {
   constructor(props, children, render, context) {
+    props.key = props.key || `fragment-${Math.random().toString(36).substr(2)}`;
+
     this.target = document.createComment(`#${props.key}`);
     this.props = props;
     this.name = props.key;
@@ -23,7 +25,7 @@ export default class FragmentNode {
 
   update(vnode) { return this.sync(vnode); }
 
-  mount(props, children) {
+  touch(props, children) {
     Object.assign(this.props, props);
 
     if (this.mounted && this.vnode) {
@@ -37,21 +39,23 @@ export default class FragmentNode {
   }
 
   patch(children) {
-    this._ready = false;
-
-    setTimeout(() => {
+    raf(() => {
       if (this.mounted) {
         this.vnode = this.render(children);
         this.vnode.mount(this.root, this.target.nextSibling);
-        this._ready = Date.now();
       }
     });
     return this;
   }
 
+  mount(el, props, children) {
+    el.appendChild(this.target);
+    return this.touch(props, children);
+  }
+
   sync(children, direction) {
     if (!direction) {
-      return this.mount(null, children);
+      return this.touch(null, children);
     }
 
     if (this.mounted) {
@@ -98,7 +102,7 @@ export default class FragmentNode {
   static from(props, children, render, context) {
     let frag;
     if (typeof props === 'string') {
-      frag = FragmentNode[`#${props}`];
+      frag = FragmentList[`#${props}`];
     } else if (props['@html']) {
       const doc = document.createDocumentFragment();
       const div = document.createElement('div');
@@ -111,10 +115,10 @@ export default class FragmentNode {
     } else {
       const name = `#${props.key}`;
 
-      if (!FragmentNode[name]) {
-        frag = FragmentNode[name] = new FragmentNode(props, children, render, context);
+      if (!FragmentList[name]) {
+        frag = FragmentList[name] = new FragmentList(props, children, render, context);
       } else {
-        frag = FragmentNode[name].mount(props, children);
+        frag = FragmentList[name].touch(props, children);
       }
     }
     return frag;
@@ -126,26 +130,27 @@ export default class FragmentNode {
   }
 
   static with(id, cb) {
-    return FragmentNode.for(id).then(frag => {
-      const fn = cb(frag);
+    return FragmentList.for(id)
+      .then(frag => {
+        const fn = cb(frag);
 
-      if (typeof fn === 'function') {
-        effects.push(fn);
-      }
-      return frag;
-    });
+        if (typeof fn === 'function') {
+          effects.push(fn);
+        }
+        return frag;
+      });
   }
 
   static has(id) {
-    return FragmentNode[`#${id}`] && FragmentNode[`#${id}`].vnode;
+    return (FragmentList[`#${id}`] && FragmentList[`#${id}`].mounted) || false;
   }
 
   static for(id) {
     return new Promise(ok => {
-      if (!FragmentNode.has(id)) {
-        raf(() => ok(FragmentNode.for(id)));
+      if (!FragmentList.has(id)) {
+        raf(() => ok(FragmentList.for(id)));
       } else {
-        ok(FragmentNode[`#${id}`]);
+        ok(FragmentList[`#${id}`]);
       }
     });
   }

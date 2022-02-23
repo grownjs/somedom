@@ -1,7 +1,5 @@
 /* istanbul ignore file */
 
-import { Window } from 'happy-dom';
-
 import {
   patchDocument,
   patchWindow,
@@ -16,8 +14,15 @@ export {
 export * from '..';
 
 function enable() {
-  if (process.env.USE_JSDOM) {
-    const window = new Window();
+  if (process.env.JS_DOM || process.env.HAPPY_DOM) {
+    let window;
+    if (process.env.HAPPY_DOM) {
+      const { Window } = require('happy-dom');
+      window = new Window();
+    } else {
+      const { JSDOM } = require('jsdom');
+      ({ window } = new JSDOM());
+    }
 
     global.document = window.document;
     global.window = window;
@@ -29,9 +34,10 @@ function enable() {
 }
 
 function disable() {
-  if (process.env.USE_JSDOM) {
+  if (process.env.JS_DOM || process.env.HAPPY_DOM) {
     delete global.document;
     delete global.window;
+    delete global.Event;
   } else {
     dropDocument();
     dropWindow();
