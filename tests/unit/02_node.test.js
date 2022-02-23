@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-expressions */
+/* eslint-disable no-unused-expressions, no-plusplus */
 
 import td from 'testdouble';
 import { expect } from 'chai';
@@ -458,9 +458,12 @@ describe('node', () => {
 
       await updateElement(div, ['div', null], ['div', null, ['b', null, 42]]);
 
-      const fix = createElement(['em', null, 'OSOM']);
-      fix.__dirty = true;
-      div.insertBefore(fix, div.childNodes[0]);
+      for (let c = 3; c > 0; c--) {
+        const fix = createElement(['em', null, 'OSOM']);
+
+        fix.__dirty = true;
+        div.insertBefore(fix, div.childNodes[0]);
+      }
 
       await updateElement(div, ['div', null], ['div', null, ['b', null, 43]]);
       expect(div.outerHTML).to.eql('<div><em>OSOM</em><b>43</b></div>');

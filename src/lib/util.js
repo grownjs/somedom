@@ -46,6 +46,11 @@ export function isNode(value) {
 export function zip(set, prev, next, offset, left, right, cb, d = 0) {
   const c = Math.max(prev.length, next.length);
 
+  function get(el) {
+    while (el && el.__dirty) el = el[++offset];
+    return el;
+  }
+
   let i = 0;
   let a = 0;
   let b = 0;
@@ -62,12 +67,12 @@ export function zip(set, prev, next, offset, left, right, cb, d = 0) {
       if (isBegin(el)) {
         const k = el.__length + 2;
         for (let p = 0; p < k; p++) {
-          cb({ rm: set[offset++] });
+          cb({ rm: get(set[offset++]) });
         }
       } else if (isBlock(x)) {
         let k = x.length;
         if (!set[offset]) offset -= k;
-        while (k--) cb({ rm: set[offset++] });
+        while (k--) cb({ rm: get(set[offset++]) });
       } else if (el) {
         cb({ rm: el });
         offset++;
@@ -107,23 +112,22 @@ export function zip(set, prev, next, offset, left, right, cb, d = 0) {
   }
 }
 
-export function isDiff(prev, next, isWeak) {
-  if (isWeak && prev === next && (isFunction(prev) || isFunction(next))) return true;
+export function isDiff(prev, next) {
   if (typeof prev !== typeof next) return true;
   if (isArray(prev)) {
     if (prev.length !== next.length) return true;
 
     for (let i = 0; i < next.length; i += 1) {
-      if (isDiff(prev[i], next[i], isWeak)) return true;
+      if (isDiff(prev[i], next[i])) return true;
     }
   } else if (isPlain(prev) && isPlain(next)) {
     const a = Object.keys(prev).sort();
     const b = Object.keys(next).sort();
 
-    if (isDiff(a, b, isWeak)) return true;
+    if (isDiff(a, b)) return true;
 
     for (let i = 0; i < a.length; i += 1) {
-      if (isDiff(prev[a[i]], next[b[i]], isWeak)) return true;
+      if (isDiff(prev[a[i]], next[b[i]])) return true;
     }
   } else return prev !== next;
 }

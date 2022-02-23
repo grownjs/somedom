@@ -184,6 +184,11 @@
   function zip(set, prev, next, offset, left, right, cb, d = 0) {
     const c = Math.max(prev.length, next.length);
 
+    function get(el) {
+      while (el && el.__dirty) el = el[++offset];
+      return el;
+    }
+
     let i = 0;
     let a = 0;
     let b = 0;
@@ -200,12 +205,12 @@
         if (isBegin(el)) {
           const k = el.__length + 2;
           for (let p = 0; p < k; p++) {
-            cb({ rm: set[offset++] });
+            cb({ rm: get(set[offset++]) });
           }
         } else if (isBlock(x)) {
           let k = x.length;
           if (!set[offset]) offset -= k;
-          while (k--) cb({ rm: set[offset++] });
+          while (k--) cb({ rm: get(set[offset++]) });
         } else if (el) {
           cb({ rm: el });
           offset++;
@@ -245,23 +250,22 @@
     }
   }
 
-  function isDiff(prev, next, isWeak) {
-    if (isWeak && prev === next && (isFunction(prev) || isFunction(next))) return true;
+  function isDiff(prev, next) {
     if (typeof prev !== typeof next) return true;
     if (isArray(prev)) {
       if (prev.length !== next.length) return true;
 
       for (let i = 0; i < next.length; i += 1) {
-        if (isDiff(prev[i], next[i], isWeak)) return true;
+        if (isDiff(prev[i], next[i])) return true;
       }
     } else if (isPlain(prev) && isPlain(next)) {
       const a = Object.keys(prev).sort();
       const b = Object.keys(next).sort();
 
-      if (isDiff(a, b, isWeak)) return true;
+      if (isDiff(a, b)) return true;
 
       for (let i = 0; i < a.length; i += 1) {
-        if (isDiff(prev[a[i]], next[b[i]], isWeak)) return true;
+        if (isDiff(prev[a[i]], next[b[i]])) return true;
       }
     } else return prev !== next;
   }
@@ -437,7 +441,7 @@
       if (k in prev && !(k in next)) {
         all[k] = null;
         changed = true;
-      } else if (isDiff(prev[k], next[k], true)) {
+      } else if (isDiff(prev[k], next[k])) {
         all[k] = next[k];
         changed = true;
       }
@@ -614,6 +618,13 @@
 
     if (!isBlock(next)) next = [next];
 
+    if (target.nodeType === 3) {
+      const newNode = createElement(next, svg, cb);
+
+      detach(target, newNode);
+      return newNode;
+    }
+
     zip(set, prev, next, i || 0, 0, 0, push);
 
     for (const task of stack) {
@@ -621,10 +632,14 @@
         await destroyElement(task.rm);
       }
       if (!isNot(task.patch)) {
-        await patchNode(task.target, task.patch, task.with, svg, cb);
+        if (!task.target.parentNode) {
+          task.add = task.with;
+        } else {
+          await patchNode(task.target, task.patch, task.with, svg, cb);
+        }
       }
       if (!isNot(task.add)) {
-        const newNode = createElement(task.add);
+        const newNode = createElement(task.add, svg, cb);
 
         if (newNode instanceof Fragment) {
           newNode.mount(target);
@@ -636,7 +651,7 @@
   }
 
   async function updateElement(target, prev, next, svg, cb, i) {
-    if (target.__dirty) {
+    if (target.__dirty || target.__update) {
       return target.__update ? target.__update(target, prev, next, svg, cb, i) : target;
     }
 
@@ -669,6 +684,7 @@
     const q = [];
 
     for (let k = 0; k < del; k++) {
+      if (!target) break;
       q.push(target);
       target = target.nextSibling;
     }
@@ -681,7 +697,7 @@
   async function patchNode(target, prev, next, svg, cb) {
     const newNode = await upgradeFragment(target, prev, next, svg, cb);
 
-    if (!newNode) {
+    if (!newNode && isDiff(prev, next)) {
       if (target.nodeType === 3) {
         if (isBegin(target)) {
           await destroyFragment(target, next, svg, cb);
@@ -696,8 +712,10 @@
             target.nodeValue = String(next);
           }
         }
-      } else {
+      } else if (target.nodeType === 1) {
         target = await upgradeNode(target, prev, next, svg, cb);
+      } else {
+        target = await updateElement(target, prev, next, svg, cb);
       }
     } else {
       target = newNode;
