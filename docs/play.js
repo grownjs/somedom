@@ -34,7 +34,7 @@
     }
 
     appendChild(node) {
-      if (node instanceof Fragment) {
+      if (Fragment.valid(node)) {
         node.childNodes.forEach(sub => {
           this.appendChild(sub);
         });
@@ -132,8 +132,13 @@
 
     get root() {
       let root = this;
-      while (root instanceof Fragment) root = root.parentNode;
+      while (Fragment.valid(root)) root = root.parentNode;
       return root;
+    }
+
+    static valid(value) {
+      if (value instanceof Fragment) return true;
+      return typeof value === 'object' && value.begin && value.nodeType === 11;
     }
 
     static from(render, value) {
@@ -176,8 +181,8 @@
   function isNode(value) {
     if (!isArray(value)) return false;
     if (typeof value[0] === 'function') return true;
-    if (typeof value[0] !== 'string') return false;
     if (typeof value[1] !== 'object' || isArray(value[1])) return false;
+    if (typeof value[0] !== 'string' || value[0].includes(' ')) return false;
     return true;
   }
 
@@ -194,7 +199,7 @@
     let b = 0;
     for (; i < c; i++) {
       let el = set[offset];
-      while (el && el.__dirty) el = el[++offset];
+      while (el && (el.__dirty || isEnd(el))) el = el[++offset];
 
       const x = flat(prev[a]);
       const y = flat(next[b]);
@@ -342,11 +347,11 @@
   const raf = cb => ((typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout)(cb);
 
   const remove = (target, node) => target && target.removeChild(node);
-  const append = (target, node) => (node instanceof Fragment ? node.mount(target) : target.appendChild(node));
+  const append = (target, node) => (Fragment.valid(node) ? node.mount(target) : target.appendChild(node));
 
   const detach = (target, node) => {
     if (node) {
-      if (node instanceof Fragment) {
+      if (Fragment.valid(node)) {
         node.mount(target.parentNode, target);
       } else {
         target.parentNode.insertBefore(node, target);
@@ -476,7 +481,7 @@
     }
 
     if (!isArray(vnode)) {
-      if (vnode instanceof Fragment) return vnode;
+      if (Fragment.valid(vnode)) return vnode;
       if (vnode.target) return vnode.target;
       return vnode;
     }
@@ -559,7 +564,7 @@
     if (!isNode(prev) || prev[0] !== next[0]) {
       const newNode = createElement(next);
 
-      if (newNode instanceof Fragment) {
+      if (Fragment.valid(newNode)) {
         detach(target, newNode);
       } else {
         target.replaceWith(newNode);
@@ -580,7 +585,7 @@
       const newNode = createElement(next, svg, cb);
 
       // FIXME: instance check up?
-      if (newNode instanceof Fragment) {
+      if (Fragment.valid(newNode)) {
         if (isBegin(target)) {
           await target.__self.upgrade(newNode);
           if (isFunction(newNode.onupdate)) await newNode.onupdate(newNode);
@@ -603,7 +608,7 @@
     newNode.onupdate = prev.onupdate || newNode.onupdate;
     newNode.update = prev.update || newNode.update;
 
-    if (newNode instanceof Fragment) {
+    if (Fragment.valid(newNode)) {
       newNode.mount(el, target);
     } else {
       el.insertBefore(newNode, target);
@@ -641,7 +646,7 @@
       if (!isNot(task.add)) {
         const newNode = createElement(task.add, svg, cb);
 
-        if (newNode instanceof Fragment) {
+        if (Fragment.valid(newNode)) {
           newNode.mount(target);
         } else {
           target.appendChild(newNode);
@@ -655,7 +660,7 @@
       return target.__update ? target.__update(target, prev, next, svg, cb, i) : target;
     }
 
-    if (target instanceof Fragment) {
+    if (Fragment.valid(target)) {
       await upgradeElements(target.root, prev, next, svg, cb, target.offset);
       return target;
     }
@@ -1147,7 +1152,7 @@
         ctx.refs[identity] = ctx.refs[identity] || [];
         ctx.refs[identity].push(thunk);
 
-        const _remove = thunk.target.remove;
+        const _remove = thunk.target.remove.bind(thunk.target);
 
         thunk.target.remove = target.remove = async _cb => {
           ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);
