@@ -31,7 +31,7 @@ export function createElement(vnode, svg, cb) {
   }
 
   if (!isArray(vnode)) {
-    if (vnode instanceof Fragment) return vnode;
+    if (Fragment.valid(vnode)) return vnode;
     if (vnode.target) return vnode.target;
     return vnode;
   }
@@ -114,7 +114,7 @@ export async function upgradeNode(target, prev, next, svg, cb) {
   if (!isNode(prev) || prev[0] !== next[0]) {
     const newNode = createElement(next);
 
-    if (newNode instanceof Fragment) {
+    if (Fragment.valid(newNode)) {
       detach(target, newNode);
     } else {
       target.replaceWith(newNode);
@@ -135,7 +135,7 @@ export async function upgradeFragment(target, prev, next, svg, cb) {
     const newNode = createElement(next, svg, cb);
 
     // FIXME: instance check up?
-    if (newNode instanceof Fragment) {
+    if (Fragment.valid(newNode)) {
       if (isBegin(target)) {
         await target.__self.upgrade(newNode);
         if (isFunction(newNode.onupdate)) await newNode.onupdate(newNode);
@@ -158,7 +158,7 @@ export async function upgradeElement(target, prev, next, el, svg, cb) {
   newNode.onupdate = prev.onupdate || newNode.onupdate;
   newNode.update = prev.update || newNode.update;
 
-  if (newNode instanceof Fragment) {
+  if (Fragment.valid(newNode)) {
     newNode.mount(el, target);
   } else {
     el.insertBefore(newNode, target);
@@ -196,7 +196,7 @@ export async function upgradeElements(target, prev, next, svg, cb, i) {
     if (!isNot(task.add)) {
       const newNode = createElement(task.add, svg, cb);
 
-      if (newNode instanceof Fragment) {
+      if (Fragment.valid(newNode)) {
         newNode.mount(target);
       } else {
         target.appendChild(newNode);
@@ -210,7 +210,7 @@ export async function updateElement(target, prev, next, svg, cb, i) {
     return target.__update ? target.__update(target, prev, next, svg, cb, i) : target;
   }
 
-  if (target instanceof Fragment) {
+  if (Fragment.valid(target)) {
     await upgradeElements(target.root, prev, next, svg, cb, target.offset);
     return target;
   }

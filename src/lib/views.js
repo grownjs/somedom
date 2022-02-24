@@ -200,7 +200,7 @@ export function createThunk(vnode, svg, cb = createElement) {
       ctx.refs[identity] = ctx.refs[identity] || [];
       ctx.refs[identity].push(thunk);
 
-      const _remove = thunk.target.remove;
+      const _remove = thunk.target.remove.bind(thunk.target);
 
       thunk.target.remove = target.remove = async _cb => {
         ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);

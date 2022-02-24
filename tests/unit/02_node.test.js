@@ -36,7 +36,7 @@ describe('node', () => {
 
       tree.mount(div);
       expect(div.outerHTML).to.eql('<div><span>foo</span><span>bar</span></div>');
-      expect([].slice.call(div.childNodes).some(x => x instanceof Fragment)).to.be.false;
+      expect([].slice.call(div.childNodes).some(x => Fragment.valid(x))).to.be.false;
     });
 
     it('should invoke factories from fragments', () => {

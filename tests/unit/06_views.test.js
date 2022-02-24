@@ -501,7 +501,7 @@ describe('views', () => {
 
       const el = thunk.wrap(tag, 'Test')();
 
-      expect(el instanceof Fragment).to.be.true;
+      expect(Fragment.valid(el)).to.be.true;
       expect(thunk.refs.Test[0].target).to.eql(el);
 
       await thunk.unmount();

@@ -56,7 +56,7 @@ export function zip(set, prev, next, offset, left, right, cb, d = 0) {
   let b = 0;
   for (; i < c; i++) {
     let el = set[offset];
-    while (el && el.__dirty) el = el[++offset];
+    while (el && (el.__dirty || isEnd(el))) el = el[++offset];
 
     const x = flat(prev[a]);
     const y = flat(next[b]);
@@ -214,11 +214,11 @@ export const tick = cb => Promise.resolve().then(cb).then(() => new Promise(done
 
 export const remove = (target, node) => target && target.removeChild(node);
 export const replace = (target, node, i) => target.replaceChild(node, target.childNodes[i]);
-export const append = (target, node) => (node instanceof Fragment ? node.mount(target) : target.appendChild(node));
+export const append = (target, node) => (Fragment.valid(node) ? node.mount(target) : target.appendChild(node));
 
 export const detach = (target, node) => {
   if (node) {
-    if (node instanceof Fragment) {
+    if (Fragment.valid(node)) {
       node.mount(target.parentNode, target);
     } else {
       target.parentNode.insertBefore(node, target);

@@ -11,7 +11,7 @@ export default class Fragment {
   }
 
   appendChild(node) {
-    if (node instanceof Fragment) {
+    if (Fragment.valid(node)) {
       node.childNodes.forEach(sub => {
         this.appendChild(sub);
       });
@@ -109,8 +109,13 @@ export default class Fragment {
 
   get root() {
     let root = this;
-    while (root instanceof Fragment) root = root.parentNode;
+    while (Fragment.valid(root)) root = root.parentNode;
     return root;
+  }
+
+  static valid(value) {
+    if (value instanceof Fragment) return true;
+    return typeof value === 'object' && value.begin && value.nodeType === 11;
   }
 
   static from(render, value) {

@@ -28,7 +28,7 @@ export class Comment extends Node {}
 export class HTMLElement extends Node {}
 
 export function mount(node, el) {
-  if (node instanceof Fragment) {
+  if (Fragment.valid(node)) {
     node.childNodes.forEach(sub => mount(sub, el));
   } else {
     Object.defineProperty(node, 'parentNode', { configurable: true, value: el });
@@ -193,7 +193,7 @@ export function createElementNode(name, props) {
     insertBefore(n, o) {
       mount(n, self);
 
-      if (n instanceof Fragment) {
+      if (Fragment.valid(n)) {
         n.childNodes.forEach(sub => {
           self.insertBefore(sub, o);
         });
@@ -213,7 +213,7 @@ export function createElementNode(name, props) {
     appendChild(n) {
       mount(n, self);
 
-      if (n instanceof Fragment) {
+      if (Fragment.valid(n)) {
         n.childNodes.forEach(sub => {
           self.appendChild(sub);
         });
