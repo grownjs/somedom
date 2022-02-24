@@ -38,8 +38,8 @@ export function isEmpty(value) {
 export function isNode(value) {
   if (!isArray(value)) return false;
   if (typeof value[0] === 'function') return true;
-  if (typeof value[0] !== 'string') return false;
   if (typeof value[1] !== 'object' || isArray(value[1])) return false;
+  if (typeof value[0] !== 'string' || value[0].includes(' ')) return false;
   return true;
 }
 
