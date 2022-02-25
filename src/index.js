@@ -117,6 +117,7 @@ export {
 } from './lib/views';
 
 export {
+  equals,
   onError,
   useRef,
   useMemo,

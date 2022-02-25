@@ -3,6 +3,7 @@ import {
 } from 'nohooks';
 
 export {
+  equals,
   onError,
   useMemo,
   useRef,
