@@ -783,13 +783,11 @@
     return a === b;
   }
 
-  function createContext(render, callback = fn => fn()) {
-    if (typeof render !== 'function' || typeof callback !== 'function') {
-      throw new TypeError('Invalid input for createContext()');
-    }
+  class Context {
+    constructor(args, render, callback) {
+      const scope = this;
 
-    return (...args) => {
-      const scope = { c: 0 };
+      scope.c = 0;
 
       function end(skip) {
         try {
@@ -827,12 +825,19 @@
         if (scope.get) next(Promise.resolve(end()));
       }
 
+      scope.defer = ms => Promise.resolve()
+        .then(() => new Promise(ok => setTimeout(() => ok(scope), ms)));
+
+      scope.clear = () => {
+        if (scope.get) after();
+      };
+
       scope.sync = () => {
         deferred = next(scope.set());
         return deferred;
       };
 
-      return callback(() => {
+      scope.run = callback(() => {
   (function loop() { // eslint-disable-line
           scope.set = scope.set || (() => Promise.resolve().then(() => {
             if (!equals(scope.val, scope.old)) loop();
@@ -865,12 +870,17 @@
           }
         })();
 
-        scope.defer = ms => Promise.resolve()
-          .then(() => new Promise(ok => setTimeout(() => ok(scope), ms)));
-
         return scope;
       }, sync => { scope.set = sync; });
-    };
+    }
+  }
+
+  function createContext(render, callback = fn => fn()) {
+    if (typeof render !== 'function' || typeof callback !== 'function') {
+      throw new TypeError('Invalid input for createContext()');
+    }
+
+    return (...args) => new Context(args, render, callback).run;
   }
 
   function onError(callback) {
@@ -944,6 +954,7 @@
   var nohooks = {
     clone,
     equals,
+    Context,
     getContext,
     createContext,
     onError,
@@ -952,16 +963,17 @@
     useState,
     useEffect,
   };
-  var nohooks_4 = nohooks.createContext;
-  var nohooks_5 = nohooks.onError;
-  var nohooks_6 = nohooks.useMemo;
-  var nohooks_7 = nohooks.useRef;
-  var nohooks_8 = nohooks.useState;
-  var nohooks_9 = nohooks.useEffect;
+  var nohooks_3 = nohooks.Context;
+  var nohooks_5 = nohooks.createContext;
+  var nohooks_6 = nohooks.onError;
+  var nohooks_7 = nohooks.useMemo;
+  var nohooks_8 = nohooks.useRef;
+  var nohooks_9 = nohooks.useState;
+  var nohooks_10 = nohooks.useEffect;
 
   function withContext(tag, view) {
-    return nohooks_4(tag, (fn, set) => {
-      return view((...args) => fn(...args).result, set);
+    return nohooks_5(tag, (fn, set) => {
+      return view((...args) => fn(...args), set);
     });
   }
 
@@ -1030,12 +1042,24 @@
       const data = clone$1(state || {});
       const fns = [];
 
+      let context;
       let vnode;
       let $;
 
+      function get() {
+        const next = Tag(clone$1(data), $);
+
+        context = null;
+        if (next && next instanceof nohooks_3) {
+          context = next;
+          return next.result;
+        }
+        return next;
+      }
+
       async function sync(result) {
         await Promise.all(fns.map(fn => fn(data, $)));
-        $.target = await updateElement($.target, vnode, vnode = Tag(clone$1(data), $), null, cb);
+        $.target = await updateElement($.target, vnode, vnode = get(), null, cb);
         return result;
       }
 
@@ -1083,9 +1107,10 @@
         };
       };
 
+      $.teardown = () => context && context.clear();
       $.defer = _cb => new Promise(_ => raf(_)).then(_cb);
+      $.target = mountElement(el, vnode = get(), null, cb);
       $.unmount = _cb => destroyElement($.target, _cb || false);
-      $.target = mountElement(el, vnode = Tag(clone$1(data), $), null, cb);
 
       Object.defineProperty($, 'state', {
         configurable: false,
@@ -1108,6 +1133,7 @@
 
     const ctx = {
       refs: {},
+      stack: [],
       render: cb,
       source: null,
       vnode: vnode || ['div', null],
@@ -1137,6 +1163,10 @@
       return ctx;
     };
 
+    ctx.clear = () => {
+      ctx.stack.forEach(fn => fn());
+    };
+
     ctx.wrap = (tag, name) => {
       if (!isFunction(tag)) throw new Error(`Expecting a view factory, given '${tag}'`);
 
@@ -1145,18 +1175,20 @@
         const target = new Fragment();
         const thunk = tag(props, children)(target, ctx.render);
 
+        if (thunk.teardown) ctx.stack.push(thunk.teardown);
         ctx.refs[identity] = ctx.refs[identity] || [];
         ctx.refs[identity].push(thunk);
 
         const _remove = thunk.target.remove.bind(thunk.target);
 
         thunk.target.remove = target.remove = async _cb => {
-          ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);
-
-          if (!ctx.refs[identity].length) {
-            delete ctx.refs[identity];
+          if (thunk.teardown) {
+            thunk.teardown();
+            ctx.stack.splice(ctx.stack.indexOf(thunk.teardown), 1);
           }
 
+          ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);
+          if (!ctx.refs[identity].length) delete ctx.refs[identity];
           return _remove(_cb);
         };
 
@@ -1364,11 +1396,11 @@
     classes: applyClasses,
     animation: applyAnimations,
 
-    onError: nohooks_5,
-    useRef: nohooks_7,
-    useMemo: nohooks_6,
-    useState: nohooks_8,
-    useEffect: nohooks_9,
+    onError: nohooks_6,
+    useRef: nohooks_8,
+    useMemo: nohooks_7,
+    useState: nohooks_9,
+    useEffect: nohooks_10,
   };
 
   function summarize(script) {

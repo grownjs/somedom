@@ -10,6 +10,11 @@ import {
 } from '../../src/lib/views';
 
 import {
+  useState,
+  useEffect,
+} from '../../src/lib/hooks';
+
+import {
   createElement,
 } from '../../src/lib/node';
 
@@ -474,8 +479,19 @@ describe('views', () => {
     });
 
     it('should allow to re-render the same thunk', async () => {
+      let t;
       function Testing(props) {
-        return ['span', null, props.value];
+        const [v, s] = useState(props.value);
+
+        useEffect(() => {
+          t = setTimeout(() => {
+            s(v + 1);
+          }, 100);
+
+          return () => clearTimeout(t);
+        }, [v]);
+
+        return ['span', null, v];
       }
 
       const Test = createView(Testing);
@@ -493,8 +509,12 @@ describe('views', () => {
       await $$.mount(div, [[Thunk, { value: 42 }]]);
       expect(document.body.outerHTML).to.eql('<body><div><span>42</span></div></body>');
 
+      await new Promise(ok => setTimeout(ok, 150));
+      expect(document.body.outerHTML).to.eql('<body><div><span>43</span></div></body>');
+
       await $$.mount(div, [[Thunk, { value: -1 }]]);
       expect(document.body.outerHTML).to.eql('<body><div><span>-1</span></div></body>');
+      $$.unmount();
     });
 
     it('should wrap given views as factories on the thunk', async () => {

@@ -11,7 +11,7 @@ import {
 } from './shared';
 
 import Fragment from './fragment';
-import { withContext } from './hooks';
+import { Context, withContext } from './hooks';
 
 export function getDecorated(Tag, state, actions, children) {
   if (isPlain(Tag) && isFunction(Tag.render)) {
@@ -78,12 +78,24 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
     const data = clone(state || {});
     const fns = [];
 
+    let context;
     let vnode;
     let $;
 
+    function get() {
+      const next = Tag(clone(data), $);
+
+      context = null;
+      if (next && next instanceof Context) {
+        context = next;
+        return next.result;
+      }
+      return next;
+    }
+
     async function sync(result) {
       await Promise.all(fns.map(fn => fn(data, $)));
-      $.target = await updateElement($.target, vnode, vnode = Tag(clone(data), $), null, cb);
+      $.target = await updateElement($.target, vnode, vnode = get(), null, cb);
       return result;
     }
 
@@ -131,9 +143,10 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
       };
     };
 
+    $.teardown = () => context && context.clear();
     $.defer = _cb => new Promise(_ => raf(_)).then(_cb);
+    $.target = mountElement(el, vnode = get(), null, cb);
     $.unmount = _cb => destroyElement($.target, _cb || false);
-    $.target = mountElement(el, vnode = Tag(clone(data), $), null, cb);
 
     Object.defineProperty($, 'state', {
       configurable: false,
@@ -156,6 +169,7 @@ export function createThunk(vnode, svg, cb = createElement) {
 
   const ctx = {
     refs: {},
+    stack: [],
     render: cb,
     source: null,
     vnode: vnode || ['div', null],
@@ -185,6 +199,10 @@ export function createThunk(vnode, svg, cb = createElement) {
     return ctx;
   };
 
+  ctx.clear = () => {
+    ctx.stack.forEach(fn => fn());
+  };
+
   ctx.wrap = (tag, name) => {
     if (!isFunction(tag)) throw new Error(`Expecting a view factory, given '${tag}'`);
 
@@ -193,18 +211,20 @@ export function createThunk(vnode, svg, cb = createElement) {
       const target = new Fragment();
       const thunk = tag(props, children)(target, ctx.render);
 
+      if (thunk.teardown) ctx.stack.push(thunk.teardown);
       ctx.refs[identity] = ctx.refs[identity] || [];
       ctx.refs[identity].push(thunk);
 
       const _remove = thunk.target.remove.bind(thunk.target);
 
       thunk.target.remove = target.remove = async _cb => {
-        ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);
-
-        if (!ctx.refs[identity].length) {
-          delete ctx.refs[identity];
+        if (thunk.teardown) {
+          thunk.teardown();
+          ctx.stack.splice(ctx.stack.indexOf(thunk.teardown), 1);
         }
 
+        ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);
+        if (!ctx.refs[identity].length) delete ctx.refs[identity];
         return _remove(_cb);
       };
 
