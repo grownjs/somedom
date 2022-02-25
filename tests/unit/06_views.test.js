@@ -473,14 +473,28 @@ describe('views', () => {
       expect(td.explain(thunk.thunk).callCount).to.eql(1);
     });
 
-    it('should call destroyElement() on unmounting', async () => {
-      const callback = td.func('remove');
+    it('should allow to re-render the same thunk', async () => {
+      function Testing(props) {
+        return ['span', null, props.value];
+      }
 
-      thunk.source = { target: document.createElement('div') };
-      thunk.source.target.remove = callback;
+      const Test = createView(Testing);
 
-      await thunk.mount();
-      expect(td.explain(callback).callCount).to.eql(1);
+      const tag = bind(render, listeners());
+      const $$ = createThunk(['div', null, 'Loading...'], tag);
+
+      const div = document.createElement('div');
+      document.body.appendChild(div);
+
+      expect(document.body.outerHTML).to.eql('<body><div></div></body>');
+
+      const Thunk = $$.wrap(Test);
+
+      await $$.mount(div, [[Thunk, { value: 42 }]]);
+      expect(document.body.outerHTML).to.eql('<body><div><span>42</span></div></body>');
+
+      await $$.mount(div, [[Thunk, { value: -1 }]]);
+      expect(document.body.outerHTML).to.eql('<body><div><span>-1</span></div></body>');
     });
 
     it('should wrap given views as factories on the thunk', async () => {

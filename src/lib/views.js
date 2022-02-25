@@ -164,7 +164,7 @@ export function createThunk(vnode, svg, cb = createElement) {
     patch: (target, prev, next) => updateElement(target, prev, next, svg, cb),
   };
 
-  ctx.unmount = async _cb => {
+  ctx.unmount = async () => {
     const tasks = [];
 
     Object.keys(ctx.refs).forEach(ref => {
@@ -174,10 +174,6 @@ export function createThunk(vnode, svg, cb = createElement) {
     });
 
     await Promise.all(tasks);
-
-    if (ctx.source) {
-      destroyElement(ctx.source.target, _cb || false);
-    }
   };
 
   ctx.mount = async (el, _vnode) => {
