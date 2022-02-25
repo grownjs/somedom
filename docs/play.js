@@ -1047,12 +1047,11 @@
       let $;
 
       function get() {
-        const next = Tag(clone$1(data), $);
-
+        let next = Tag(clone$1(data), $);
         context = null;
         if (next && next instanceof nohooks_3) {
           context = next;
-          return next.result;
+          next = next.result;
         }
         return next;
       }
@@ -1115,7 +1114,8 @@
       Object.defineProperty($, 'state', {
         configurable: false,
         enumerable: true,
-        get: () => data,
+        get: () => context || data,
+        set: v => Object.assign(context || data, v),
       });
 
       if (instance) {
@@ -1154,7 +1154,11 @@
       await Promise.all(tasks);
     };
 
-    ctx.mount = async (el, _vnode) => {
+    ctx.mount = async (el, _vnode, _remove) => {
+      if (_remove) {
+        while (el.firstChild) el.removeChild(el.firstChild);
+      }
+
       await ctx.unmount();
 
       ctx.vnode = _vnode || ctx.vnode;
@@ -1175,7 +1179,10 @@
         const target = new Fragment();
         const thunk = tag(props, children)(target, ctx.render);
 
-        if (thunk.teardown) ctx.stack.push(thunk.teardown);
+        if (thunk.teardown) {
+          ctx.stack.push(thunk.teardown);
+        }
+
         ctx.refs[identity] = ctx.refs[identity] || [];
         ctx.refs[identity].push(thunk);
 

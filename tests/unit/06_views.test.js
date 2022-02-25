@@ -478,6 +478,35 @@ describe('views', () => {
       expect(td.explain(thunk.thunk).callCount).to.eql(1);
     });
 
+    it('should allow to keep context between renders', async () => {
+      function Testing() {
+        const [v, s] = useState(0);
+
+        if (!v) s(-1);
+        return ['span', null, v];
+      }
+
+      const Test = createView(Testing);
+      const tag = bind(render, listeners());
+      const $$ = createThunk(null, tag);
+
+      const Thunk = $$.wrap(Test);
+
+      await $$.mount(document.body, [[Thunk]]);
+      expect(document.body.innerHTML).to.eql('<span>0</span>');
+
+      await $$.defer();
+      expect(document.body.innerHTML).to.eql('<span>-1</span>');
+
+      const _thunk = $$.refs.Thunk[0];
+
+      _thunk.state.val = [42];
+      _thunk.state.sync();
+      await $$.defer();
+
+      expect(document.body.innerHTML).to.eql('<span>42</span>');
+    });
+
     it('should allow to re-render the same thunk', async () => {
       let t;
       function Testing(props) {
@@ -495,7 +524,6 @@ describe('views', () => {
       }
 
       const Test = createView(Testing);
-
       const tag = bind(render, listeners());
       const $$ = createThunk(['div', null, 'Loading...'], tag);
 

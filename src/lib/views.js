@@ -83,12 +83,11 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
     let $;
 
     function get() {
-      const next = Tag(clone(data), $);
-
+      let next = Tag(clone(data), $);
       context = null;
       if (next && next instanceof Context) {
         context = next;
-        return next.result;
+        next = next.result;
       }
       return next;
     }
@@ -151,7 +150,8 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
     Object.defineProperty($, 'state', {
       configurable: false,
       enumerable: true,
-      get: () => data,
+      get: () => context || data,
+      set: v => Object.assign(context || data, v),
     });
 
     if (instance) {
@@ -190,7 +190,11 @@ export function createThunk(vnode, svg, cb = createElement) {
     await Promise.all(tasks);
   };
 
-  ctx.mount = async (el, _vnode) => {
+  ctx.mount = async (el, _vnode, _remove) => {
+    if (_remove) {
+      while (el.firstChild) el.removeChild(el.firstChild);
+    }
+
     await ctx.unmount();
 
     ctx.vnode = _vnode || ctx.vnode;
@@ -211,7 +215,10 @@ export function createThunk(vnode, svg, cb = createElement) {
       const target = new Fragment();
       const thunk = tag(props, children)(target, ctx.render);
 
-      if (thunk.teardown) ctx.stack.push(thunk.teardown);
+      if (thunk.teardown) {
+        ctx.stack.push(thunk.teardown);
+      }
+
       ctx.refs[identity] = ctx.refs[identity] || [];
       ctx.refs[identity].push(thunk);
 
