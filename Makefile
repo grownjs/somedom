@@ -5,6 +5,7 @@ ci: src deps ## Run CI scripts
 	@HAPPY_DOM=1 npm run test:ssr
 	@JS_DOM=1 npm run test:ssr
 	@touch src/lib/*.js
+	@npm run pretest
 	@npm run test:e2e
 	@npm run test:ci
 ifneq ($(CI),)
