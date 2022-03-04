@@ -1,5 +1,5 @@
 import {
-  isEmpty, isObject, isFunction, isScalar, isPlain, isDiff, isBlock, isArray,
+  isEmpty, isObject, isFunction, isScalar, isPlain, isDiff, isBlock, isArray, camelCase,
 } from './util';
 
 import { XLINK_NS, ELEM_REGEX } from './shared';
@@ -56,6 +56,20 @@ export function assignProps(target, attrs, svg, cb) {
 
     if (prop === '@html') {
       target.innerHTML = attrs[prop];
+      return;
+    }
+
+    if (prop.indexOf('class:') === 0) {
+      if (!attrs[prop]) {
+        target.classList.remove(prop.substr(6));
+      } else {
+        target.classList.add(prop.substr(6));
+      }
+      return;
+    }
+
+    if (prop.indexOf('style:') === 0) {
+      target.style[camelCase(prop.substr(6))] = attrs[prop];
       return;
     }
 

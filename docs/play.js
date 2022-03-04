@@ -186,7 +186,7 @@
     return true;
   }
 
-  function zip(set, prev, next, offset, left, right, cb, d = 0) {
+  function zip(set, prev, next, limit, offset, cb, d = 0) {
     const c = Math.max(prev.length, next.length);
 
     function get(el) {
@@ -225,7 +225,7 @@
           cb({ patch: x, with: y, target: el });
           offset += el.__length + 2;
         } else {
-          zip(set, x, y, offset, 0, 0, cb, d + 1);
+          zip(set, x, y, limit, offset, cb, d + 1);
           offset += y.length + 2;
         }
       } else if (isBlock(y)) {
@@ -243,6 +243,7 @@
         offset++;
       }
 
+      if (limit !== null && i >= limit - 1) return;
       a++;
       b++;
     }
@@ -298,6 +299,7 @@
     }, []);
   }
 
+  const camelCase = value => value.replace(/-([a-z])/g, (_, $1) => $1.toUpperCase());
   const dashCase = value => value.replace(/[A-Z]/g, '-$&').toLowerCase();
   const filter = (value, cb) => value.filter(cb || (x => !isEmpty(x)));
 
@@ -412,6 +414,20 @@
 
       if (prop === '@html') {
         target.innerHTML = attrs[prop];
+        return;
+      }
+
+      if (prop.indexOf('class:') === 0) {
+        if (!attrs[prop]) {
+          target.classList.remove(prop.substr(6));
+        } else {
+          target.classList.add(prop.substr(6));
+        }
+        return;
+      }
+
+      if (prop.indexOf('style:') === 0) {
+        target.style[camelCase(prop.substr(6))] = attrs[prop];
         return;
       }
 
@@ -584,7 +600,6 @@
     if (isFunction(next[0])) {
       const newNode = createElement(next, svg, cb);
 
-      // FIXME: instance check up?
       if (Fragment.valid(newNode)) {
         if (isBegin(target)) {
           await target.__self.upgrade(newNode);
@@ -616,7 +631,7 @@
     return newNode;
   }
 
-  async function upgradeElements(target, prev, next, svg, cb, i) {
+  async function upgradeElements(target, prev, next, svg, cb, i, c) {
     const stack = [];
     const set = target.childNodes;
     const push = v => stack.push(v);
@@ -630,9 +645,12 @@
       return newNode;
     }
 
-    zip(set, prev, next, i || 0, 0, 0, push);
+    zip(set, prev, next, c || null, i || 0, push);
 
+    let j = 0;
     for (const task of stack) {
+      if (c !== null && j++ >= c) break;
+
       if (task.rm) {
         await destroyElement(task.rm);
       }
@@ -655,13 +673,13 @@
     }
   }
 
-  async function updateElement(target, prev, next, svg, cb, i) {
+  async function updateElement(target, prev, next, svg, cb, i, c) {
     if (target.__dirty || target.__update) {
-      return target.__update ? target.__update(target, prev, next, svg, cb, i) : target;
+      return target.__update ? target.__update(target, prev, next, svg, cb, i, c) : target;
     }
 
     if (Fragment.valid(target)) {
-      await upgradeElements(target.root, prev, next, svg, cb, target.offset);
+      await upgradeElements(target.root, prev, next, svg, cb, target.offset, target.length);
       return target;
     }
 
@@ -678,7 +696,7 @@
       return upgradeNode(target, prev, next, svg, cb);
     }
 
-    await upgradeElements(target, prev, next, svg, cb, i);
+    await upgradeElements(target, prev, next, svg, cb, i, c);
     return target;
   }
 
