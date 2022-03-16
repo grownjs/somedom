@@ -134,7 +134,6 @@ export async function upgradeFragment(target, prev, next, svg, cb) {
   if (isFunction(next[0])) {
     const newNode = createElement(next, svg, cb);
 
-    // FIXME: instance check up?
     if (Fragment.valid(newNode)) {
       if (isBegin(target)) {
         await target.__self.upgrade(newNode);
@@ -166,7 +165,7 @@ export async function upgradeElement(target, prev, next, el, svg, cb) {
   return newNode;
 }
 
-export async function upgradeElements(target, prev, next, svg, cb, i) {
+export async function upgradeElements(target, prev, next, svg, cb, i, c) {
   const stack = [];
   const set = target.childNodes;
   const push = v => stack.push(v);
@@ -180,9 +179,12 @@ export async function upgradeElements(target, prev, next, svg, cb, i) {
     return newNode;
   }
 
-  zip(set, prev, next, i || 0, 0, 0, push);
+  zip(set, prev, next, c || null, i || 0, push);
 
+  let j = 0;
   for (const task of stack) {
+    if (c !== null && j++ >= c) break;
+
     if (task.rm) {
       await destroyElement(task.rm);
     }
@@ -205,13 +207,13 @@ export async function upgradeElements(target, prev, next, svg, cb, i) {
   }
 }
 
-export async function updateElement(target, prev, next, svg, cb, i) {
+export async function updateElement(target, prev, next, svg, cb, i, c) {
   if (target.__dirty || target.__update) {
-    return target.__update ? target.__update(target, prev, next, svg, cb, i) : target;
+    return target.__update ? target.__update(target, prev, next, svg, cb, i, c) : target;
   }
 
   if (Fragment.valid(target)) {
-    await upgradeElements(target.root, prev, next, svg, cb, target.offset);
+    await upgradeElements(target.root, prev, next, svg, cb, target.offset, target.length);
     return target;
   }
 
@@ -228,7 +230,7 @@ export async function updateElement(target, prev, next, svg, cb, i) {
     return upgradeNode(target, prev, next, svg, cb);
   }
 
-  await upgradeElements(target, prev, next, svg, cb, i);
+  await upgradeElements(target, prev, next, svg, cb, i, c);
   return target;
 }
 

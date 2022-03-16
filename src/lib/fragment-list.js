@@ -1,110 +1,104 @@
 /* eslint-disable no-plusplus, no-await-in-loop */
 
-import { destroyElement } from './node';
-import { raf, tick } from './util';
+import { createElement, upgradeElements } from './node';
+import { raf, tick, isBlock } from './util';
+import { BEGIN } from './fragment';
 
-let effects = [];
+let FRAGMENT_FX = [];
 export default class FragmentList {
-  constructor(props, children, render, context) {
+  constructor(props, children, callback = createElement) {
     props.key = props.key || `fragment-${Math.random().toString(36).substr(2)}`;
 
-    this.target = document.createComment(`#${props.key}`);
-    this.target.__update = async (_, prev, next) => {
-      this.__ready = false;
-      this.touch(next[1], next.slice(2));
-      await tick();
-      return _;
+    this.target = document.createComment(`#${props.key}/${children.length}`);
+    this.target.__update = (_, prev, next) => {
+      this.vnode = prev || this.vnode;
+      this.patch(next);
     };
 
+    this.target.__length = children.length;
+    this.target.__mark = BEGIN;
+
     this.props = props;
-    this.name = props.key;
-    this.render = render;
-    this.context = context;
+    this.vnode = children;
+    this.render = callback;
+    this.touch(props, children);
 
-    context.blocks = context.blocks || {};
-    context.blocks[this.name] = context.blocks[this.name] || [];
-    context.blocks[this.name].instance = this;
+    let promise = Promise.resolve();
+    Object.defineProperty(this, '__defer', {
+      set: p => promise.then(() => { promise = p; }),
+      get: () => promise,
+    });
+  }
 
-    if (props.mode && props.mode !== 'replace') {
-      this.patch(children);
+  async update(...args) {
+    try {
+      this.patch(...args);
+      await tick();
+    } finally {
+      await this.__defer;
     }
+    return this;
   }
 
-  prepend(vnode) { return this.sync(vnode, -1); }
+  prepend(children) { return this.sync(children, -1); }
 
-  append(vnode) { return this.sync(vnode, 1); }
-
-  update(vnode) { return this.sync(vnode); }
-
-  touch(props, children) {
-    Object.assign(this.props, props);
-    return this.patch(children);
-  }
+  append(children) { return this.sync(children, 1); }
 
   patch(children) {
-    raf(async () => {
-      if (this.mounted) {
-        if (!this.__ready) {
-          this.__ready = true;
-          this.__frag = this.render(children);
-          this.__frag.mount(this.root, this.target.nextSibling);
-        } else if (this.__frag) {
-          const rm = [];
+    const ok = this.mounted;
 
-          let old = this.target.nextSibling;
-          while (this.__frag.length-- > 0) {
-            if (!old) break;
-            rm.push(old);
-            old = old.nextSibling;
-          }
+    raf(() => {
+      if (ok) {
+        const i = this.offset + 1;
+        const c = this.length;
 
-          await Promise.all(rm.map(node => destroyElement(node)));
+        this.target.__length = children.length;
+        this.target.nodeValue = `#${this.props.key}/${children.length}`;
+        this.__defer = upgradeElements(this.root, this.vnode, this.vnode = children, null, this.render, i, c);
+      } else {
+        const frag = this.render(children);
+        const anchor = this.target.nextSibling;
 
-          const nextNode = this.render(children);
-
-          this.__frag.length = nextNode.length;
-          nextNode.mount(this.root, this.target.nextSibling || null);
-        }
+        this.target.__length = frag.length;
+        this.target.nodeValue = `#${this.props.key}/${frag.length}`;
+        frag.childNodes.forEach(sub => this.root.insertBefore(sub, anchor));
       }
     });
     return this;
   }
 
-  mount(el, props, children) {
-    return this.touch(props, children);
+  touch(props, children) {
+    Object.assign(this.props, props);
+    return children ? this.patch(children) : this;
   }
 
   sync(children, direction) {
-    if (!direction) {
-      return this.touch(null, children);
+    if (!isBlock(children)) {
+      throw new Error(`Fragments should be lists of nodes, given '${JSON.stringify(children)}'`);
     }
 
-    if (this.mounted && this.__frag) {
-      if (this.last && this.last !== direction) this.anchor = null;
-      if (this.anchor && !this.root.contains(this.anchor)) {
-        this.target = this.context.blocks[`#${this.name}`];
-        this.anchor = null;
+    if (!direction) return this.patch(children);
+    if (this.mounted) {
+      const offset = this.offset + this.length;
+      const begin = this.target;
+      const end = this.root.childNodes[offset];
+
+      if (direction < 0) {
+        this.vnode.unshift(...children);
+      } else {
+        this.vnode.push(...children);
       }
 
       const frag = this.render(children);
 
-      this.last = direction;
-      this.__frag.length += frag.length;
+      let anchor = direction < 0 ? begin : end;
+      frag.childNodes.forEach(node => {
+        this.root.insertBefore(node, anchor ? anchor.nextSibling : null);
+        anchor = node;
+      });
 
-      let anchor;
-      if (direction < 0) {
-        this.anchor = this.anchor || this.target.nextSibling;
-        anchor = frag.childNodes[0];
-        frag.mount(this.root, this.anchor);
-        this.__frag.anchor = anchor;
-      } else {
-        const offset = this.__frag.offset + this.__frag.length;
-
-        this.anchor = this.anchor || this.root.childNodes[offset - 1] || null;
-        anchor = frag.childNodes[frag.childNodes.length - 1];
-        frag.mount(this.root, this.anchor);
-      }
-      this.anchor = anchor;
+      this.target.__length = this.vnode.length;
+      this.target.nodeValue = `#${this.props.key}/${this.vnode.length}`;
     }
     return this;
   }
@@ -114,10 +108,27 @@ export default class FragmentList {
       && this.target.parentNode;
   }
 
+  get length() {
+    return this.vnode.length;
+  }
+
+  get offset() {
+    const d = this.root.childNodes;
+    const c = d.length;
+
+    let i = 0;
+    for (; i < c; i += 1) {
+      if (d[i] === this.target) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   get mounted() {
-    return this.root
+    return !!(this.root
       && this.root.isConnected
-      && this.target.isConnected;
+      && this.target.isConnected);
   }
 
   static from(props, children, render, context) {
@@ -146,8 +157,11 @@ export default class FragmentList {
   }
 
   static stop() {
-    effects.forEach(fn => fn());
-    effects = [];
+    try {
+      FRAGMENT_FX.forEach(fn => fn());
+    } finally {
+      FRAGMENT_FX = [];
+    }
   }
 
   static with(id, cb) {
@@ -156,20 +170,25 @@ export default class FragmentList {
         const fn = cb(frag);
 
         if (typeof fn === 'function') {
-          effects.push(fn);
+          FRAGMENT_FX.push(fn);
         }
         return frag;
       });
   }
 
   static has(id) {
-    return (FragmentList[`#${id}`] && FragmentList[`#${id}`].mounted) || false;
+    return FragmentList[`#${id}`]
+      && FragmentList[`#${id}`].mounted;
   }
 
-  static for(id) {
+  static for(id, retries = 0) {
     return new Promise(ok => {
+      if (retries++ > 100) {
+        throw new ReferenceError(`Fragment not found, given '${id}'`);
+      }
+
       if (!FragmentList.has(id)) {
-        raf(() => ok(FragmentList.for(id)));
+        raf(() => ok(FragmentList.for(id, retries + 1)));
       } else {
         ok(FragmentList[`#${id}`]);
       }

@@ -43,7 +43,7 @@ export function isNode(value) {
   return true;
 }
 
-export function zip(set, prev, next, offset, left, right, cb, d = 0) {
+export function zip(set, prev, next, limit, offset, cb, d = 0) {
   const c = Math.max(prev.length, next.length);
 
   function get(el) {
@@ -82,7 +82,7 @@ export function zip(set, prev, next, offset, left, right, cb, d = 0) {
         cb({ patch: x, with: y, target: el });
         offset += el.__length + 2;
       } else {
-        zip(set, x, y, offset, 0, 0, cb, d + 1);
+        zip(set, x, y, limit, offset, cb, d + 1);
         offset += y.length + 2;
       }
     } else if (isBlock(y)) {
@@ -100,6 +100,7 @@ export function zip(set, prev, next, offset, left, right, cb, d = 0) {
       offset++;
     }
 
+    if (limit !== null && i >= limit - 1) return;
     a++;
     b++;
   }
@@ -155,6 +156,7 @@ export function getMethods(obj) {
   }, []);
 }
 
+export const camelCase = value => value.replace(/-([a-z])/g, (_, $1) => $1.toUpperCase());
 export const dashCase = value => value.replace(/[A-Z]/g, '-$&').toLowerCase();
 export const toArray = value => (!isEmpty(value) && !isArray(value) ? [value] : value) || [];
 export const filter = (value, cb) => value.filter(cb || (x => !isEmpty(x)));

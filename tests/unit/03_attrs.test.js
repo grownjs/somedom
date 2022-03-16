@@ -101,6 +101,18 @@ describe('attrs', () => {
 
       expect(div.outerHTML).to.eql('<div><b>OSOM</b></div>');
     });
+
+    it('should handle class/style directives', () => {
+      assignProps(div, {
+        'style:backgroundColor': 'red',
+        'style:font-size': '12px',
+        'class:enabled': 1,
+        'class:disabled': null,
+      });
+
+      expect(div.outerHTML).to.contains(' class="enabled"');
+      expect(div.outerHTML).to.contains(' style="background-color: red; font-size: 12px;"');
+    });
   });
 
   describe('updateProps', () => {

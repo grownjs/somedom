@@ -1,7 +1,9 @@
+/* eslint-disable class-methods-use-this */
+
 import { CLOSE_TAGS } from '../lib/shared';
 import Fragment from '../lib/fragment';
 import {
-  tick, isNot,
+  tick, isNot, dashCase,
 } from '../lib/util';
 
 export class Event {
@@ -25,13 +27,24 @@ export class Node {
 
 export class Text extends Node {}
 export class Comment extends Node {}
-export class HTMLElement extends Node {}
+export class HTMLElement extends Node {
+  querySelector() {
+    throw new Error('Not implemented');
+  }
+
+  contains() {
+    throw new Error('Not implemented');
+  }
+}
 
 export function mount(node, el) {
   if (Fragment.valid(node)) {
     node.childNodes.forEach(sub => mount(sub, el));
   } else {
-    Object.defineProperty(node, 'parentNode', { configurable: true, value: el });
+    Object.defineProperties(node, {
+      parentNode: { configurable: true, value: el },
+      isConnected: { configurable: true, value: true },
+    });
   }
 }
 
@@ -119,6 +132,7 @@ export function createElementNode(name, props) {
     className: '',
     childNodes: [],
     attributes: {},
+    style: {},
     remove,
     dispatchEvent,
     addEventListener,
@@ -157,10 +171,11 @@ export function createElementNode(name, props) {
       return self.__html || self.childNodes.map(node => {
         return node.nodeType === 8
           ? `<!--${node.nodeValue}-->`
-          : node.outerHTML || node.nodeValue;
+          : node.outerHTML || encodeText(node.nodeValue, false);
       }).join('');
     },
     get outerHTML() {
+      const _css = [];
       const _props = Object.keys(self.attributes).reduce((prev, cur) => {
         prev.push(` ${cur}="${encodeText(self.attributes[cur])}"`);
         return prev;
@@ -168,6 +183,14 @@ export function createElementNode(name, props) {
 
       if (self.className) {
         _props.push(` class="${self.className}"`);
+      }
+
+      Object.keys(self.style).forEach(k => {
+        _css.push(`${dashCase(k)}: ${self.style[k]};`);
+      });
+
+      if (_css.length > 0) {
+        _props.push(` style="${_css.join(' ')}"`);
       }
 
       if (CLOSE_TAGS.indexOf(name) !== -1) {
@@ -219,7 +242,6 @@ export function createElementNode(name, props) {
         });
         n.childNodes = [];
       } else if (self.tagName === 'PRE') {
-        n.nodeValue = encodeText(n.nodeValue, false);
         self.childNodes.push(n);
       } else {
         self.childNodes.push(n);
@@ -284,13 +306,13 @@ export function createComment(content) {
 export function patchDocument() {
   global.document = {
     body: createElement('body'),
+    querySelector() {
+      throw new Error('Not implemented');
+    },
     createElementNS,
     createElement,
     createTextNode,
     createComment,
-    querySelector() {
-      throw new Error('Not implemented');
-    },
     createDocumentFragment,
   };
 }
