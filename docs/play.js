@@ -578,7 +578,7 @@
 
   async function upgradeNode(target, prev, next, svg, cb) {
     if (!isNode(prev) || prev[0] !== next[0]) {
-      const newNode = createElement(next);
+      const newNode = createElement(next, svg, cb);
 
       if (Fragment.valid(newNode)) {
         detach(target, newNode);

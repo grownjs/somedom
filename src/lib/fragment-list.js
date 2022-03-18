@@ -30,9 +30,9 @@ export default class FragmentList {
     });
   }
 
-  async update(...args) {
+  async update(children) {
     try {
-      this.patch(...args);
+      this.patch(children);
       await tick();
     } finally {
       await this.__defer;
@@ -131,7 +131,7 @@ export default class FragmentList {
       && this.target.isConnected);
   }
 
-  static from(props, children, render, context) {
+  static from(props, children, callback) {
     let frag;
     if (typeof props === 'string') {
       frag = FragmentList[`#${props}`];
@@ -148,7 +148,7 @@ export default class FragmentList {
       const name = `#${props.key}`;
 
       if (!FragmentList[name]) {
-        frag = FragmentList[name] = new FragmentList(props, children, render, context);
+        frag = FragmentList[name] = new FragmentList(props, children, callback);
       } else {
         frag = FragmentList[name].touch(props, children);
       }
