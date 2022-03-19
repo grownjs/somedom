@@ -48,10 +48,10 @@ export default class FragmentList {
     const ok = this.mounted;
 
     raf(() => {
-      if (ok) {
-        const i = this.offset + 1;
-        const c = this.length;
+      const i = this.offset + 1;
+      const c = this.length;
 
+      if (ok && this.root.childNodes.length >= i + c) {
         this.target.__length = children.length;
         this.target.nodeValue = `#${this.props.key}/${children.length}`;
         this.__defer = upgradeElements(this.root, this.vnode, this.vnode = children, null, this.render, i, c);
@@ -94,11 +94,11 @@ export default class FragmentList {
       let anchor = direction < 0 ? begin : end;
       frag.childNodes.forEach(node => {
         this.root.insertBefore(node, anchor ? anchor.nextSibling : null);
+        this.target.__length += 1;
         anchor = node;
       });
 
-      this.target.__length = this.vnode.length;
-      this.target.nodeValue = `#${this.props.key}/${this.vnode.length}`;
+      this.target.nodeValue = `#${this.props.key}/${this.target.__length}`;
     }
     return this;
   }
@@ -109,7 +109,7 @@ export default class FragmentList {
   }
 
   get length() {
-    return this.vnode.length;
+    return this.target.__length;
   }
 
   get offset() {
