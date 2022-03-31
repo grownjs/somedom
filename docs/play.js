@@ -417,6 +417,11 @@
         return;
       }
 
+      if (prop.charAt() === '@') {
+        target.dataset[camelCase(prop.substr(1))] = attrs[prop];
+        return;
+      }
+
       if (prop.indexOf('class:') === 0) {
         if (!attrs[prop]) {
           target.classList.remove(prop.substr(6));

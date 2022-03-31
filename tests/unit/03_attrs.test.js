@@ -102,6 +102,14 @@ describe('attrs', () => {
       expect(div.outerHTML).to.eql('<div><b>OSOM</b></div>');
     });
 
+    it('should handle data-* shortcuts', () => {
+      assignProps(div, {
+        '@foo': 'bar',
+      }, true);
+
+      expect(div.outerHTML).to.contains(' data-foo="bar"');
+    });
+
     it('should handle class/style directives', () => {
       assignProps(div, {
         'style:backgroundColor': 'red',
