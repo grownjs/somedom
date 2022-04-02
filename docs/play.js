@@ -418,7 +418,7 @@
       }
 
       if (prop.charAt() === '@') {
-        target.dataset[camelCase(prop.substr(1))] = attrs[prop];
+        target.setAttribute(`data-${prop.substr(1)}`, attrs[prop]);
         return;
       }
 
@@ -582,7 +582,7 @@
   }
 
   async function upgradeNode(target, prev, next, svg, cb) {
-    if (!isNode(prev) || prev[0] !== next[0]) {
+    if (!isNode(prev) || prev[0] !== next[0] || target.nodeType !== 1) {
       const newNode = createElement(next, svg, cb);
 
       if (Fragment.valid(newNode)) {

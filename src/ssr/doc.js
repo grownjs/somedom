@@ -132,7 +132,6 @@ export function createElementNode(name, props) {
     className: '',
     childNodes: [],
     attributes: {},
-    dataset: {},
     style: {},
     remove,
     dispatchEvent,
@@ -181,10 +180,6 @@ export function createElementNode(name, props) {
         prev.push(` ${cur}="${encodeText(self.attributes[cur])}"`);
         return prev;
       }, []);
-
-      Object.keys(self.dataset).forEach(key => {
-        _props.push(` data-${key}="${self.dataset[key]}"`);
-      });
 
       if (self.className) {
         _props.push(` class="${self.className}"`);

@@ -60,7 +60,7 @@ export function assignProps(target, attrs, svg, cb) {
     }
 
     if (prop.charAt() === '@') {
-      target.dataset[camelCase(prop.substr(1))] = attrs[prop];
+      target.setAttribute(`data-${prop.substr(1)}`, attrs[prop]);
       return;
     }
 
