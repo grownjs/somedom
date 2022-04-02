@@ -51,7 +51,10 @@ export default class Fragment {
   }
 
   mount(target, node) {
-    Object.defineProperty(this, 'parentNode', { configurable: true, value: target });
+    Object.defineProperties(this, {
+      parentNode: { configurable: true, value: target },
+      isConnected: { configurable: true, value: true },
+    });
 
     const doc = this.getDocumentFragment();
 

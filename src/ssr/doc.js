@@ -164,6 +164,9 @@ export function createElementNode(name, props) {
     get firstChild() {
       return self.childNodes[0];
     },
+    get lastChild() {
+      return self.childNodes[self.childNodes.length - 1];
+    },
     set innerHTML(value) {
       self.__html = value;
     },

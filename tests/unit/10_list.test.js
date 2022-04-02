@@ -4,7 +4,7 @@ import { expect } from 'chai';
 
 import doc from '../../src/ssr/jsdom';
 import { encodeText } from '../../src/ssr/doc';
-import { tick, bind, render } from '../../src';
+import { bind, render } from '../../src';
 import FragmentList from '../../src/lib/fragment-list';
 
 /* global beforeEach, afterEach, describe, it */
@@ -22,7 +22,7 @@ describe('FragmentList', () => {
     doc.enable();
     tree = $(['div', null, [
       '{',
-      ['fragment', { key: 'test' }, [
+      ['fragment', { name: 'test' }, [
         'OSOM',
       ]],
       '}',
@@ -31,7 +31,7 @@ describe('FragmentList', () => {
     t = FragmentList['#test'];
 
     const div = $(['div', null, [
-      ['fragment', { key: 'other' }],
+      ['fragment', { name: 'other' }],
     ]]);
 
     document.body.appendChild(div);
@@ -41,55 +41,41 @@ describe('FragmentList', () => {
     delete FragmentList['#test'];
   });
 
-  it('should mount anchors as comments', async () => {
+  it('should behave as regular elements', async () => {
     expect(t.mounted).to.be.false;
     document.body.appendChild(tree);
     expect(t.mounted).to.be.true;
-    expect(tree.outerHTML).to.contains('<div>{<!--#test/1-->}</div>');
-
-    await tick();
-    expect(t.length).to.eql(1);
-    expect(tree.outerHTML).to.contains('<div>{<!--#test/1-->OSOM}</div>');
+    expect(tree.outerHTML).to.contains('<div>{<fragment name="test">OSOM</fragment>}</div>');
   });
 
   it('should be able to append childNodes', async () => {
-    await tick();
-    expect(t.length).to.eql(1);
     document.body.appendChild(tree);
     t.append(['!', '?']);
 
-    expect(tree.outerHTML).to.eql('<div>{<!--#test/3-->OSOM!?}</div>');
-    expect(t.length).to.eql(3);
+    expect(tree.outerHTML).to.eql('<div>{<fragment name="test">OSOM!?</fragment>}</div>');
   });
 
   it('should be able to prepend childNodes', async () => {
-    await tick();
-    expect(t.length).to.eql(1);
     document.body.appendChild(tree);
     t.prepend(['.', '.', '.']);
 
-    expect(tree.outerHTML).to.eql('<div>{<!--#test/4-->...OSOM}</div>');
-    expect(t.length).to.eql(4);
+    expect(tree.outerHTML).to.eql('<div>{<fragment name="test">...OSOM</fragment>}</div>');
   });
 
   it('should be able to change directions', async () => {
-    await tick();
-    expect(t.length).to.eql(1);
     document.body.appendChild(tree);
     t.prepend(['(', '[']);
     t.append([']', ')']);
 
-    expect(tree.outerHTML).to.eql('<div>{<!--#test/5-->([OSOM])}</div>');
+    expect(t.vnode).to.eql(['(', '[', ['OSOM'], ']', ')']);
+    expect(tree.outerHTML).to.eql('<div>{<fragment name="test">([OSOM])</fragment>}</div>');
   });
 
   it('should be able to update childNodes', async () => {
-    await tick();
-    expect(t.length).to.eql(1);
     document.body.appendChild(tree);
 
     t.prepend(['<', '[!CDATA[']);
     t.append([']]', '>']);
-    await tick();
 
     let sample = '<[!CDATA[OSOM]]>';
     // why no escape this happy-dom?
@@ -97,8 +83,8 @@ describe('FragmentList', () => {
       sample = encodeText(sample, false);
     }
 
-    expect(tree.outerHTML).to.eql(`<div>{<!--#test/5-->${sample}}</div>`);
-    expect(tree.childNodes.length).to.eql(8);
+    expect(tree.outerHTML).to.eql(`<div>{<fragment name="test">${sample}</fragment>}</div>`);
+    expect(tree.childNodes.length).to.eql(3);
 
     let c = +(Math.random() * 10 + 1);
     while (c > 0) {
@@ -107,28 +93,16 @@ describe('FragmentList', () => {
       c -= 1;
     }
 
-    expect(tree.outerHTML).to.eql('<div>{<!--#test/0-->}</div>');
+    expect(tree.outerHTML).to.eql('<div>{<fragment name="test"></fragment>}</div>');
   });
 
-  it('should prepend on already mounted nodes', async () => {
-    await tick();
+  it('should work on already mounted nodes', async () => {
     await FragmentList.with('other', frag => {
-      for (let i = 0; i < 3; i += 1) {
-        frag.prepend([['li', null, i]]);
-      }
+      frag.prepend([['li', null, -1]]);
+      frag.append([['li', null, 1]]);
+      frag.append([['li', null, 2]]);
     });
 
-    expect(document.body.outerHTML).to.eql('<body><div><!--#other/3--><li>2</li><li>1</li><li>0</li></div></body>');
-  });
-
-  it('should append on already mounted nodes', async () => {
-    await tick();
-    await FragmentList.with('other', frag => {
-      for (let i = 0; i < 3; i += 1) {
-        frag.append([['li', null, i]]);
-      }
-    });
-
-    expect(document.body.outerHTML).to.eql('<body><div><!--#other/3--><li>0</li><li>1</li><li>2</li></div></body>');
+    expect(document.body.outerHTML).to.eql('<body><div><fragment name="other"><li>-1</li><li>1</li><li>2</li></fragment></div></body>');
   });
 });
