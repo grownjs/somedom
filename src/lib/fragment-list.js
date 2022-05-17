@@ -9,11 +9,13 @@ export default class FragmentList {
   constructor(props, children, callback = createElement) {
     props.key = props.key || `fragment-${Math.random().toString(36).substr(2)}`;
 
-    this.target = document.createElement('fragment');
+    this.target = document.createElement(props.tag || 'x-fragment');
     this.target.__update = (_, prev, next) => {
       this.vnode = prev || this.vnode;
       this.patch(next);
     };
+
+    delete props.tag;
 
     this.props = {};
     this.vnode = null;
@@ -54,6 +56,7 @@ export default class FragmentList {
   }
 
   touch(props, children) {
+    delete props.tag;
     updateProps(this.target, this.props, props, null, this.render);
     return children ? this.patch(children) : this;
   }
@@ -106,7 +109,7 @@ export default class FragmentList {
       });
       return { target: doc };
     } else {
-      const name = `#${props.key || props.name}`;
+      const name = `#${props.id}`;
 
       if (!FragmentList[name]) {
         frag = FragmentList[name] = new FragmentList(props, children, callback);
