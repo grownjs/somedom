@@ -109,7 +109,7 @@ export default class FragmentList {
       });
       return { target: doc };
     } else {
-      const name = `#${props.id}`;
+      const name = `#${props.key || props.id}`;
 
       if (!FragmentList[name]) {
         frag = FragmentList[name] = new FragmentList(props, children, callback);
