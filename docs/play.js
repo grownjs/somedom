@@ -406,7 +406,7 @@
 
   function assignProps(target, attrs, svg, cb) {
     Object.keys(attrs).forEach(prop => {
-      if (prop === 'key') return;
+      if (prop === 'key' || prop.charAt() === ':') return;
 
       if (prop === 'ref') {
         target.oncreate = el => {

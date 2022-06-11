@@ -102,12 +102,20 @@ describe('attrs', () => {
       expect(div.outerHTML).to.eql('<div><b>OSOM</b></div>');
     });
 
-    it('should handle data-* shortcuts', () => {
+    it('should handle the @html prop', () => {
       assignProps(div, {
-        '@foo': 'bar',
+        '@html': '<b>OSOM</b>',
       }, true);
 
-      expect(div.outerHTML).to.contains(' data-foo="bar"');
+      expect(div.outerHTML).to.eql('<div><b>OSOM</b></div>');
+    });
+
+    it('should skip :static props', () => {
+      assignProps(div, {
+        ':disabled': true,
+      }, true);
+
+      expect(div.outerHTML).to.not.contains(' disabled');
     });
 
     it('should handle class/style directives', () => {
