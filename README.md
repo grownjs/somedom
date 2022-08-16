@@ -5,4 +5,4 @@
 [![Coverage Status](https://codecov.io/gh/pateketrueke/somedom/coverage.svg?branch=master)](https://codecov.io/gh/pateketrueke/somedom)
 [![Known Vulnerabilities](https://snyk.io/test/npm/somedom/badge.svg)](https://snyk.io/test/npm/somedom)
 
-> Read the user-guide at: https://pateketrueke.github.io/somedom/
+> Read the user-guide at: https://somedom.soypache.co/
