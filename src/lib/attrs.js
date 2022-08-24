@@ -7,8 +7,7 @@ import { XLINK_NS, ELEM_REGEX } from './shared';
 export function fixProps(vnode) {
   if (isBlock(vnode)) return vnode;
 
-  vnode[2] = vnode.slice(2);
-  vnode.length = 3;
+  vnode = [vnode[0], vnode[1], vnode.slice(2)];
 
   let attrs = isPlain(vnode[1])
     ? { ...vnode[1] }

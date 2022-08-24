@@ -11,7 +11,7 @@ export {
   bindHelpers,
 } from './doc';
 
-export * from '..';
+export * from '../index';
 
 function enable() {
   if (process.env.JS_DOM || process.env.HAPPY_DOM) {

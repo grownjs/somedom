@@ -368,8 +368,7 @@
   function fixProps(vnode) {
     if (isBlock(vnode)) return vnode;
 
-    vnode[2] = vnode.slice(2);
-    vnode.length = 3;
+    vnode = [vnode[0], vnode[1], vnode.slice(2)];
 
     let attrs = isPlain(vnode[1])
       ? { ...vnode[1] }
@@ -1514,4 +1513,4 @@
     mountElement('head', ['script', { src: '//cdn.rawgit.com/cloudhead/hijs/0eaa0031/hijs.js' }]);
   });
 
-}());
+})();

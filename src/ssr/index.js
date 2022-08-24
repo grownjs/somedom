@@ -12,7 +12,7 @@ export {
   bindHelpers,
 } from './doc';
 
-export * from '..';
+export * from '../index';
 
 export function useWindow(cb) {
   try {
