@@ -24,5 +24,11 @@ test: src deps ## Start dev+testing flow
 check: src deps ## Run coverage checks locally
 	@LCOV_OUTPUT=html npm run test:ci
 
+release: deps
+ifneq ($(CI),)
+	@echo '//registry.npmjs.org/:_authToken=$(NODE_AUTH_TOKEN)' > .npmrc
+	@npm version $(USE_RELEASE_VERSION)
+endif
+
 deps: package*.json
 	@(((ls node_modules | grep .) > /dev/null 2>&1) || npm i) || true
