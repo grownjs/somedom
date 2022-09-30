@@ -1,4 +1,4 @@
-import somedom, { mount, render } from '../../src';
+import * as somedom from '../../src';
 import { trim as format } from '../../src/lib/util';
 
 function summarize(script) {
@@ -9,7 +9,7 @@ function summarize(script) {
     .replace(/test\(\s*\([^=()]*\)\s*=>\s*\{/, '')
     .replace(/\}\)\s*;$/, '');
 
-  mount(parentNode, ['details', null, [
+  somedom.mount(parentNode, ['details', null, [
     ['summary', null, ['View executed code']],
     ['pre', { class: 'highlight' }, format(code)],
   ]]);
@@ -46,11 +46,11 @@ window.addEventListener('DOMContentLoaded', () => {
       t.cb(somedom, x => appendChild(t.el, x));
     } catch (e) {
       console.log(e);
-      appendChild(t.el, render(['div', { class: 'error' }, e.toString()]));
+      appendChild(t.el, somedom.render(['div', { class: 'error' }, e.toString()]));
     }
   });
 
   window.hijs = '.highlight';
 
-  mount('head', ['script', { src: '//cdn.rawgit.com/cloudhead/hijs/0eaa0031/hijs.js' }]);
+  somedom.mount('head', ['script', { src: '//cdn.rawgit.com/cloudhead/hijs/0eaa0031/hijs.js' }]);
 });

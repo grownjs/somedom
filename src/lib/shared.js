@@ -34,5 +34,3 @@ export const SKIP_METHODS = [
   'state',
   'props',
 ];
-
-export const SHARED_CONTEXT = [];

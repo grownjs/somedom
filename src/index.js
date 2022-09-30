@@ -1,28 +1,13 @@
 import {
-  mountElement as mount,
-  updateElement as patch,
   createElement as render,
-  destroyElement as unmount,
 } from './lib/node';
 
 import {
   createView as view,
-  createThunk as thunk,
 } from './lib/views';
 
 import {
-  onError,
-  useRef,
-  useMemo,
-  useState,
-  useEffect,
-} from './lib/hooks';
-
-import {
   invokeProps,
-  applyStyles as styles,
-  applyClasses as classes,
-  applyAnimations as animation,
 } from './lib/props';
 
 import {
@@ -131,30 +116,3 @@ export {
   applyClasses as classes,
   applyAnimations as animation,
 } from './lib/props';
-
-export default {
-  h,
-  pre,
-  bind,
-
-  view,
-  thunk,
-
-  mount,
-  patch,
-  render,
-  unmount,
-
-  listeners,
-  attributes,
-
-  styles,
-  classes,
-  animation,
-
-  onError,
-  useRef,
-  useMemo,
-  useState,
-  useEffect,
-};
