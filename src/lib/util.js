@@ -116,7 +116,7 @@ export function zip(set, prev, next, limit, offset, cb, d = 0) {
 export function isDiff(prev, next) {
   if (typeof prev !== typeof next) return true;
   if (isArray(prev)) {
-    if (prev.length !== next.length) return true;
+    if (!isArray(next) || prev.length !== next.length) return true;
 
     for (let i = 0; i < next.length; i += 1) {
       if (isDiff(prev[i], next[i])) return true;

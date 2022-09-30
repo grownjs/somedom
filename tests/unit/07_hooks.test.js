@@ -23,7 +23,7 @@ import {
 import { bindHelpers as $ } from '../../src/ssr';
 import Fragment from '../../src/lib/fragment';
 import { tick } from '../../src/lib/util';
-import doc from '../../src/ssr/jsdom';
+import * as doc from '../../src/ssr/jsdom';
 
 /* global beforeEach, afterEach, describe, it */
 

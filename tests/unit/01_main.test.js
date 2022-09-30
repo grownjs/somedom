@@ -12,7 +12,7 @@ import { bindHelpers as $ } from '../../src/ssr';
 import { encodeText } from '../../src/ssr/doc';
 
 import Fragment from '../../src/lib/fragment';
-import doc from '../../src/ssr/jsdom';
+import * as doc from '../../src/ssr/jsdom';
 
 /* global beforeEach, afterEach, describe, it */
 

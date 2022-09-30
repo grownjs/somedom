@@ -37,7 +37,9 @@ export default isDev ? {
 }, {
   input: './src/ssr/index.js',
   output: bundle('./dist/index.ssr.js', 'cjs'),
+  plugins,
 }, {
   input: './src/ssr/jsdom.js',
   output: bundle('./dist/jsdom.ssr.js', 'cjs'),
+  plugins,
 }];

@@ -13,7 +13,7 @@ export {
 
 export * from '../index';
 
-function enable() {
+export function enable() {
   if (process.env.JS_DOM || process.env.HAPPY_DOM) {
     let window;
     if (process.env.HAPPY_DOM) {
@@ -33,7 +33,7 @@ function enable() {
   }
 }
 
-function disable() {
+export function disable() {
   if (process.env.JS_DOM || process.env.HAPPY_DOM) {
     delete global.document;
     delete global.window;
@@ -43,5 +43,3 @@ function disable() {
     dropWindow();
   }
 }
-
-export default { enable, disable };

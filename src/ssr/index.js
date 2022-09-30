@@ -43,5 +43,3 @@ export function renderToString(vnode, cb = createElement) {
     return render;
   });
 }
-
-export default { useWindow, renderToString };

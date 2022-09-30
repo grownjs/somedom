@@ -26,7 +26,7 @@ import Fragment from '../../src/lib/fragment';
 
 import { tick, trim, format } from '../../src/lib/util';
 import { bindHelpers as $ } from '../../src/ssr';
-import doc from '../../src/ssr/jsdom';
+import * as doc from '../../src/ssr/jsdom';
 
 /* global beforeEach, afterEach, describe, it */
 
