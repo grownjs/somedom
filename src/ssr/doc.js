@@ -178,6 +178,10 @@ export function createElementNode(name, props) {
       }).join('');
     },
     get outerHTML() {
+      if (typeof self.__raw === 'string') {
+        return self.__raw;
+      }
+
       const _css = [];
       const _props = Object.keys(self.attributes).reduce((prev, cur) => {
         prev.push(` ${cur}="${encodeText(self.attributes[cur])}"`);
