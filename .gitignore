@@ -4,6 +4,7 @@
 .nyc_output
 dist
 chrome
+himalaya
 coverage
 node_modules
 package-lock.json

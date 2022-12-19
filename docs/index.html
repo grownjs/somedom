@@ -881,6 +881,7 @@
     <p>To render entire <i>vnode</i> trees on the back-end use:</p>
     <pre class="highlight">import {
   useWindow,
+  parseMarkup,
   renderToString,
   bindHelpers as $,
 } from 'somedom/ssr';</pre>
@@ -930,6 +931,21 @@ $root.withText('Click me.').dispatch('click');</pre>
 
 // `dispatch()` actually calls this method
 button.dispatchEvent(new Event('click'));</pre>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>parseMarkup()</code></summary>
+      <dl>
+        <dt><code>parseMarkup(html[, options])</code></dt>
+        <dd>
+          <p>Returns an AST from parsed HTML, used by SSR's `innerHTML` implementation.</p>
+          <pre class="highlight">var test = '&lt;b&gt;OSOM&lt;/b&gt;';
+var ast = parseMarkup(test);
+
+console.log(ast);
+// [ { type: 'element', rawTagName: 'b', tagName: 'b', attributes: [], children: [ [Object] ] } ]</pre>
         </dd>
       </dl>
     </details>

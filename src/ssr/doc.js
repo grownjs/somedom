@@ -1,10 +1,9 @@
 /* eslint-disable class-methods-use-this */
 
-import { CLOSE_TAGS } from '../lib/shared';
 import Fragment from '../lib/fragment';
-import {
-  tick, isNot, dashCase,
-} from '../lib/util';
+import { CLOSE_TAGS } from '../lib/shared';
+import { parse, parseDefaults } from './himalaya';
+import { tick, isNot, dashCase } from '../lib/util';
 
 export class Event {
   constructor(type, params) {
@@ -35,6 +34,36 @@ export class HTMLElement extends Node {
   contains() {
     throw new Error('Not implemented');
   }
+}
+
+export function traverse(target, children) {
+  children.forEach(node => {
+    switch (node.type) {
+      case 'element': {
+        const el = document.createElement(node.tagName);
+
+        node.attributes.forEach(attr => {
+          el.setAttribute(attr.key, attr.value === null ? true : attr.value);
+        });
+
+        if (node.children) {
+          traverse(el, node.children);
+        }
+        target.appendChild(el);
+      } break;
+
+      case 'comment':
+        target.appendChild(document.createComment(node.content));
+        break;
+
+      case 'text':
+        target.appendChild(document.createTextNode(node.content));
+        break;
+
+      default:
+        throw new ReferenceError(`Unsupported nodeType=${node.type}`);
+    }
+  });
 }
 
 export function mount(node, el) {
@@ -167,21 +196,17 @@ export function createElementNode(name, props) {
     get lastChild() {
       return self.childNodes[self.childNodes.length - 1];
     },
-    set innerHTML(value) {
-      self.__html = value;
+    set innerHTML(html) {
+      traverse(self, parse(html, parseDefaults));
     },
     get innerHTML() {
-      return self.__html || self.childNodes.map(node => {
+      return self.childNodes.map(node => {
         return node.nodeType === 8
           ? `<!--${node.nodeValue}-->`
           : node.outerHTML || encodeText(node.nodeValue, false);
       }).join('');
     },
     get outerHTML() {
-      if (typeof self.__raw === 'string') {
-        return self.__raw;
-      }
-
       const _css = [];
       const _props = Object.keys(self.attributes).reduce((prev, cur) => {
         prev.push(` ${cur}="${encodeText(self.attributes[cur])}"`);
