@@ -28,7 +28,7 @@ describe('FragmentList', () => {
       '}',
     ]]);
 
-    t = FragmentList['#test'];
+    t = FragmentList.from('test');
 
     const div = $(['div', null, [
       ['fragment', { id: 'other', tag: 'p' }],
@@ -38,7 +38,7 @@ describe('FragmentList', () => {
   });
   afterEach(() => {
     doc.disable();
-    delete FragmentList['#test'];
+    FragmentList.del('test');
   });
 
   it('should behave as regular elements', async () => {

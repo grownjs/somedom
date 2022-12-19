@@ -1,4 +1,5 @@
 import { isFunction, format } from '../lib/util';
+import { parse, parseDefaults } from './himalaya';
 import { mountElement, createElement } from '../lib/node';
 
 import {
@@ -24,6 +25,10 @@ export function useWindow(cb) {
     dropDocument();
     dropWindow();
   }
+}
+
+export function parseMarkup(html, options) {
+  return parse(html, { ...parseDefaults, ...options });
 }
 
 export function renderToString(vnode, cb = createElement) {

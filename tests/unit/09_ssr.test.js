@@ -153,6 +153,23 @@ describe('SSR', () => {
       expect(document.createElement('img').outerHTML).to.match(/<img\/?>/);
     });
 
+    it('should support innerHTML parsing', () => {
+      const div = document.createElement('div');
+      const html = `<b class="test">
+        <!-- test -->
+        <em>OSOM</em>
+        <input type="checkbox" checked />
+      </b>`;
+
+      div.innerHTML = html;
+
+      const pre = process.env.HAPPY_DOM ? 'checked ' : 'checked /';
+      const bool = (process.env.JS_DOM || process.env.HAPPY_DOM) ? '' : 'true';
+      const fixed = html.replace(pre, `checked="${bool}"`);
+
+      expect(div.outerHTML).to.eql(`<div>${fixed}</div>`);
+    });
+
     it('should handle event-listeners too', () => {
       const a = document.createElement('a');
       const fn = td.func('callback');

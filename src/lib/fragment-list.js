@@ -4,6 +4,8 @@ import { createElement, upgradeElements } from './node';
 import { updateProps } from './attrs';
 import { raf, tick, isBlock } from './util';
 
+const CACHED_FRAGMENTS = new Map();
+
 let FRAGMENT_FX = [];
 export default class FragmentList {
   constructor(props, children, callback = createElement) {
@@ -98,7 +100,7 @@ export default class FragmentList {
   static from(props, children, callback) {
     let frag;
     if (typeof props === 'string') {
-      frag = FragmentList[`#${props}`];
+      frag = CACHED_FRAGMENTS.get(props);
     } else if (props['@html']) {
       const doc = document.createDocumentFragment();
       const div = document.createElement('div');
@@ -109,12 +111,12 @@ export default class FragmentList {
       });
       return { target: doc };
     } else {
-      const name = `#${props.key || props.id}`;
+      const name = props.key || props.id;
 
-      if (!FragmentList[name]) {
-        frag = FragmentList[name] = new FragmentList(props, children, callback);
+      if (!CACHED_FRAGMENTS.has(name)) {
+        CACHED_FRAGMENTS.set(name, frag = new FragmentList(props, children, callback));
       } else {
-        frag = FragmentList[name].touch(props, children);
+        frag = CACHED_FRAGMENTS.get(name).touch(props, children);
       }
     }
     return frag;
@@ -140,9 +142,13 @@ export default class FragmentList {
       });
   }
 
+  static del(id) {
+    CACHED_FRAGMENTS.delete(id);
+  }
+
   static has(id) {
-    return FragmentList[`#${id}`]
-      && FragmentList[`#${id}`].mounted;
+    return CACHED_FRAGMENTS.has(id)
+      && CACHED_FRAGMENTS.get(id).mounted;
   }
 
   static for(id, retries = 0) {
@@ -154,7 +160,7 @@ export default class FragmentList {
       if (!FragmentList.has(id)) {
         raf(() => ok(FragmentList.for(id, retries + 1)));
       } else {
-        ok(FragmentList[`#${id}`]);
+        ok(CACHED_FRAGMENTS.get(id));
       }
     });
   }
