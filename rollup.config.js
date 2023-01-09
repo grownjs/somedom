@@ -36,6 +36,10 @@ export default isDev ? {
   plugins,
 }, {
   input: './src/ssr/index.js',
+  output: bundle('./dist/index.ssr.mjs', 'es'),
+  plugins,
+}, {
+  input: './src/ssr/index.js',
   output: bundle('./dist/index.ssr.js', 'cjs'),
   plugins,
 }, {
