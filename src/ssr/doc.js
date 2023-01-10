@@ -27,12 +27,38 @@ export class Node {
 export class Text extends Node {}
 export class Comment extends Node {}
 export class HTMLElement extends Node {
+  insertAdjacentHTML() {
+    throw new Error(`${this.tagName}.insertAdjacentHTML() not implemented`);
+  }
+
+  getElementsByClassName() {
+    throw new Error(`${this.tagName}.getElementsByClassName() not implemented`);
+  }
+
+  getElementById() {
+    throw new Error(`${this.tagName}.getElementById() not implemented`);
+  }
+
+  querySelectorAll() {
+    throw new Error(`${this.tagName}.querySelectorAll() not implemented`);
+  }
+
   querySelector() {
-    throw new Error('Not implemented');
+    throw new Error(`${this.tagName}.querySelector() not implemented`);
   }
 
   contains() {
-    throw new Error('Not implemented');
+    throw new Error(`${this.tagName}.contains() not implemented`);
+  }
+
+  closest() {
+    throw new Error(`${this.tagName}.closest() not implemented`);
+  }
+
+  clone() {
+    const self = document.createElement('div');
+    traverse(self, parse(this.outerHTML, parseDefaults));
+    return self.childNodes[0];
   }
 }
 
@@ -197,6 +223,7 @@ export function createElementNode(name, props) {
       return self.childNodes[self.childNodes.length - 1];
     },
     set innerHTML(html) {
+      self.childNodes = [];
       traverse(self, parse(html, parseDefaults));
     },
     get innerHTML() {
@@ -338,8 +365,17 @@ export function createComment(content) {
 export function patchDocument() {
   global.document = {
     body: createElement('body'),
+    getElementsByClassName() {
+      throw new Error('DOCUMENT.getElementsByClassName() not implemented');
+    },
+    getElementById() {
+      throw new Error('DOCUMENT.getElementById() not implemented');
+    },
+    querySelectorAll() {
+      throw new Error('DOCUMENT.querySelectorAll() not implemented');
+    },
     querySelector() {
-      throw new Error('Not implemented');
+      throw new Error('DOCUMENT.querySelector() not implemented');
     },
     createElementNS,
     createElement,

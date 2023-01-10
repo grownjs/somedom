@@ -161,6 +161,7 @@ describe('SSR', () => {
         <input type="checkbox" checked />
       </b>`;
 
+      div.appendChild(document.createElement('span'));
       div.innerHTML = html;
 
       const pre = process.env.HAPPY_DOM ? 'checked ' : 'checked /';
@@ -168,6 +169,7 @@ describe('SSR', () => {
       const fixed = html.replace(pre, `checked="${bool}"`);
 
       expect(div.outerHTML).to.eql(`<div>${fixed}</div>`);
+      expect(div.clone().outerHTML).to.eql(div.outerHTML);
     });
 
     it('should handle event-listeners too', () => {
