@@ -1,6 +1,9 @@
 /* eslint-disable class-methods-use-this */
 
+import { selectAll, selectOne } from 'css-select';
+
 import Fragment from '../lib/fragment';
+import { markupAdapter } from './adapter';
 import { CLOSE_TAGS } from '../lib/shared';
 import { parse, parseDefaults } from './himalaya';
 import { tick, isNot, dashCase } from '../lib/util';
@@ -31,20 +34,36 @@ export class HTMLElement extends Node {
     throw new Error(`${this.tagName}.insertAdjacentHTML() not implemented`);
   }
 
-  getElementsByClassName() {
-    throw new Error(`${this.tagName}.getElementsByClassName() not implemented`);
+  getElementsByClassName(name) {
+    return selectAll(`.${name}`, this, { adapter: markupAdapter });
   }
 
-  getElementById() {
-    throw new Error(`${this.tagName}.getElementById() not implemented`);
+  getElementById(id) {
+    return selectOne(`#${id}`, this, { adapter: markupAdapter });
   }
 
-  querySelectorAll() {
-    throw new Error(`${this.tagName}.querySelectorAll() not implemented`);
+  querySelectorAll(rule) {
+    return selectAll(rule, this, { adapter: markupAdapter });
   }
 
-  querySelector() {
-    throw new Error(`${this.tagName}.querySelector() not implemented`);
+  querySelector(rule) {
+    return selectOne(rule, this, { adapter: markupAdapter });
+  }
+
+  cloneNode(children) {
+    if (!children) {
+      const target = document.createElement(this.tagName.toLowerCase());
+
+      Object.entries(this.attributes).forEach(([key, val]) => {
+        target.setAttribute(key, val);
+      });
+      return target;
+    }
+
+    const self = document.createElement('div');
+
+    traverse(self, parse(this.outerHTML, parseDefaults));
+    return self.childNodes[0];
   }
 
   contains() {
@@ -53,12 +72,6 @@ export class HTMLElement extends Node {
 
   closest() {
     throw new Error(`${this.tagName}.closest() not implemented`);
-  }
-
-  clone() {
-    const self = document.createElement('div');
-    traverse(self, parse(this.outerHTML, parseDefaults));
-    return self.childNodes[0];
   }
 }
 
@@ -215,6 +228,14 @@ export function createElementNode(name, props) {
         else self.classList.add(value);
       },
       contains: value => self.className.split(/\W/).indexOf(value) !== -1,
+    },
+    get textContent() {
+      return self.childNodes.reduce((memo, cur) => memo
+        // eslint-disable-next-line no-nested-ternary
+        + (cur.nodeType === 1 ? cur.textContent : (cur.nodeType === 3 ? cur.nodeValue : '')), '');
+    },
+    set textContent(val) {
+      self.childNodes = [createTextNode(val)];
     },
     get firstChild() {
       return self.childNodes[0];

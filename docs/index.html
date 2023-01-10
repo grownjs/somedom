@@ -880,8 +880,11 @@
     <h3>Server Side Rendering</h3>
     <p>To render entire <i>vnode</i> trees on the back-end use:</p>
     <pre class="highlight">import {
+  findOne,
+  findAll,
   useWindow,
   parseMarkup,
+  markupAdapter,
   renderToString,
   bindHelpers as $,
 } from 'somedom/ssr';</pre>
@@ -932,6 +935,33 @@ $root.withText('Click me.').dispatch('click');</pre>
 // `dispatch()` actually calls this method
 button.dispatchEvent(new Event('click'));</pre>
         </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>findOne()</code></summary>
+      <dl>
+        <dt><code>findOne(css, nodes[, adapter])</code></dt>
+        <dd>
+          <p>Returns a node matching the css-selector, used by SSR's `querySelector` implementation.</p>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>findAll()</code></summary>
+      <dl>
+        <dt><code>findAll(css, nodes[, adapter])</code></dt>
+        <dd>
+          <p>Returns all nodes matching the css-selector, used by SSR's `querySelectorAll` implementation.</p>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>markupAdapter</code></summary>
+      <dl>
+        <dt><code>{ isTag, getAttributeValue, getName, getChildren, getParent, getText, removeSubsets, existsOne, getSiblings, hasAttrib, findOne, findAll }</code></dt>
+        <dd>
+          <p>Implements the required methods for `css-select` adapters, used by methods above. You can extend from here to make your own adapter.</p>
       </dl>
     </details>
 

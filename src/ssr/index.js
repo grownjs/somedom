@@ -1,3 +1,5 @@
+import { selectAll, selectOne } from 'css-select';
+
 import { isFunction, format } from '../lib/util';
 import { parse, parseDefaults } from './himalaya';
 import { mountElement, createElement } from '../lib/node';
@@ -9,9 +11,10 @@ import {
   dropWindow,
 } from './doc';
 
-export {
-  bindHelpers,
-} from './doc';
+import { markupAdapter } from './adapter';
+
+export { markupAdapter } from './adapter';
+export { bindHelpers } from './doc';
 
 export * from '../index';
 
@@ -25,6 +28,14 @@ export function useWindow(cb) {
     dropDocument();
     dropWindow();
   }
+}
+
+export function findOne(rule, children, adapter = markupAdapter) {
+  return selectOne(rule, children, { adapter });
+}
+
+export function findAll(rule, children, adapter = markupAdapter) {
+  return selectAll(rule, children, { adapter });
 }
 
 export function parseMarkup(html, options) {

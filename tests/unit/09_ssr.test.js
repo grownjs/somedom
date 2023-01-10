@@ -153,11 +153,11 @@ describe('SSR', () => {
       expect(document.createElement('img').outerHTML).to.match(/<img\/?>/);
     });
 
-    it('should support innerHTML parsing', () => {
+    it('should support innerHTML parsing and such', () => {
       const div = document.createElement('div');
       const html = `<b class="test">
         <!-- test -->
-        <em>OSOM</em>
+        <em>OS<!--?-->OM</em>
         <input type="checkbox" checked />
       </b>`;
 
@@ -169,7 +169,18 @@ describe('SSR', () => {
       const fixed = html.replace(pre, `checked="${bool}"`);
 
       expect(div.outerHTML).to.eql(`<div>${fixed}</div>`);
-      expect(div.clone().outerHTML).to.eql(div.outerHTML);
+      expect(div.cloneNode(true).outerHTML).to.eql(div.outerHTML);
+      expect(div.querySelector('em').outerHTML).to.eql('<em>OS<!--?-->OM</em>');
+      expect(div.textContent.trim()).to.eql('OSOM');
+
+      div.textContent = 'OK';
+      expect(div.textContent).to.eql('OK');
+
+      const span = document.createElement('span');
+
+      span.setAttribute('data-foo', 'bar');
+      span.textContent = 'EMPTY';
+      expect(span.cloneNode().outerHTML).to.eql('<span data-foo="bar"></span>');
     });
 
     it('should handle event-listeners too', () => {
