@@ -9,7 +9,7 @@ import {
 
 import { trim, format } from '../../src/lib/util';
 import Fragment from '../../src/lib/fragment';
-import * as doc from '../../src/ssr/jsdom';
+import doc from './fixtures/env';
 
 /* global beforeEach, afterEach, describe, it */
 

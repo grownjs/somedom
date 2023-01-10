@@ -10,7 +10,7 @@ import {
   trim, plain, format,
 } from '../../src/lib/util';
 
-import * as doc from '../../src/ssr/jsdom';
+import doc from './fixtures/env';
 
 /* global beforeEach, afterEach, describe, it */
 

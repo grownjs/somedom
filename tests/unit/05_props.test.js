@@ -13,7 +13,7 @@ import {
 } from '../../src/lib/props';
 
 import { tick } from '../../src/lib/util';
-import * as doc from '../../src/ssr/jsdom';
+import doc from './fixtures/env';
 
 /* global beforeEach, afterEach, describe, it */
 

@@ -31,19 +31,14 @@ export default isDev ? {
   output: [
     bundle(pkg.main, 'cjs'),
     bundle(pkg.module, 'es'),
-    bundle(pkg.browser, 'umd'),
+    bundle(pkg.unpkg, 'umd'),
   ],
   plugins,
 }, {
   input: './src/ssr/index.js',
-  output: bundle('./dist/index.ssr.mjs', 'es'),
-  plugins,
-}, {
-  input: './src/ssr/index.js',
-  output: bundle('./dist/index.ssr.js', 'cjs'),
-  plugins,
-}, {
-  input: './src/ssr/jsdom.js',
-  output: bundle('./dist/jsdom.ssr.js', 'cjs'),
+  output: [
+    bundle('./dist/index.ssr.mjs', 'es'),
+    bundle('./dist/index.ssr.js', 'cjs'),
+  ],
   plugins,
 }];

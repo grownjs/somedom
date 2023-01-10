@@ -7,7 +7,7 @@ import {
   assignProps, updateProps, fixProps,
 } from '../../src/lib/attrs';
 
-import * as doc from '../../src/ssr/jsdom';
+import doc from './fixtures/env';
 
 /* global beforeEach, afterEach, describe, it */
 

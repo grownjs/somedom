@@ -8,7 +8,7 @@ import {
   addEvents,
 } from '../../src/lib/events';
 
-import * as doc from '../../src/ssr/jsdom';
+import doc from './fixtures/env';
 
 /* global beforeEach, afterEach, describe, it */
 

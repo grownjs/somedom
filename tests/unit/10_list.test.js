@@ -2,7 +2,7 @@
 
 import { expect } from 'chai';
 
-import * as doc from '../../src/ssr/jsdom';
+import doc from './fixtures/env';
 import { encodeText } from '../../src/ssr/doc';
 import { bind, render } from '../../src';
 import FragmentList from '../../src/lib/fragment-list';

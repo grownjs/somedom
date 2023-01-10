@@ -18,15 +18,46 @@ export { bindHelpers } from './doc';
 
 export * from '../index';
 
-export function useWindow(cb) {
-  try {
+let patched;
+export function enable(env) {
+  if (env && (env.jsdom || env.happydom)) {
+    let window;
+    if (env.happydom) {
+      const { Window } = env.happydom;
+      window = new Window();
+    } else {
+      const { JSDOM } = env.jsdom;
+      ({ window } = new JSDOM());
+    }
+
+    global.document = window.document;
+    global.window = window;
+    global.Event = window.Event;
+    patched = true;
+  } else {
     patchDocument();
     patchWindow();
+  }
+}
 
-    return cb();
-  } finally {
+export function disable() {
+  if (patched) {
+    delete global.document;
+    delete global.window;
+    delete global.Event;
+    patched = null;
+  } else {
     dropDocument();
     dropWindow();
+  }
+}
+
+export function useWindow(cb) {
+  try {
+    enable();
+    return cb();
+  } finally {
+    disable();
   }
 }
 

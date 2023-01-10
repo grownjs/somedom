@@ -880,6 +880,8 @@
     <h3>Server Side Rendering</h3>
     <p>To render entire <i>vnode</i> trees on the back-end use:</p>
     <pre class="highlight">import {
+  enable,
+  disable,
   findOne,
   findAll,
   useWindow,
@@ -888,6 +890,39 @@
   renderToString,
   bindHelpers as $,
 } from 'somedom/ssr';</pre>
+
+    <details>
+      <summary><code>enable()</code></summary>
+      <dl>
+        <dt><code>enable([env])</code></dt>
+        <dd>
+          <p>The `env` argument is used to retrieve the `jsdom` or `happy-dom` modules from the user, e.g.</p>
+          <pre class="highlight">// CommonJS
+const happydom = require('happy-dom');
+const jsdom = require('jsdom');
+
+enable({ jsdom, happydom });
+
+// ESM
+import * as happydom from 'happy-dom';
+import * as jsdom from 'jsdom';
+
+enable({ jsdom, happydom });
+</pre>
+          <p>You can set those conditionally: `happy-dom` will be tried first, then `jsdom`, otherwise the built-in environment will be used.</p>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>disable()</code></summary>
+      <dl>
+        <dt><code>disable()</code></dt>
+        <dd>
+          <p>This will clear the globals set by the method above, use after your tests or SSR stuff.</p>
+        </dd>
+      </dl>
+    </details>
 
     <details>
       <summary><code>useWindow()</code></summary>

@@ -4,12 +4,23 @@
   "description": "Building blocks for the DOM.",
   "main": "dist/somedom.js",
   "module": "dist/somedom.mjs",
-  "browser": "dist/somedom.umd.js",
+  "unpkg": "dist/somedom.umd.js",
   "files": [
     "dist/*.*",
     "test.js",
     "ssr.js"
   ],
+  "exports": {
+    ".": {
+      "import": "dist/somedom.mjs",
+      "require": "dist/somedom.js",
+      "browser": "dist/somedom.umd.js"
+    },
+    "ssr": {
+      "import": "dist/index.ssr.mjs",
+      "require": "dist/index.ssr.js"
+    }
+  },
   "scripts": {
     "dev": "rollup -c -w",
     "build": "rollup -c",
