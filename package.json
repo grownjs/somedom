@@ -12,13 +12,13 @@
   ],
   "exports": {
     ".": {
-      "import": "dist/somedom.mjs",
-      "require": "dist/somedom.js",
-      "browser": "dist/somedom.umd.js"
+      "import": "./dist/somedom.mjs",
+      "require": "./dist/somedom.js",
+      "browser": "./dist/somedom.umd.js"
     },
-    "ssr": {
-      "import": "dist/index.ssr.mjs",
-      "require": "dist/index.ssr.js"
+    "./ssr": {
+      "import": "./dist/index.ssr.mjs",
+      "require": "./dist/index.ssr.js"
     }
   },
   "scripts": {
