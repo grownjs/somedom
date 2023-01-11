@@ -32,7 +32,7 @@ function removeSubsets(nodes) {
     nodes[idx] = null;
     replace = true;
     while (ancestor) {
-      if (!nodes.includes(ancestor)) {
+      if (nodes.includes(ancestor)) {
         replace = false;
         nodes.splice(idx, 1);
         break;
