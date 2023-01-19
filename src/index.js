@@ -86,7 +86,7 @@ export const listeners = opts => apply(addEvents, 3, opts);
 export const attributes = opts => apply(invokeProps, 3, opts);
 
 export {
-  raf, tick,
+  raf, tick, format,
 } from './lib/util';
 
 export {
