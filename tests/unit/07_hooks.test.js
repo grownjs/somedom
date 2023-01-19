@@ -167,7 +167,7 @@ describe('hooks', () => {
       const tag = bind(render, listeners());
       const app = counter(null, tag);
 
-      $(app.target).withText('truth').dispatch('click');
+      $(app.target).withText('truth').dispatchEvent(new Event('click'));
       await tick();
 
       expect(stack.join('.')).to.eql('3.AFTER.2.CLEAN.DIV.AFTER');
@@ -175,7 +175,7 @@ describe('hooks', () => {
 
       global.prompt = () => 'WAT';
 
-      $(app.target).withText('ask').dispatch('click');
+      $(app.target).withText('ask').dispatchEvent(new Event('click'));
       await tick();
 
       expect(stack.join('.')).to.eql('3.AFTER.2.CLEAN.DIV.AFTER.1.CLEAN.DIV.AFTER');

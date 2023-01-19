@@ -18,8 +18,13 @@ export { bindHelpers } from './doc';
 
 export * from '../index';
 
+const isNode = !(typeof Deno !== 'undefined' || typeof Bun !== 'undefined');
+
 let patched;
+let builtin;
 export function enable(env) {
+  if (patched) return;
+  builtin = false;
   if (env && (env.jsdom || env.happydom)) {
     let window;
     if (env.happydom) {
@@ -32,24 +37,32 @@ export function enable(env) {
 
     global.document = window.document;
     global.window = window;
-    global.Event = window.Event;
-    patched = true;
+
+    if (isNode) {
+      global.Event = window.Event;
+    }
   } else {
     patchDocument();
     patchWindow();
+    builtin = true;
   }
+  patched = true;
 }
 
 export function disable() {
-  if (patched) {
+  if (!patched) return;
+  if (!builtin) {
     delete global.document;
     delete global.window;
-    delete global.Event;
-    patched = null;
+
+    if (isNode) {
+      delete global.Event;
+    }
   } else {
     dropDocument();
     dropWindow();
   }
+  patched = null;
 }
 
 export function useWindow(cb) {

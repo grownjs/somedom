@@ -3,8 +3,8 @@ help: Makefile
 
 ci: src deps ## Run CI scripts
 	@npm run pretest
-	@HAPPY_DOM=1 npm run test:ssr
 	@JS_DOM=1 npm run test:ssr
+	@HAPPY_DOM=1 npm run test:ssr
 	@npm run test:ssr
 	@npm run test:e2e
 	@touch src/lib/*.js
