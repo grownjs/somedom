@@ -254,7 +254,7 @@ describe('somedom', () => {
       `));
 
       for (let i = 0; i < 2; i += 1) {
-        $(node).withText(`Item ${i + 1}`).dispatch('click');
+        $(node).withText(`Item ${i + 1}`).dispatchEvent(new Event('click'));
 
         await tick(); // eslint-disable-line
         await patch(node, vnode, vnode = view(), null, tag, null); // eslint-disable-line

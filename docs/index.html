@@ -961,13 +961,12 @@ var app = new Application(el, {
 var $root = $(app.target);
 
 // returns the first node matching
-$root.withText('Click me.').dispatch('click');</pre>
+$root.withText('Click me.').dispatchEvent(new Event('click'));</pre>
         </dd>
         <dd>
           <p>The method above returns a single instance from calling <code>findText()</code> which just returns a list for matching nodes.</p>
           <pre class="highlight">var button = $root.findText(/Click me/)[0];
 
-// `dispatch()` actually calls this method
 button.dispatchEvent(new Event('click'));</pre>
         </dd>
       </dl>

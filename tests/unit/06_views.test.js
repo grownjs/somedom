@@ -392,7 +392,7 @@ describe('views', () => {
         const app = createView(subject, { value }, [description]);
         const el = app(body, bind(render, listeners()));
 
-        $(body).withText(description).dispatch('click');
+        $(body).withText(description).dispatchEvent(new Event('click'));
         await tick();
 
         expect(el.target.innerHTML).to.eql(`<button>${description}</button><span>Got: ${result} (${result * 2})</span>`);

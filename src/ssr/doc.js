@@ -6,7 +6,9 @@ import Fragment from '../lib/fragment';
 import { markupAdapter } from './adapter';
 import { CLOSE_TAGS } from '../lib/shared';
 import { parse, parseDefaults } from './himalaya';
-import { tick, isNot, dashCase } from '../lib/util';
+import { isNot, dashCase } from '../lib/util';
+
+const isNode = !(typeof Deno !== 'undefined' || typeof Bun !== 'undefined');
 
 export class Event {
   constructor(type, params) {
@@ -143,20 +145,7 @@ export function findText(value) {
     }
   }
 
-  // istanbul ignore next
-  const _Event = typeof window !== 'undefined' ? window.Event : Event;
-
   walk(this, this.childNodes);
-
-  found.forEach(node => {
-    // istanbul ignore next
-    if (!node.dispatch) {
-      node.dispatch = (type, params) => {
-        node.dispatchEvent(new _Event(type, params));
-      };
-    }
-  });
-
   return found;
 }
 
@@ -278,9 +267,6 @@ export function createElementNode(name, props) {
       }
 
       return `<${name}${_props.join('')}>${self.innerHTML}</${name}>`;
-    },
-    dispatch(type, params) {
-      return tick(() => self.dispatchEvent(new Event(type, params)));
     },
     replaceChild(n, o) {
       mount(n, self);
@@ -407,7 +393,10 @@ export function patchDocument() {
 }
 
 export function patchWindow() {
-  global.Event = Event;
+  if (isNode) {
+    global.Event = Event;
+  }
+
   global.window = {
     eventListeners: {},
     HTMLElement,
@@ -423,4 +412,8 @@ export function dropDocument() {
 
 export function dropWindow() {
   delete global.window;
+
+  if (isNode) {
+    delete global.Event;
+  }
 }
