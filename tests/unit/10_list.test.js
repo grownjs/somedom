@@ -3,8 +3,8 @@
 import { expect } from 'chai';
 
 import doc from './fixtures/env';
-import { encodeText } from '../../src/ssr/doc';
 import { bind, render } from '../../src';
+import { encodeText } from '../../src/ssr/doc';
 import FragmentList from '../../src/lib/fragment-list';
 
 /* global beforeEach, afterEach, describe, it */
@@ -22,7 +22,7 @@ describe('FragmentList', () => {
     doc.enable();
     tree = $(['div', null, [
       '{',
-      ['fragment', { id: 'test' }, [
+      ['fragment', { name: 'test' }, [
         'OSOM',
       ]],
       '}',
@@ -31,7 +31,8 @@ describe('FragmentList', () => {
     t = FragmentList.from('test');
 
     const div = $(['div', null, [
-      ['fragment', { id: 'other', tag: 'p' }],
+      ['fragment', { name: 'other', tag: 'p' }],
+      ['ul', { 'data-fragment': 'test' }, []],
     ]]);
 
     document.body.appendChild(div);
@@ -45,21 +46,21 @@ describe('FragmentList', () => {
     expect(t.mounted).to.be.false;
     document.body.appendChild(tree);
     expect(t.mounted).to.be.true;
-    expect(tree.outerHTML).to.contains('<div>{<x-fragment id="test">OSOM</x-fragment>}</div>');
+    expect(tree.outerHTML).to.contains('<div>{<x-fragment name="test">OSOM</x-fragment>}</div>');
   });
 
   it('should be able to append childNodes', async () => {
     document.body.appendChild(tree);
     t.append(['!', '?']);
 
-    expect(tree.outerHTML).to.eql('<div>{<x-fragment id="test">OSOM!?</x-fragment>}</div>');
+    expect(tree.outerHTML).to.eql('<div>{<x-fragment name="test">OSOM!?</x-fragment>}</div>');
   });
 
   it('should be able to prepend childNodes', async () => {
     document.body.appendChild(tree);
     t.prepend(['.', '.', '.']);
 
-    expect(tree.outerHTML).to.eql('<div>{<x-fragment id="test">...OSOM</x-fragment>}</div>');
+    expect(tree.outerHTML).to.eql('<div>{<x-fragment name="test">...OSOM</x-fragment>}</div>');
   });
 
   it('should be able to change directions', async () => {
@@ -68,7 +69,7 @@ describe('FragmentList', () => {
     t.append([']', ')']);
 
     expect(t.vnode).to.eql(['(', '[', ['OSOM'], ']', ')']);
-    expect(tree.outerHTML).to.eql('<div>{<x-fragment id="test">([OSOM])</x-fragment>}</div>');
+    expect(tree.outerHTML).to.eql('<div>{<x-fragment name="test">([OSOM])</x-fragment>}</div>');
   });
 
   it('should be able to update childNodes', async () => {
@@ -83,7 +84,7 @@ describe('FragmentList', () => {
       sample = encodeText(sample, false);
     }
 
-    expect(tree.outerHTML).to.eql(`<div>{<x-fragment id="test">${sample}</x-fragment>}</div>`);
+    expect(tree.outerHTML).to.eql(`<div>{<x-fragment name="test">${sample}</x-fragment>}</div>`);
     expect(tree.childNodes.length).to.eql(3);
 
     let c = +(Math.random() * 10 + 1);
@@ -93,7 +94,7 @@ describe('FragmentList', () => {
       c -= 1;
     }
 
-    expect(tree.outerHTML).to.eql('<div>{<x-fragment id="test"></x-fragment>}</div>');
+    expect(tree.outerHTML).to.eql('<div>{<x-fragment name="test"></x-fragment>}</div>');
   });
 
   it('should work on already mounted nodes', async () => {
@@ -103,6 +104,13 @@ describe('FragmentList', () => {
       frag.append([['li', null, 2]]);
     });
 
-    expect(document.body.outerHTML).to.eql('<body><div><p id="other"><li>-1</li><li>1</li><li>2</li></p></div></body>');
+    const node = document.body.querySelector('ul[data-fragment]');
+    const frag = FragmentList.from(node, [], $);
+
+    frag.append([['li', null, 'OSOM']]);
+    frag.append([['li', null, 'SO']]);
+
+    expect(document.body.outerHTML).to.contains('<body><div><p name="other"><li>-1</li><li>1</li><li>2</li></p>');
+    expect(document.body.outerHTML).to.contains('<ul data-fragment="test"><li>OSOM</li><li>SO</li></ul></div></body>');
   });
 });

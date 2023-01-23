@@ -9,20 +9,28 @@ const CACHED_FRAGMENTS = new Map();
 let FRAGMENT_FX = [];
 export default class FragmentList {
   constructor(props, children, callback = createElement) {
-    props.key = props.key || `fragment-${Math.random().toString(36).substr(2)}`;
+    if (props instanceof window.HTMLElement) {
+      this.props = {};
+      this.vnode = children;
+      this.target = props;
+      this.render = callback;
+    } else {
+      props.name = props.name || `fragment-${Math.random().toString(36).substr(2)}`;
 
-    this.target = document.createElement(props.tag || 'x-fragment');
+      this.target = document.createElement(props.tag || 'x-fragment');
+
+      delete props.tag;
+
+      this.props = {};
+      this.vnode = null;
+      this.render = callback;
+      this.touch(props, children);
+    }
+
     this.target.__update = (_, prev, next) => {
       this.vnode = prev || this.vnode;
       this.patch(next);
     };
-
-    delete props.tag;
-
-    this.props = {};
-    this.vnode = null;
-    this.render = callback;
-    this.touch(props, children);
 
     let promise = Promise.resolve();
     Object.defineProperty(this, '__defer', {
@@ -110,14 +118,10 @@ export default class FragmentList {
         doc.appendChild(node);
       });
       return { target: doc };
+    } else if (!CACHED_FRAGMENTS.has(props.name)) {
+      CACHED_FRAGMENTS.set(props.name, frag = new FragmentList(props, children, callback));
     } else {
-      const name = props.key || props.id;
-
-      if (!CACHED_FRAGMENTS.has(name)) {
-        CACHED_FRAGMENTS.set(name, frag = new FragmentList(props, children, callback));
-      } else {
-        frag = CACHED_FRAGMENTS.get(name).touch(props, children);
-      }
+      frag = CACHED_FRAGMENTS.get(props.name).touch(props, children);
     }
     return frag;
   }
