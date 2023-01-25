@@ -46,17 +46,12 @@ export function isNode(value) {
 export function zip(set, prev, next, limit, offset, cb, d = 0) {
   const c = Math.max(prev.length, next.length);
 
-  function get(el) {
-    while (el && el.__dirty) el = el[++offset];
-    return el;
-  }
-
   let i = 0;
   let a = 0;
   let b = 0;
   for (; i < c; i++) {
     let el = set[offset];
-    while (el && (el.__dirty || isEnd(el))) el = el[++offset];
+    while (el && isEnd(el)) el = el[++offset];
 
     const x = flat(prev[a]);
     const y = flat(next[b]);
@@ -67,12 +62,12 @@ export function zip(set, prev, next, limit, offset, cb, d = 0) {
       if (isBegin(el)) {
         const k = el.__length + 2;
         for (let p = 0; p < k; p++) {
-          cb({ rm: get(set[offset++]) });
+          cb({ rm: set[offset++] });
         }
       } else if (isBlock(x)) {
         let k = x.length;
         if (!set[offset]) offset -= k;
-        while (k--) cb({ rm: get(set[offset++]) });
+        while (k--) cb({ rm: set[offset++] });
       } else if (el) {
         cb({ rm: el });
         offset++;

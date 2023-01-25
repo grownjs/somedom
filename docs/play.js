@@ -192,17 +192,12 @@
   function zip(set, prev, next, limit, offset, cb, d = 0) {
     const c = Math.max(prev.length, next.length);
 
-    function get(el) {
-      while (el && el.__dirty) el = el[++offset];
-      return el;
-    }
-
     let i = 0;
     let a = 0;
     let b = 0;
     for (; i < c; i++) {
       let el = set[offset];
-      while (el && (el.__dirty || isEnd(el))) el = el[++offset];
+      while (el && isEnd(el)) el = el[++offset];
 
       const x = flat(prev[a]);
       const y = flat(next[b]);
@@ -213,12 +208,12 @@
         if (isBegin(el)) {
           const k = el.__length + 2;
           for (let p = 0; p < k; p++) {
-            cb({ rm: get(set[offset++]) });
+            cb({ rm: set[offset++] });
           }
         } else if (isBlock(x)) {
           let k = x.length;
           if (!set[offset]) offset -= k;
-          while (k--) cb({ rm: get(set[offset++]) });
+          while (k--) cb({ rm: set[offset++] });
         } else if (el) {
           cb({ rm: el });
           offset++;
@@ -467,14 +462,15 @@
     let changed;
 
     const props = keys.reduce((all, k) => {
-      if (k in prev && !(k in next)) {
-        all[k] = null;
-        changed = true;
-      } else if (isDiff(prev[k], next[k])) {
-        all[k] = next[k];
-        changed = true;
+      if (k !== '@html') {
+        if (k in prev && !(k in next)) {
+          all[k] = null;
+          changed = true;
+        } else if (isDiff(prev[k], next[k])) {
+          all[k] = next[k];
+          changed = true;
+        }
       }
-
       return all;
     }, {});
 
@@ -601,6 +597,11 @@
       if (isFunction(target.update)) await target.update();
     }
 
+    if (next[1] && next[1]['@html']) {
+      target.innerHTML = next[1]['@html'];
+      return target;
+    }
+
     return updateElement(target, prev.slice(2), next.slice(2), svg, cb);
   }
 
@@ -682,7 +683,7 @@
   }
 
   async function updateElement(target, prev, next, svg, cb, i, c) {
-    if (target.__dirty || target.__update) {
+    if (target.__update) {
       return target.__update ? target.__update(target, prev, next, svg, cb, i, c) : target;
     }
 

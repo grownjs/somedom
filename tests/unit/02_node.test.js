@@ -456,30 +456,12 @@ describe('node', () => {
       expect(a.outerHTML).to.eql('<a></a>');
     });
 
-    it('should skip _dirty nodes', async () => {
-      div.__dirty = true;
-      await updateElement(div, ['div', null], ['b', null, 'OK!']);
-
+    it('should handle __update calls', async () => {
       div.__update = td.func('patch');
       await updateElement(div, ['div', null], ['b', null, 'OK!']);
 
       expect(body.innerHTML).to.eql('<div><a></a></div>');
       expect(td.explain(div.__update).callCount).to.eql(1);
-
-      delete div.__dirty;
-      delete div.__update;
-
-      await updateElement(div, ['div', null], ['div', null, ['b', null, 42]]);
-
-      for (let c = 3; c > 0; c--) {
-        const fix = createElement(['em', null, 'OSOM']);
-
-        fix.__dirty = true;
-        div.insertBefore(fix, div.childNodes[0]);
-      }
-
-      await updateElement(div, ['div', null], ['div', null, ['b', null, 43]]);
-      expect(div.outerHTML).to.eql('<div><em>OSOM</em><b>43</b></div>');
     });
 
     it('can reconcilliate childNodes', async () => {

@@ -213,7 +213,7 @@ export async function upgradeElements(target, prev, next, svg, cb, i, c) {
 }
 
 export async function updateElement(target, prev, next, svg, cb, i, c) {
-  if (target.__dirty || target.__update) {
+  if (target.__update) {
     return target.__update ? target.__update(target, prev, next, svg, cb, i, c) : target;
   }
 
