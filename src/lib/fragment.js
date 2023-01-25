@@ -43,7 +43,6 @@ export default class Fragment {
 
   static valid(value) {
     if (value instanceof Fragment) return true;
-    return typeof value === 'object' && value.nodeType === 11;
   }
 
   static from(render, value) {
