@@ -1,10 +1,12 @@
 /* eslint-disable no-unused-expressions */
 
 import { expect } from 'chai';
+import td from 'testdouble';
 
 import doc from './fixtures/env';
 import { bind, render } from '../../src';
 import { encodeText } from '../../src/ssr/doc';
+import { updateElement } from '../../src/lib/node';
 import FragmentList from '../../src/lib/fragment-list';
 
 /* global beforeEach, afterEach, describe, it */
@@ -98,10 +100,13 @@ describe('FragmentList', () => {
   });
 
   it('should work on already mounted nodes', async () => {
+    const off = td.func('teardown');
+
     await FragmentList.with('other', frag => {
       frag.prepend([['li', null, -1]]);
       frag.append([['li', null, 1]]);
       frag.append([['li', null, 2]]);
+      return off;
     });
 
     const node = document.body.querySelector('ul[data-fragment]');
@@ -110,7 +115,24 @@ describe('FragmentList', () => {
     frag.append([['li', null, 'OSOM']]);
     frag.append([['li', null, 'SO']]);
 
+    FragmentList.stop();
+
+    expect(td.explain(off).callCount).to.eql(1);
+
     expect(document.body.outerHTML).to.contains('<body><div><p name="other"><li>-1</li><li>1</li><li>2</li></p>');
     expect(document.body.outerHTML).to.contains('<ul data-fragment="test"><li>OSOM</li><li>SO</li></ul></div></body>');
+  });
+
+  it('should warn if children are not valid', async () => {
+    expect(() => FragmentList.from({ name: 'test' }, ['b', null, 'OK'])).to.throw(/Fragments should be lists of nodes, given '\["b",null,"OK"]/);
+  });
+
+  it('should handle node-patches on its elements', async () => {
+    const { target } = FragmentList.from({ name: 'sample' }, [['b', null, 'OSOM']]);
+
+    expect(target.outerHTML).to.eql('<x-fragment name="sample"><b>OSOM</b></x-fragment>');
+    await updateElement(target, [['b', null, 'OSOM']], [['em', null, 'COOL']]);
+
+    expect(target.outerHTML).to.eql('<x-fragment name="sample"><em>COOL</em></x-fragment>');
   });
 });

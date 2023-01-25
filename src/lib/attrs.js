@@ -105,14 +105,15 @@ export function updateProps(target, prev, next, svg, cb) {
   let changed;
 
   const props = keys.reduce((all, k) => {
-    if (k in prev && !(k in next)) {
-      all[k] = null;
-      changed = true;
-    } else if (isDiff(prev[k], next[k], true)) {
-      all[k] = next[k];
-      changed = true;
+    if (k !== '@html') {
+      if (k in prev && !(k in next)) {
+        all[k] = null;
+        changed = true;
+      } else if (isDiff(prev[k], next[k], true)) {
+        all[k] = next[k];
+        changed = true;
+      }
     }
-
     return all;
   }, {});
 
