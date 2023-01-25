@@ -192,6 +192,14 @@ describe('node', () => {
 
         expect(document.body.innerHTML).to.eql('<div class="y"><em>OK</em></div>');
       });
+
+      it('should expand @ into data- attributes', async () => {
+        mountElement(document.body, [
+          ['b', { '@foo': 'bar' }, 'OK'],
+        ]);
+
+        expect(document.body.innerHTML).to.eql('<b data-foo="bar">OK</b>');
+      });
     });
   });
 

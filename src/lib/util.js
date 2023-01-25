@@ -8,7 +8,7 @@ import {
   RE_XML_CLOSE_BEGIN,
 } from './shared';
 
-import Fragment, { BEGIN, END } from './fragment';
+import Fragment, { BEGIN } from './fragment';
 
 export const isString = value => typeof value === 'string';
 export const isFunction = value => typeof value === 'function';
@@ -20,7 +20,6 @@ export const isScalar = value => isString(value) || typeof value === 'number' ||
 
 export const isArray = value => Array.isArray(value);
 export const isBegin = value => value === BEGIN || (value && value.__mark === BEGIN);
-export const isEnd = value => value === END || (value && value.__mark === END);
 export const isBlock = value => isArray(value) && !isNode(value);
 
 export function flat(value) {
@@ -39,7 +38,6 @@ export function isNode(value) {
   if (!isArray(value)) return false;
   if (typeof value[0] === 'function') return true;
   if (typeof value[1] !== 'object' || isArray(value[1])) return false;
-  if (typeof value[0] !== 'string' || value[0].includes(' ')) return false;
   return true;
 }
 
@@ -50,9 +48,7 @@ export function zip(set, prev, next, limit, offset, cb, d = 0) {
   let a = 0;
   let b = 0;
   for (; i < c; i++) {
-    let el = set[offset];
-    while (el && isEnd(el)) el = el[++offset];
-
+    const el = set[offset];
     const x = flat(prev[a]);
     const y = flat(next[b]);
 
@@ -66,7 +62,6 @@ export function zip(set, prev, next, limit, offset, cb, d = 0) {
         }
       } else if (isBlock(x)) {
         let k = x.length;
-        if (!set[offset]) offset -= k;
         while (k--) cb({ rm: set[offset++] });
       } else if (el) {
         cb({ rm: el });
@@ -102,7 +97,6 @@ export function zip(set, prev, next, limit, offset, cb, d = 0) {
 
   if (offset !== set.length) {
     for (let k = offset; k < set.length; k++) {
-      if (isEnd(set[k])) break;
       cb({ rm: set[k] });
     }
   }

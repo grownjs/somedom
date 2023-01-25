@@ -6,6 +6,12 @@ import { raf, tick, isBlock } from './util';
 
 const CACHED_FRAGMENTS = new Map();
 
+function __validate(children) {
+  if (!isBlock(children)) {
+    throw new Error(`Fragments should be lists of nodes, given '${JSON.stringify(children)}'`);
+  }
+}
+
 let FRAGMENT_FX = [];
 export default class FragmentList {
   constructor(props, children, callback = createElement) {
@@ -67,15 +73,13 @@ export default class FragmentList {
 
   touch(props, children) {
     delete props.tag;
+    __validate(children);
     updateProps(this.target, this.props, props, null, this.render);
     return children ? this.patch(children) : this;
   }
 
   sync(children, direction) {
-    if (!isBlock(children)) {
-      throw new Error(`Fragments should be lists of nodes, given '${JSON.stringify(children)}'`);
-    }
-
+    __validate(children);
     if (!direction) return this.patch(children);
     if (this.mounted) {
       if (direction < 0) {
@@ -109,15 +113,6 @@ export default class FragmentList {
     let frag;
     if (typeof props === 'string') {
       frag = CACHED_FRAGMENTS.get(props);
-    } else if (props['@html']) {
-      const doc = document.createDocumentFragment();
-      const div = document.createElement('div');
-
-      div.innerHTML = props['@html'];
-      [].slice.call(div.childNodes).forEach(node => {
-        doc.appendChild(node);
-      });
-      return { target: doc };
     } else if (!CACHED_FRAGMENTS.has(props.name)) {
       CACHED_FRAGMENTS.set(props.name, frag = new FragmentList(props, children, callback));
     } else {

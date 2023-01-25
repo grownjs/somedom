@@ -151,7 +151,6 @@ export function createView(Factory, initialState, userActions, refreshCallback) 
       configurable: false,
       enumerable: true,
       get: () => context || data,
-      set: v => Object.assign(context || data, v),
     });
 
     if (instance) {
@@ -190,11 +189,7 @@ export function createThunk(vnode, svg, cb = createElement) {
     await Promise.all(tasks);
   };
 
-  ctx.mount = async (el, _vnode, _remove) => {
-    if (_remove) {
-      while (el.firstChild) el.removeChild(el.firstChild);
-    }
-
+  ctx.mount = async (el, _vnode) => {
     await ctx.unmount();
 
     ctx.vnode = _vnode || ctx.vnode;

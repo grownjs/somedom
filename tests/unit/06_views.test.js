@@ -503,6 +503,7 @@ describe('views', () => {
       _thunk.state.val = [42];
       _thunk.state.sync();
       await $$.defer();
+      $$.clear();
 
       expect(document.body.innerHTML).to.eql('<span>42</span>');
     });

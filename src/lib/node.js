@@ -177,28 +177,14 @@ export async function upgradeElements(target, prev, next, svg, cb, i, c) {
 
   if (!isBlock(next)) next = [next];
 
-  if (target.nodeType === 3) {
-    const newNode = createElement(next, svg, cb);
-
-    detach(target, newNode);
-    return newNode;
-  }
-
   zip(set, prev, next, c || null, i || 0, push);
 
-  let j = 0;
   for (const task of stack) {
-    if (c !== null && j++ >= c) break;
-
     if (task.rm) {
       await destroyElement(task.rm);
     }
     if (!isNot(task.patch)) {
-      if (!task.target.parentNode) {
-        task.add = task.with;
-      } else {
-        await patchNode(task.target, task.patch, task.with, svg, cb);
-      }
+      await patchNode(task.target, task.patch, task.with, svg, cb);
     }
     if (!isNot(task.add)) {
       const newNode = createElement(task.add, svg, cb);
@@ -246,7 +232,6 @@ export async function destroyFragment(target, next, svg, cb) {
   const q = [];
 
   for (let k = 0; k < del; k++) {
-    if (!target) break;
     q.push(target);
     target = target.nextSibling;
   }
@@ -274,10 +259,8 @@ export async function patchNode(target, prev, next, svg, cb) {
           target.nodeValue = String(next);
         }
       }
-    } else if (target.nodeType === 1) {
-      target = await upgradeNode(target, prev, next, svg, cb);
     } else {
-      target = await updateElement(target, prev, next, svg, cb);
+      target = await upgradeNode(target, prev, next, svg, cb);
     }
   } else {
     target = newNode;
