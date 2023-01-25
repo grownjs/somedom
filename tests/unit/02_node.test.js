@@ -179,6 +179,19 @@ describe('node', () => {
 
         expect(td.explain(callback).callCount).to.eql(4);
       });
+
+      it('should handle updates with @html attributes', async () => {
+        mountElement(document.body, [
+          ['div', { '@html': '<b>OSOM</b>' }],
+        ]);
+
+        const old = [['div', { class: 'x' }, ['b', null, 'OSOM']]];
+        const next = [['div', { class: 'y', '@html': '<em>OK</em>' }]];
+
+        await updateElement(document.body, old, next);
+
+        expect(document.body.innerHTML).to.eql('<div class="y"><em>OK</em></div>');
+      });
     });
   });
 

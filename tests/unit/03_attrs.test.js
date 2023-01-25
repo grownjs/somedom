@@ -102,14 +102,6 @@ describe('attrs', () => {
       expect(div.outerHTML).to.eql('<div><b>OSOM</b></div>');
     });
 
-    it('should handle the @html prop', () => {
-      assignProps(div, {
-        '@html': '<b>OSOM</b>',
-      }, true);
-
-      expect(div.outerHTML).to.eql('<div><b>OSOM</b></div>');
-    });
-
     it('should skip :static props', () => {
       assignProps(div, {
         ':disabled': true,

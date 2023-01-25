@@ -127,6 +127,11 @@ export async function upgradeNode(target, prev, next, svg, cb) {
     if (isFunction(target.update)) await target.update();
   }
 
+  if (next[1] && next[1]['@html']) {
+    target.innerHTML = next[1]['@html'];
+    return target;
+  }
+
   return updateElement(target, prev.slice(2), next.slice(2), svg, cb);
 }
 
