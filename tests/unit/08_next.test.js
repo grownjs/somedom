@@ -93,7 +93,7 @@ describe('@next', () => {
         ]],
         ['a', null, ['D']],
       ]);
-      expect(plain(div)).to.eql(['<x>A</x>', '', '<y>B</y>', '', '', '<z>C</z>', '<z>c</z>', '', '<a>D</a>']);
+      expect(plain(div)).to.eql(['<x>A</x>', '<y>B</y>', '<z>C</z>', '<z>c</z>', '<a>D</a>']);
 
       await patch(div, old, old = [
         ['y', null, ['F']],
@@ -103,7 +103,7 @@ describe('@next', () => {
           ['x', null, ['e']],
         ]],
       ]);
-      expect(plain(div)).to.eql(['<y>F</y>', '?', '', '<x>E</x>', '<x>e</x>', '']);
+      expect(plain(div)).to.eql(['<y>F</y>', '?', '<x>E</x>', '<x>e</x>']);
 
       await patch(div, old, old = [
         ['y', null, ['O']],
@@ -115,7 +115,7 @@ describe('@next', () => {
           ['z', null, ['R']],
         ]],
       ]);
-      expect(plain(div)).to.eql(['<y>O</y>', '<y>P</y>', '', '', '<x>Q</x>', '', '<z>R</z>', '']);
+      expect(plain(div)).to.eql(['<y>O</y>', '<y>P</y>', '<x>Q</x>', '<z>R</z>']);
     });
   });
 
@@ -167,17 +167,17 @@ describe('@next', () => {
         el = div;
         tmp = ['div', null];
         await patch(el, tmp, tmp = ['div', null, ['c']]);
-        expect(plain(el)).to.eql(['', 'c', '']);
+        expect(plain(el)).to.eql(['c']);
       });
 
       it('should append missing nodes', async () => {
         await patch(el, tmp, tmp = ['div', null, ['c', 'd']]);
-        expect(plain(el)).to.eql(['', 'c', 'd', '']);
+        expect(plain(el)).to.eql(['c', 'd']);
       });
 
       it('should unmount deleted nodes', async () => {
         await patch(el, tmp, tmp = ['div', null, ['x']]);
-        expect(plain(el)).to.eql(['', 'x', '']);
+        expect(plain(el)).to.eql(['x']);
       });
 
       it('should replace changed nodes', async () => {
@@ -195,12 +195,12 @@ describe('@next', () => {
         expect(el.outerHTML).to.eql('<a><foo>bar</foo></a>');
       });
 
-      it('should patch over nested fragments', async () => {
+      it('should patch over mounted fragments', async () => {
         await patch(el, tmp, tmp = [['a', 'b', 'c'], ['d', 'e']]);
-        expect(plain(el)).to.eql(['', 'a', 'b', 'c', '', '', 'd', 'e', '']);
+        expect(plain(el)).to.eql(['a', 'b', 'c', 'd', 'e']);
 
         await patch(el, tmp, tmp = [['foo'], ['bar']]);
-        expect(plain(el)).to.eql(['', 'foo', '', '', 'bar', '']);
+        expect(plain(el)).to.eql(['foo', 'bar']);
 
         await patch(el, tmp, tmp = ['baz']);
         expect(plain(el)).to.eql(['baz']);

@@ -8,7 +8,7 @@ import {
   RE_XML_CLOSE_BEGIN,
 } from './shared';
 
-import Fragment, { BEGIN } from './fragment';
+import Fragment from './fragment';
 
 export const isString = value => typeof value === 'string';
 export const isFunction = value => typeof value === 'function';
@@ -19,7 +19,6 @@ export const isObject = value => value !== null && (typeof value === 'function' 
 export const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
 
 export const isArray = value => Array.isArray(value);
-export const isBegin = value => value === BEGIN || (value && value.__mark === BEGIN);
 export const isBlock = value => isArray(value) && !isNode(value);
 
 export function flat(value) {
@@ -41,7 +40,7 @@ export function isNode(value) {
   return true;
 }
 
-export function zip(set, prev, next, limit, offset, cb, d = 0) {
+export function zip(set, prev, next, offset, cb, d = 0) {
   const c = Math.max(prev.length, next.length);
 
   let i = 0;
@@ -55,12 +54,7 @@ export function zip(set, prev, next, limit, offset, cb, d = 0) {
     if (isNot(x)) {
       cb({ add: y });
     } else if (isNot(y)) {
-      if (isBegin(el)) {
-        const k = el.__length + 2;
-        for (let p = 0; p < k; p++) {
-          cb({ rm: set[offset++] });
-        }
-      } else if (isBlock(x)) {
+      if (isBlock(x)) {
         let k = x.length;
         while (k--) cb({ rm: set[offset++] });
       } else if (el) {
@@ -68,29 +62,18 @@ export function zip(set, prev, next, limit, offset, cb, d = 0) {
         offset++;
       }
     } else if (isBlock(x) && isBlock(y)) {
-      if (isBegin(el)) {
-        cb({ patch: x, with: y, target: el });
-        offset += el.__length + 2;
-      } else {
-        zip(set, x, y, limit, offset, cb, d + 1);
-        offset += y.length + 2;
-      }
+      zip(set, x, y, offset, cb, d + 1);
+      offset += y.length + 2;
     } else if (isBlock(y)) {
       cb({ patch: [x], with: y, target: el });
       offset += y.length;
     } else if (el) {
       cb({ patch: x, with: y, target: el });
-      if (isBegin(el)) {
-        offset += el.__length + 2;
-      } else {
-        offset++;
-      }
+      offset++;
     } else {
       cb({ add: y });
       offset++;
     }
-
-    if (limit !== null && i >= limit - 1) return;
     a++;
     b++;
   }

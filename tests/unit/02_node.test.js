@@ -45,12 +45,14 @@ describe('node', () => {
         return ['OK: ', -1];
       }];
 
-      expect(createElement([
+      createElement([
         ['p', null, [
           ['span', null, ['value: ', value]],
         ]],
         children,
-      ]).outerHTML).to.eql('<p><span>value: 42</span></p>OK: -1');
+      ]).mount(document.body);
+
+      expect(document.body.innerHTML).to.eql('<p><span>value: 42</span></p>OK: -1');
     });
 
     it('should render children indistinctly', () => {
@@ -135,51 +137,6 @@ describe('node', () => {
         expect(div.childNodes.length).to.eql(9);
       });
 
-      it('should trigger onupdate/update methods on fragments', async () => {
-        const callback = td.func('update');
-
-        let calls = 0;
-        let ref;
-        function Test(props, children) {
-          const old = ref && ref.root;
-          ref = createElement(children);
-          ref.parentNode = old;
-          ref.onupdate = callback;
-          ref.update = callback;
-          calls += 1;
-          return ref;
-        }
-
-        let old;
-        mountElement(document.body, old = [
-          ['div', null, [
-            [Test, { foo: 'bar' }, ['baz']],
-          ]],
-        ]);
-
-        expect(document.body.innerHTML).to.eql('<div>baz</div>');
-        expect(td.explain(callback).callCount).to.eql(0);
-        expect(calls).to.eql(1);
-        expect(ref.length).to.eql(1);
-
-        await updateElement(document.body, old, old = [
-          ['div', null, [
-            [Test, { baz: 'buzz' }, ['bazzinga']],
-          ]],
-        ]);
-
-        expect(calls).to.eql(2);
-        expect(td.explain(callback).callCount).to.eql(2);
-        expect(document.body.innerHTML).to.eql('<div>bazzinga</div>');
-
-        ref = await updateElement(ref, [[Test, { baz: 'buzz' }, ['bazzinga']]], [[Test, { key: 'x' }, ['yz']]]);
-        expect(calls).to.eql(3);
-        expect(ref.root.outerHTML).to.eql('<div>yz</div>');
-        expect(document.body.innerHTML).to.eql('<div>yz</div>');
-
-        expect(td.explain(callback).callCount).to.eql(4);
-      });
-
       it('should handle updates with @html attributes', async () => {
         mountElement(document.body, [
           ['div', { '@html': '<b>OSOM</b>' }],
@@ -223,22 +180,6 @@ describe('node', () => {
     it('should skip removal if wait() does not resolve', async () => {
       await destroyElement(div, () => null);
       expect(td.explain(div.remove).callCount).to.eql(0);
-    });
-
-    it('should remove all Fragment childNodes', async () => {
-      const vdom = createElement([[['OSOM'], ['SO']]]);
-      const remove = td.func('-OSOM');
-      const remove2 = td.func('-SO');
-
-      vdom.mount(document.createElement('div'));
-
-      td.replace(vdom.children[0], 'remove', remove);
-      td.replace(vdom.children[1], 'remove', remove2);
-
-      await vdom.remove();
-
-      expect(td.explain(remove).callCount).to.eql(1);
-      expect(td.explain(remove2).callCount).to.eql(1);
     });
   });
 
@@ -289,12 +230,12 @@ describe('node', () => {
 
       expect(node.parentNode).not.to.be.undefined;
       expect(node.childNodes.length).to.eql(0);
-      expect(node.outerHTML).to.eql('<p><i></i></p>');
-      expect(node.children[0].tagName).to.eql('P');
-      expect(node.children[0].childNodes.length).to.eql(1);
-      expect(node.children[0].childNodes[0].nodeType).to.eql(1);
-      expect(node.children[0].childNodes[0].tagName).to.eql('I');
-      expect(node.children[0].childNodes[0].childNodes.length).to.eql(0);
+      expect(node.parentNode.innerHTML).to.eql('<p><i></i></p>');
+      expect(node.parentNode.childNodes[0].tagName).to.eql('P');
+      expect(node.parentNode.childNodes[0].childNodes.length).to.eql(1);
+      expect(node.parentNode.childNodes[0].childNodes[0].nodeType).to.eql(1);
+      expect(node.parentNode.childNodes[0].childNodes[0].tagName).to.eql('I');
+      expect(node.parentNode.childNodes[0].childNodes[0].childNodes.length).to.eql(0);
     });
 
     it('should pass created element to given callback', () => {

@@ -104,10 +104,16 @@ describe('FragmentList', () => {
 
     await FragmentList.with('other', frag => {
       frag.prepend([['li', null, -1]]);
-      frag.append([['li', null, 1]]);
-      frag.append([['li', null, 2]]);
       return off;
     });
+
+    await FragmentList.with('other', frag => {
+      frag.append([['li', null, 1]]);
+      frag.append([['li', null, 2]]);
+    });
+
+    expect(FragmentList.has('other')).to.be.true;
+    expect(FragmentList.has('undef')).to.be.false;
 
     const node = document.body.querySelector('ul[data-fragment]');
     const frag = FragmentList.from(node, [], $);
@@ -128,11 +134,14 @@ describe('FragmentList', () => {
   });
 
   it('should handle node-patches on its elements', async () => {
-    const { target } = FragmentList.from({ name: 'sample' }, [['b', null, 'OSOM']]);
+    const frag = FragmentList.from({ name: 'sample' }, [['b', null, 'OSOM']]);
 
-    expect(target.outerHTML).to.eql('<x-fragment name="sample"><b>OSOM</b></x-fragment>');
-    await updateElement(target, [['b', null, 'OSOM']], [['em', null, 'COOL']]);
+    expect(frag.target.outerHTML).to.eql('<x-fragment name="sample"><b>OSOM</b></x-fragment>');
+    await updateElement(frag.target, [['b', null, 'OSOM']], [['em', null, 'COOL']]);
 
-    expect(target.outerHTML).to.eql('<x-fragment name="sample"><em>COOL</em></x-fragment>');
+    expect(frag.target.outerHTML).to.eql('<x-fragment name="sample"><em>COOL</em></x-fragment>');
+
+    await frag.sync([['p', null, 'OK']]);
+    expect(frag.target.outerHTML).to.eql('<x-fragment name="sample"><p>OK</p></x-fragment>');
   });
 });

@@ -135,12 +135,10 @@ describe('somedom', () => {
       expect(document.body.outerHTML).to.eql('<body>\n</body>');
     });
 
-    it('should patch childNodes from live fragments', async () => {
-      const refs = {};
+    it('should patch childNodes from fragments', async () => {
       const $$ = bind(render, [{
         fragment(props, children) {
-          refs[props.key] = Fragment.from($$, children);
-          return refs[props.key];
+          return Fragment.from($$, children);
         },
       }]);
 
@@ -167,9 +165,6 @@ describe('somedom', () => {
 </ul></nav>
 <main>MARKUP</main></body>`);
 
-      expect(refs['user-menu'].outerHTML).to.eql('\n<li>Profile</li>\n');
-      expect(refs['flash-info'].outerHTML).to.eql('\n');
-
       const next = [
         '\n',
         ['nav', null, [
@@ -183,9 +178,6 @@ describe('somedom', () => {
       ];
 
       await patch(document.body, prev, next, null, $$);
-
-      expect(refs['user-menu'].outerHTML).to.eql('\n');
-      expect(refs['flash-info'].outerHTML).to.eql('<p>Done.</p>\n');
 
       expect(document.body.outerHTML).to.eql(`<body>
 <nav><ul><li>Home</li>
