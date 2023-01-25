@@ -22,8 +22,6 @@ import {
   bind, render, listeners,
 } from '../../src';
 
-import Fragment from '../../src/lib/fragment';
-
 import { tick, trim, format } from '../../src/lib/util';
 import { bindHelpers as $ } from '../../src/ssr';
 import doc from './fixtures/env';
@@ -493,10 +491,10 @@ describe('views', () => {
       const Thunk = $$.wrap(Test);
 
       await $$.mount(document.body, [[Thunk]]);
-      expect(document.body.innerHTML).to.eql('<span>0</span>');
+      expect(document.body.innerHTML).to.eql('<x-fragment><span>0</span></x-fragment>');
 
       await $$.defer();
-      expect(document.body.innerHTML).to.eql('<span>-1</span>');
+      expect(document.body.innerHTML).to.eql('<x-fragment><span>-1</span></x-fragment>');
 
       const _thunk = $$.refs.Thunk[0];
 
@@ -505,7 +503,7 @@ describe('views', () => {
       await $$.defer();
       $$.clear();
 
-      expect(document.body.innerHTML).to.eql('<span>42</span>');
+      expect(document.body.innerHTML).to.eql('<x-fragment><span>42</span></x-fragment>');
     });
 
     it('should allow to re-render the same thunk', async () => {
@@ -536,13 +534,13 @@ describe('views', () => {
       const Thunk = $$.wrap(Test);
 
       await $$.mount(div, [[Thunk, { value: 42 }]]);
-      expect(document.body.outerHTML).to.eql('<body><div><span>42</span></div></body>');
+      expect(document.body.outerHTML).to.eql('<body><div><x-fragment><span>42</span></x-fragment></div></body>');
 
       await new Promise(ok => setTimeout(ok, 150));
-      expect(document.body.outerHTML).to.eql('<body><div><span>43</span></div></body>');
+      expect(document.body.outerHTML).to.eql('<body><div><x-fragment><span>43</span></x-fragment></div></body>');
 
       await $$.mount(div, [[Thunk, { value: -1 }]]);
-      expect(document.body.outerHTML).to.eql('<body><div><span>-1</span></div></body>');
+      expect(document.body.outerHTML).to.eql('<body><div><x-fragment></x-fragment><x-fragment><span>-1</span></x-fragment></div></body>');
       $$.unmount();
     });
 
@@ -564,7 +562,6 @@ describe('views', () => {
 
       const el = thunk.wrap(tag, 'Test')();
 
-      expect(Fragment.valid(el)).to.be.true;
       expect(thunk.refs.Test[0].target).to.eql(el);
 
       await thunk.unmount();
@@ -574,7 +571,7 @@ describe('views', () => {
     it('should derive the thunk name from the given factory', () => {
       const callback = td.func('mount');
 
-      td.when(callback(td.matchers.isA(Fragment), thunk.render))
+      td.when(callback(td.matchers.isA(window.HTMLElement), thunk.render))
         .thenDo(target => ({ target }));
 
       thunk.wrap(function Test() {
@@ -649,11 +646,13 @@ describe('views', () => {
         expect(format(node.outerHTML)).to.eql(trim(`
           <fieldset>
             <legend>Example:</legend>
-            <span>
-              <button>--</button>
-              <button>++</button>
-              <span>value: 42</span>
-            </span>
+            <x-fragment>
+              <span>
+                <button>--</button>
+                <button>++</button>
+                <span>value: 42</span>
+              </span>
+            </x-fragment>
           </fieldset>
         `));
 
@@ -665,9 +664,10 @@ describe('views', () => {
           obj = obj.parentNode;
         }
 
-        expect(depth).to.eql(2);
-        expect(node.childNodes.length).to.eql(4);
-        expect(node.childNodes[2].childNodes.length).to.eql(3);
+        expect(depth).to.eql(3);
+        expect(node.childNodes.length).to.eql(2);
+        expect(node.childNodes[1].childNodes.length).to.eql(1);
+        expect(node.childNodes[1].childNodes[0].childNodes.length).to.eql(3);
       });
 
       it('should reference mounted views', async () => {
@@ -675,10 +675,10 @@ describe('views', () => {
 
         await ctx.defer(ctx.refs.CounterView[0].setValue('OSOMS'));
         expect(ctx.source.target.innerHTML).to.contains('value: OSOMS');
-        expect(ctx.source.target.innerHTML).to.contains('<legend>Example:</legend><span><button>');
+        expect(ctx.source.target.innerHTML).to.contains('<legend>Example:</legend><x-fragment><span><button>');
 
         await ctx.defer(ctx.refs.CounterView[0].unmount());
-        expect(ctx.source.target.innerHTML).to.eql('<legend>Example:</legend>');
+        expect(ctx.source.target.innerHTML).to.eql('<legend>Example:</legend><x-fragment></x-fragment>');
         expect(ctx.refs.CounterView).to.be.undefined;
       });
 
@@ -728,8 +728,8 @@ describe('views', () => {
         const app = Counter(div);
         const prefix = seq.join('');
 
-        expect(div.outerHTML).to.eql(`<div><p><span>value: 42</span></p>OK: ${prefix}0</div>`);
-        expect(app.target.outerHTML).to.eql(`<div><p><span>value: 42</span></p>OK: ${prefix}0</div>`);
+        expect(div.outerHTML).to.eql(`<div><p><span>value: 42</span></p><x-fragment>OK: ${prefix}0</x-fragment></div>`);
+        expect(app.target.outerHTML).to.eql(`<div><p><span>value: 42</span></p><x-fragment>OK: ${prefix}0</x-fragment></div>`);
 
         expect(inc).to.eql(1);
         await app.defer(app.instance.inc());
@@ -744,9 +744,9 @@ describe('views', () => {
         const c = div.outerHTML;
 
         expect(inc).to.eql(4);
-        expect(a).to.eql(`<div><p><span>value: 43</span></p>OK: ${prefix}1-1</div>`);
-        expect(b).to.eql(`<div><p><span>value: 44</span></p>OK: ${prefix}2</div>`);
-        expect(c).to.eql(`<div><p><span>value: 45</span></p>OK: ${prefix}3</div>`);
+        expect(a).to.eql(`<div><p><span>value: 43</span></p><x-fragment>OK: ${prefix}1-1</x-fragment></div>`);
+        expect(b).to.eql(`<div><p><span>value: 44</span></p><x-fragment>OK: ${prefix}2</x-fragment></div>`);
+        expect(c).to.eql(`<div><p><span>value: 45</span></p><x-fragment>OK: ${prefix}3</x-fragment></div>`);
       });
     });
   });

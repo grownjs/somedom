@@ -21,11 +21,6 @@
     'props',
   ];
 
-  /* eslint-disable no-plusplus */
-
-  const BEGIN = Symbol('BEGIN');
-  const END = Symbol('END');
-
   class Fragment {
     constructor() {
       this.childNodes = [];
@@ -47,30 +42,9 @@
     getDocumentFragment() {
       const doc = document.createDocumentFragment();
 
-      this.flush(doc);
+      this.childNodes.forEach(sub => doc.appendChild(sub));
+      this.childNodes = [];
       return doc;
-    }
-
-    upgrade(next) {
-      const q = [];
-
-      let c = this.begin.__length;
-      let i = this.offset;
-      while (c-- > 0) {
-        q.push(this.root.childNodes[i++]);
-      }
-
-      this.begin.__length = next.length;
-      next.childNodes.forEach(node => {
-        this.root.insertBefore(node, this.end);
-      });
-
-      return Promise.all(q.map(node => node.remove()));
-    }
-
-    remove(wait) {
-      wait = wait || (cb => cb());
-      return Promise.resolve().then(() => wait(() => this.children.map(sub => sub && sub.remove())));
     }
 
     mount(target, node) {
@@ -79,69 +53,20 @@
         isConnected: { configurable: true, value: true },
       });
 
-      const doc = this.getDocumentFragment();
+      if (target) {
+        const doc = this.getDocumentFragment();
 
-      if (node) {
-        target.insertBefore(doc, node);
-      } else {
-        target.appendChild(doc);
-      }
-    }
-
-    flush(target) {
-      this.begin = document.createTextNode('');
-      this.end = document.createTextNode('');
-
-      this.begin.__length = this.childNodes.length;
-      this.begin.__mark = BEGIN;
-      this.begin.__self = this;
-      this.end.__mark = END;
-
-      target.appendChild(this.begin);
-      this.childNodes.forEach(sub => target.appendChild(sub));
-      target.appendChild(this.end);
-      this.childNodes = [];
-    }
-
-    get outerHTML() {
-      return this.children.map(node => node.outerHTML || node.nodeValue).join('');
-    }
-
-    get children() {
-      if (this.root) {
-        const childNodes = [];
-        const { offset } = this;
-
-        for (let i = 0; i < this.length; i += 1) {
-          childNodes.push(this.root.childNodes[i + offset]);
-        }
-        return childNodes;
-      }
-      return this.childNodes;
-    }
-
-    get offset() {
-      const children = this.root.childNodes;
-
-      let c = 0;
-      for (let i = 0; i < children.length; i += 1) {
-        if (children[i] === this.begin) {
-          c = i + 1;
-          break;
+        if (node) {
+          target.insertBefore(doc, node);
+        } else {
+          target.appendChild(doc);
         }
       }
-      return c;
-    }
-
-    get root() {
-      let root = this;
-      while (Fragment.valid(root)) root = root.parentNode;
-      return root;
     }
 
     static valid(value) {
       if (value instanceof Fragment) return true;
-      return typeof value === 'object' && value.begin && value.nodeType === 11;
+      return typeof value === 'object' && value.nodeType === 11;
     }
 
     static from(render, value) {
@@ -165,7 +90,6 @@
   const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
 
   const isArray = value => Array.isArray(value);
-  const isBegin = value => value === BEGIN || (value && value.__mark === BEGIN);
   const isBlock = value => isArray(value) && !isNode(value);
 
   function flat(value) {
@@ -187,7 +111,7 @@
     return true;
   }
 
-  function zip(set, prev, next, limit, offset, cb, d = 0) {
+  function zip(set, prev, next, offset, cb, d = 0) {
     const c = Math.max(prev.length, next.length);
 
     let i = 0;
@@ -201,12 +125,7 @@
       if (isNot(x)) {
         cb({ add: y });
       } else if (isNot(y)) {
-        if (isBegin(el)) {
-          const k = el.__length + 2;
-          for (let p = 0; p < k; p++) {
-            cb({ rm: set[offset++] });
-          }
-        } else if (isBlock(x)) {
+        if (isBlock(x)) {
           let k = x.length;
           while (k--) cb({ rm: set[offset++] });
         } else if (el) {
@@ -214,29 +133,18 @@
           offset++;
         }
       } else if (isBlock(x) && isBlock(y)) {
-        if (isBegin(el)) {
-          cb({ patch: x, with: y, target: el });
-          offset += el.__length + 2;
-        } else {
-          zip(set, x, y, limit, offset, cb, d + 1);
-          offset += y.length + 2;
-        }
+        zip(set, x, y, offset, cb, d + 1);
+        offset += y.length + 2;
       } else if (isBlock(y)) {
         cb({ patch: [x], with: y, target: el });
         offset += y.length;
       } else if (el) {
         cb({ patch: x, with: y, target: el });
-        if (isBegin(el)) {
-          offset += el.__length + 2;
-        } else {
-          offset++;
-        }
+        offset++;
       } else {
         cb({ add: y });
         offset++;
       }
-
-      if (limit !== null && i >= limit - 1) return;
       a++;
       b++;
     }
@@ -599,19 +507,12 @@
     return updateElement(target, prev.slice(2), next.slice(2), svg, cb);
   }
 
-  async function upgradeFragment(target, prev, next, svg, cb) {
+  async function upgradeFragment(target, next, svg, cb) {
     if (isFunction(next[0])) {
       const newNode = createElement(next, svg, cb);
 
       if (Fragment.valid(newNode)) {
-        if (isBegin(target)) {
-          await target.__self.upgrade(newNode);
-          if (isFunction(newNode.onupdate)) await newNode.onupdate(newNode);
-          if (isFunction(newNode.update)) await newNode.update();
-          target = newNode;
-        } else {
-          detach(target, newNode);
-        }
+        detach(target, newNode);
       } else {
         target.replaceWith(newNode);
         return newNode;
@@ -620,31 +521,19 @@
     }
   }
 
-  async function upgradeElement(target, prev, next, el, svg, cb) {
-    const newNode = createElement(next, svg, cb);
-
-    newNode.onupdate = prev.onupdate || newNode.onupdate;
-    newNode.update = prev.update || newNode.update;
-
-    if (Fragment.valid(newNode)) {
-      newNode.mount(el, target);
-    } else {
-      el.insertBefore(newNode, target);
-    }
-    return newNode;
-  }
-
-  async function upgradeElements(target, prev, next, svg, cb, i, c) {
+  async function upgradeElements(target, prev, next, svg, cb, i) {
     const stack = [];
     const set = target.childNodes;
     const push = v => stack.push(v);
 
     if (!isBlock(next)) next = [next];
 
-    zip(set, prev, next, c || null, i || 0, push);
+    zip(set, prev, next, i || 0, push);
+
+    const keep = stack.filter(x => x.patch);
 
     for (const task of stack) {
-      if (task.rm) {
+      if (task.rm && !keep.find(x => x.target === task.rm)) {
         await destroyElement(task.rm);
       }
       if (!isNot(task.patch)) {
@@ -664,12 +553,7 @@
 
   async function updateElement(target, prev, next, svg, cb, i, c) {
     if (target.__update) {
-      return target.__update ? target.__update(target, prev, next, svg, cb, i, c) : target;
-    }
-
-    if (Fragment.valid(target)) {
-      await upgradeElements(target.root, prev, next, svg, cb, target.offset, target.length);
-      return target;
+      return target.__update(target, prev, next, svg, cb, i, c);
     }
 
     if (!prev || (isNode(prev) && isNode(next))) {
@@ -685,34 +569,16 @@
       return upgradeNode(target, prev, next, svg, cb);
     }
 
-    await upgradeElements(target, prev, next, svg, cb, i, c);
-    return target;
-  }
-
-  async function destroyFragment(target, next, svg, cb) {
-    const del = target.__length + 2;
-    const el = target.parentNode;
-    const on = target;
-    const q = [];
-
-    for (let k = 0; k < del; k++) {
-      q.push(target);
-      target = target.nextSibling;
-    }
-
-    await Promise.all(q.map(node => destroyElement(node)));
-    await upgradeElement(target, on, next, el, svg, cb);
+    await upgradeElements(target, prev, next, svg, cb, i);
     return target;
   }
 
   async function patchNode(target, prev, next, svg, cb) {
-    const newNode = await upgradeFragment(target, prev, next, svg, cb);
+    await upgradeFragment(target, next, svg, cb);
 
-    if (!newNode && isDiff(prev, next)) {
+    if (isDiff(prev, next)) {
       if (target.nodeType === 3) {
-        if (isBegin(target)) {
-          await destroyFragment(target, next, svg, cb);
-        } else if (isNode(next)) {
+        if (isNode(next)) {
           target = await upgradeNode(target, prev, next, svg, cb);
         } else {
           for (let k = next.length - prev.length; k > 0; k--) await destroyElement(target.nextSibling || null);
@@ -726,8 +592,6 @@
       } else {
         target = await upgradeNode(target, prev, next, svg, cb);
       }
-    } else {
-      target = newNode;
     }
     return target;
   }
@@ -1200,7 +1064,7 @@
 
       return (props, children) => {
         const identity = name || tag.name || 'Thunk';
-        const target = new Fragment();
+        const target = document.createElement('x-fragment');
         const thunk = tag(props, children)(target, ctx.render);
 
         if (thunk.teardown) {
@@ -1360,8 +1224,6 @@
         this.target = props;
         this.render = callback;
       } else {
-        props.name = props.name || `fragment-${Math.random().toString(36).substr(2)}`;
-
         this.target = document.createElement(props.tag || 'x-fragment');
 
         delete props.tag;
@@ -1373,7 +1235,7 @@
       }
 
       this.target.__update = (_, prev, next) => {
-        this.vnode = prev || this.vnode;
+        this.vnode = prev;
         this.patch(next);
       };
 
@@ -1414,7 +1276,7 @@
       delete props.tag;
       __validate(children);
       updateProps(this.target, this.props, props, null, this.render);
-      return children ? this.patch(children) : this;
+      return this.patch(children);
     }
 
     sync(children, direction) {
@@ -1448,6 +1310,16 @@
         && this.target.isConnected);
     }
 
+    static async with(id, cb) {
+      const frag = FragmentList.get(id);
+      const fn = await cb(frag);
+
+      if (typeof fn === 'function') {
+        FRAGMENT_FX.push(fn);
+      }
+      return frag;
+    }
+
     static from(props, children, callback) {
       let frag;
       if (typeof props === 'string') {
@@ -1468,18 +1340,6 @@
       }
     }
 
-    static with(id, cb) {
-      return FragmentList.for(id)
-        .then(frag => {
-          const fn = cb(frag);
-
-          if (typeof fn === 'function') {
-            FRAGMENT_FX.push(fn);
-          }
-          return frag;
-        });
-    }
-
     static del(id) {
       CACHED_FRAGMENTS.delete(id);
     }
@@ -1489,18 +1349,8 @@
         && CACHED_FRAGMENTS.get(id).mounted;
     }
 
-    static for(id, retries = 0) {
-      return new Promise(ok => {
-        if (retries++ > 100) {
-          throw new ReferenceError(`Fragment not found, given '${id}'`);
-        }
-
-        if (!FragmentList.has(id)) {
-          raf(() => ok(FragmentList.for(id, retries + 1)));
-        } else {
-          ok(CACHED_FRAGMENTS.get(id));
-        }
-      });
+    static get(id) {
+      return CACHED_FRAGMENTS.get(id);
     }
   }
 
@@ -1523,7 +1373,7 @@
 
     const cb = (...args) => (args.length <= 2 ? tag(args[0], args[1], mix) : mix(...args));
 
-    const $ = () => new Fragment();
+    const $ = () => document.createElement('x-fragment');
 
     cb.tags = mix.tags = Object.assign({},
       ...filter(hooks, x => isArray(x) || isPlain(x))

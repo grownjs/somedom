@@ -30,7 +30,7 @@
     "test:ci": "npm run coverage:unit && npm run report -- -r ${LCOV_OUTPUT:-lcov}",
     "test:ssr": "NODE_ENV=test _mocha --exit --colors --recursive -r esm -bR spec tests/unit",
     "test": "npm run test:ssr && USE_JSDOM=true npm run test:ssr && npm run test:e2e",
-    "coverage": "nyc --x '**/tests/**' -x '**/*.spec.js'",
+    "coverage": "nyc --x '**/tests/**' -x '**/*.spec.js' -x 'src/ssr/himalaya/**'",
     "coverage:unit": "npm run coverage -- npm run test:ssr",
     "report": "nyc report",
     "lint": "eslint src tests",

@@ -15,7 +15,6 @@ import {
 } from './lib/util';
 
 import { addEvents } from './lib/events';
-import Fragment from './lib/fragment';
 
 export { default as FragmentList } from './lib/fragment-list';
 
@@ -38,7 +37,7 @@ export const bind = (tag, ...hooks) => {
 
   const cb = (...args) => (args.length <= 2 ? tag(args[0], args[1], mix) : mix(...args));
 
-  const $ = () => new Fragment();
+  const $ = () => document.createElement('x-fragment');
 
   cb.tags = mix.tags = Object.assign({},
     ...filter(hooks, x => isArray(x) || isPlain(x))

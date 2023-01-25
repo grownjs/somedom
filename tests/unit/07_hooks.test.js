@@ -21,7 +21,6 @@ import {
 } from '../../src';
 
 import { bindHelpers as $ } from '../../src/ssr';
-import Fragment from '../../src/lib/fragment';
 import { tick } from '../../src/lib/util';
 import doc from './fixtures/env';
 
@@ -70,7 +69,7 @@ describe('hooks', () => {
 
       function wrap(tag) {
         return (props, children) => {
-          const target = new Fragment();
+          const target = document.createElement('x');
           tag(props, children)(target);
           return target;
         };
@@ -93,24 +92,25 @@ describe('hooks', () => {
 
       const div = document.createElement('div');
       const app = A(null, 0);
-      app.mount(div);
 
-      expect(div.innerHTML).to.eql('<a><b><c>0123</c></b></a>');
+      div.appendChild(app);
+
+      expect(div.innerHTML).to.eql('<x><a><x><b><x><c>0123</c></x></b></x></a></x>');
 
       await a[1]('0');
       await tick();
 
-      expect(div.innerHTML).to.eql('<a><b><c>0120</c></b></a>');
+      expect(div.innerHTML).to.eql('<x><a><x><b><x><c>0120</c></x></b></x></a></x>');
 
       await b[1]('1');
       await tick();
 
-      expect(div.innerHTML).to.eql('<a><b><c>0113</c></b></a>');
+      expect(div.innerHTML).to.eql('<x><a><x><b><x><c>0113</c></x></b></x></a></x>');
 
       await c[1]('2');
       await tick();
 
-      expect(div.innerHTML).to.eql('<a><b><c>0223</c></b></a>');
+      expect(div.innerHTML).to.eql('<x><a><x><b><x><c>0223</c></x></b></x></a></x>');
     });
 
     it('should extend context through hooks', async () => {

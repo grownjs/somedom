@@ -10,7 +10,6 @@ import {
   SKIP_METHODS,
 } from './shared';
 
-import Fragment from './fragment';
 import { Context, withContext } from './hooks';
 
 export function getDecorated(Tag, state, actions, children) {
@@ -207,7 +206,7 @@ export function createThunk(vnode, svg, cb = createElement) {
 
     return (props, children) => {
       const identity = name || tag.name || 'Thunk';
-      const target = new Fragment();
+      const target = document.createElement('x-fragment');
       const thunk = tag(props, children)(target, ctx.render);
 
       if (thunk.teardown) {

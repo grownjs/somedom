@@ -2,6 +2,10 @@ html {
   box-sizing: border-box;
 }
 
+x-fragment {
+  display: contents;
+}
+
 *, *::before, *::after {
   margin: 0;
   box-sizing: inherit;

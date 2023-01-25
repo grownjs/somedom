@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-syntax, no-await-in-loop, no-plusplus */
 
 import {
-  isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isBegin, isDiff, isNot, append, detach, zip,
+  isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isDiff, isNot, append, detach, zip,
 } from './util';
 
 import {
@@ -135,19 +135,12 @@ export async function upgradeNode(target, prev, next, svg, cb) {
   return updateElement(target, prev.slice(2), next.slice(2), svg, cb);
 }
 
-export async function upgradeFragment(target, prev, next, svg, cb) {
+export async function upgradeFragment(target, next, svg, cb) {
   if (isFunction(next[0])) {
     const newNode = createElement(next, svg, cb);
 
     if (Fragment.valid(newNode)) {
-      if (isBegin(target)) {
-        await target.__self.upgrade(newNode);
-        if (isFunction(newNode.onupdate)) await newNode.onupdate(newNode);
-        if (isFunction(newNode.update)) await newNode.update();
-        target = newNode;
-      } else {
-        detach(target, newNode);
-      }
+      detach(target, newNode);
     } else {
       target.replaceWith(newNode);
       return newNode;
@@ -156,31 +149,19 @@ export async function upgradeFragment(target, prev, next, svg, cb) {
   }
 }
 
-export async function upgradeElement(target, prev, next, el, svg, cb) {
-  const newNode = createElement(next, svg, cb);
-
-  newNode.onupdate = prev.onupdate || newNode.onupdate;
-  newNode.update = prev.update || newNode.update;
-
-  if (Fragment.valid(newNode)) {
-    newNode.mount(el, target);
-  } else {
-    el.insertBefore(newNode, target);
-  }
-  return newNode;
-}
-
-export async function upgradeElements(target, prev, next, svg, cb, i, c) {
+export async function upgradeElements(target, prev, next, svg, cb, i) {
   const stack = [];
   const set = target.childNodes;
   const push = v => stack.push(v);
 
   if (!isBlock(next)) next = [next];
 
-  zip(set, prev, next, c || null, i || 0, push);
+  zip(set, prev, next, i || 0, push);
+
+  const keep = stack.filter(x => x.patch);
 
   for (const task of stack) {
-    if (task.rm) {
+    if (task.rm && !keep.find(x => x.target === task.rm)) {
       await destroyElement(task.rm);
     }
     if (!isNot(task.patch)) {
@@ -200,12 +181,7 @@ export async function upgradeElements(target, prev, next, svg, cb, i, c) {
 
 export async function updateElement(target, prev, next, svg, cb, i, c) {
   if (target.__update) {
-    return target.__update ? target.__update(target, prev, next, svg, cb, i, c) : target;
-  }
-
-  if (Fragment.valid(target)) {
-    await upgradeElements(target.root, prev, next, svg, cb, target.offset, target.length);
-    return target;
+    return target.__update(target, prev, next, svg, cb, i, c);
   }
 
   if (!prev || (isNode(prev) && isNode(next))) {
@@ -221,34 +197,16 @@ export async function updateElement(target, prev, next, svg, cb, i, c) {
     return upgradeNode(target, prev, next, svg, cb);
   }
 
-  await upgradeElements(target, prev, next, svg, cb, i, c);
-  return target;
-}
-
-export async function destroyFragment(target, next, svg, cb) {
-  const del = target.__length + 2;
-  const el = target.parentNode;
-  const on = target;
-  const q = [];
-
-  for (let k = 0; k < del; k++) {
-    q.push(target);
-    target = target.nextSibling;
-  }
-
-  await Promise.all(q.map(node => destroyElement(node)));
-  await upgradeElement(target, on, next, el, svg, cb);
+  await upgradeElements(target, prev, next, svg, cb, i);
   return target;
 }
 
 export async function patchNode(target, prev, next, svg, cb) {
-  const newNode = await upgradeFragment(target, prev, next, svg, cb);
+  await upgradeFragment(target, next, svg, cb);
 
-  if (!newNode && isDiff(prev, next)) {
+  if (isDiff(prev, next)) {
     if (target.nodeType === 3) {
-      if (isBegin(target)) {
-        await destroyFragment(target, next, svg, cb);
-      } else if (isNode(next)) {
+      if (isNode(next)) {
         target = await upgradeNode(target, prev, next, svg, cb);
       } else {
         for (let k = next.length - prev.length; k > 0; k--) await destroyElement(target.nextSibling || null);
@@ -262,8 +220,6 @@ export async function patchNode(target, prev, next, svg, cb) {
     } else {
       target = await upgradeNode(target, prev, next, svg, cb);
     }
-  } else {
-    target = newNode;
   }
   return target;
 }
