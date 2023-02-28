@@ -7,19 +7,11 @@
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
+  const XLINK_PREFIX = /^xlink:?/;
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
-  const ELEM_REGEX = /^(\w*|[.#]\w+)(#[\w-]+)?(\.[\w-][\w-.]*)*$/;
+  const ELEM_REGEX = /^([\w-]*|[.#]\w+)(#[\w-]+)?(\.[\w-][\w-.]*)*$/;
 
   const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
-
-  const SKIP_METHODS = [
-    'constructor',
-    'instance',
-    'children',
-    'render',
-    'state',
-    'props',
-  ];
 
   class Fragment {
     constructor() {
@@ -66,7 +58,6 @@
 
     static valid(value) {
       if (value instanceof Fragment) return true;
-      return typeof value === 'object' && value.nodeType === 11;
     }
 
     static from(render, value) {
@@ -176,29 +167,6 @@
     } else return prev !== next;
   }
 
-  function getMethods(obj) {
-    const stack = [];
-
-    do {
-      stack.push(obj);
-    } while (obj = Object.getPrototypeOf(obj)); // eslint-disable-line
-
-    stack.pop();
-
-    return stack.reduce((memo, cur) => {
-      const keys = Object.getOwnPropertyNames(cur);
-
-      keys.forEach(key => {
-        if (!SKIP_METHODS.includes(key)
-          && isFunction(cur[key])
-          && !memo.includes(key)
-        ) memo.push(key);
-      });
-
-      return memo;
-    }, []);
-  }
-
   const camelCase = value => value.replace(/-([a-z])/g, (_, $1) => $1.toUpperCase());
   const dashCase = value => value.replace(/[A-Z]/g, '-$&').toLowerCase();
   const filter = (value, cb) => value.filter(cb || (x => !isEmpty(x)));
@@ -235,14 +203,6 @@
     const depth = spaces.split('').length;
 
     return value.replace(new RegExp(`^ {${depth}}`, 'mg'), '').trim();
-  }
-
-  function clone$1(value) {
-    if (!value || !isObject(value)) return value;
-    if (isArray(value)) return value.map(x => clone$1(x));
-    if (value instanceof Date) return new Date(value.getTime());
-    if (value instanceof RegExp) return new RegExp(value.source, value.flags);
-    return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone$1(value[k]) }), {});
   }
 
   const apply = (cb, length, options = {}) => (...args) => length === args.length && cb(...args, options);
@@ -346,7 +306,7 @@
       }
 
       const removed = isEmpty(value);
-      const name = prop.replace(/^xlink:?/, '');
+      const name = prop.replace(XLINK_PREFIX, '');
 
       if (svg && prop !== name) {
         if (removed) target.removeAttributeNS(XLINK_NS, name);
@@ -507,7 +467,7 @@
     return updateElement(target, prev.slice(2), next.slice(2), svg, cb);
   }
 
-  async function upgradeFragment(target, next, svg, cb) {
+  async function upgradeElement(target, next, svg, cb) {
     if (isFunction(next[0])) {
       const newNode = createElement(next, svg, cb);
 
@@ -574,7 +534,7 @@
   }
 
   async function patchNode(target, prev, next, svg, cb) {
-    await upgradeFragment(target, next, svg, cb);
+    await upgradeElement(target, next, svg, cb);
 
     if (isDiff(prev, next)) {
       if (target.nodeType === 3) {
@@ -594,504 +554,6 @@
       }
     }
     return target;
-  }
-
-  const contextStack = [];
-
-  function getContext() {
-    const scope = contextStack[contextStack.length - 1];
-
-    if (!scope) {
-      throw new Error('Cannot invoke hooks outside createContext()');
-    }
-    return scope;
-  }
-
-  function pop(scope) {
-    contextStack[contextStack.indexOf(scope)] = null;
-  }
-
-  function push(scope) {
-    contextStack.push(scope);
-  }
-
-  function isObj(value) {
-    return value !== null && typeof value === 'object';
-  }
-
-  function undef(value) {
-    return typeof value === 'undefined' || value === null;
-  }
-
-  function clone(value) {
-    if (!value || !isObj(value)) return value;
-    if (Array.isArray(value)) return value.map(x => clone(x));
-    if (value instanceof Date) return new Date(value.getTime());
-    if (value instanceof RegExp) return new RegExp(value.source, value.flags);
-    return Object.keys(value).reduce((memo, k) => Object.assign(memo, { [k]: clone(value[k]) }), {});
-  }
-
-  function equals(a, b) {
-    if (typeof a !== typeof b) return;
-    if (a instanceof Array) {
-      if (a.length !== b.length) return;
-      for (let i = 0; i < a.length; i += 1) {
-        if (!equals(a[i], b[i])) return;
-      }
-      return true;
-    }
-    if (a && b && a.constructor === Object) {
-      const x = Object.keys(a).sort();
-      if (!equals(x, Object.keys(b).sort())) return;
-      for (let i = 0; i < x.length; i += 1) {
-        if (!equals(a[x[i]], b[x[i]])) return;
-      }
-      return true;
-    }
-    return a === b;
-  }
-
-  class Context {
-    constructor(args, render, callback) {
-      const scope = this;
-
-      scope.c = 0;
-
-      function end(skip) {
-        try {
-          scope.get.forEach(fx => {
-            if (fx.off && !fx.once) {
-              fx.off();
-              fx.off = null;
-            }
-
-            if (fx.once && fx.cb && !fx.off) {
-              const retval = fx.cb();
-
-              fx.once = false;
-              if (typeof retval === 'function') {
-                fx.off = retval;
-              }
-            }
-
-            if (skip === null && fx.on && fx.cb) {
-              const retval = fx.cb();
-
-              fx.on = false;
-              if (typeof retval === 'function') {
-                fx.off = retval;
-              }
-            }
-
-            if (skip === false && fx.off) {
-              fx.off();
-              fx.off = null;
-            }
-          });
-        } catch (e) {
-          return Promise.reject(e);
-        }
-      }
-
-      let deferred;
-      function next(promise) {
-        promise.catch(e => {
-          if (scope.get) setTimeout(() => end(true));
-          if (scope.onError) {
-            scope.onError(e);
-          } else {
-            throw e;
-          }
-        }).then(() => {
-          deferred = null;
-        });
-      }
-
-      function after(clear) {
-        if (scope.get) next(Promise.resolve(end(clear)));
-      }
-
-      scope.defer = ms => Promise.resolve()
-        .then(() => new Promise(ok => setTimeout(() => ok(scope), ms)));
-
-      scope.clear = () => {
-        if (scope.get) after(false);
-      };
-
-      scope.sync = () => {
-        deferred = next(scope.set());
-        return deferred;
-      };
-
-      scope.run = callback(() => {
-  (function loop() { // eslint-disable-line
-          scope.set = scope.set || (() => Promise.resolve().then(() => {
-            if (!equals(scope.val, scope.old)) loop();
-          }));
-
-          scope.old = clone(scope.val);
-          scope.key = 0;
-          scope.fx = 0;
-          scope.m = 0;
-          scope.c += 1;
-
-          push(scope);
-
-          try {
-            scope.result = render(...args);
-
-            const key = [scope.key, scope.fx, scope.m].join('.');
-
-            if (!scope.hash) {
-              scope.hash = key;
-            } else if (scope.hash !== key) {
-              throw new Error('Hooks must be called in a predictable way');
-            }
-            return scope.result;
-          } catch (e) {
-            throw new Error(`Unexpected failure in context\n${e.message}`);
-          } finally {
-            pop(scope);
-            after(null);
-          }
-        })();
-
-        return scope;
-      }, sync => { scope.set = sync; });
-    }
-  }
-
-  function createContext(render, callback = fn => fn()) {
-    if (typeof render !== 'function' || typeof callback !== 'function') {
-      throw new TypeError('Invalid input for createContext()');
-    }
-
-    return (...args) => new Context(args, render, callback).run;
-  }
-
-  function onError(callback) {
-    getContext().onError = callback;
-  }
-
-  function useMemo(callback, inputs) {
-    const scope = getContext();
-    const key = scope.m;
-
-    scope.m += 1;
-    scope.v = scope.v || [];
-    scope.d = scope.d || [];
-
-    const prev = scope.d[key];
-
-    if (undef(prev) || !equals(prev, inputs)) {
-      scope.v[key] = callback();
-      scope.d[key] = inputs;
-    }
-    return scope.v[key];
-  }
-
-  function useRef(result) {
-    return useMemo(() => {
-      let value = clone(result);
-
-      return Object.defineProperty({}, 'current', {
-        configurable: false,
-        enumerable: true,
-        set: ref => { value = ref; },
-        get: () => value,
-      });
-    }, []);
-  }
-
-  function useState(fallback) {
-    const scope = getContext();
-    const key = scope.key;
-
-    scope.key += 1;
-    scope.val = scope.val || [];
-
-    if (undef(scope.val[key])) {
-      scope.val[key] = fallback;
-    }
-
-    return [scope.val[key], v => {
-      if (typeof v === 'function') {
-        scope.val[key] = v(scope.val[key]);
-      } else {
-        scope.val[key] = v;
-      }
-      scope.sync();
-      return scope.val[key];
-    }];
-  }
-
-  function useEffect(callback, inputs) {
-    const scope = getContext();
-    const key = scope.fx;
-
-    scope.fx += 1;
-    scope.in = scope.in || [];
-    scope.get = scope.get || [];
-
-    const prev = scope.in[key];
-    const scoped = !inputs || !inputs.length;
-    const enabled = !scoped && !equals(prev, inputs);
-
-    scope.in[key] = inputs;
-    scope.get[key] = scope.get[key] || {};
-
-    Object.assign(scope.get[key], { cb: callback, on: enabled, once: scoped });
-  }
-
-  var nohooks = {
-    clone,
-    equals,
-    Context,
-    getContext,
-    createContext,
-    onError,
-    useMemo,
-    useRef,
-    useState,
-    useEffect,
-  };
-  var nohooks_2 = nohooks.equals;
-  var nohooks_3 = nohooks.Context;
-  var nohooks_5 = nohooks.createContext;
-  var nohooks_6 = nohooks.onError;
-  var nohooks_7 = nohooks.useMemo;
-  var nohooks_8 = nohooks.useRef;
-  var nohooks_9 = nohooks.useState;
-  var nohooks_10 = nohooks.useEffect;
-
-  function withContext(tag, view) {
-    return nohooks_5(tag, (fn, set) => {
-      return view((...args) => fn(...args), set);
-    });
-  }
-
-  function getDecorated(Tag, state, actions, children) {
-    if (isPlain(Tag) && isFunction(Tag.render)) {
-      const factory = Tag;
-
-      Tag = (_state, _actions) => factory.render(_state, _actions, children);
-
-      state = isFunction(factory.state) ? factory.state(state) : factory.state || state;
-      actions = Object.keys(factory).reduce((memo, key) => {
-        if (!SKIP_METHODS.includes(key) && isFunction(factory[key])) {
-          memo[key] = (...args) => factory[key](...args);
-        }
-        return memo;
-      }, {});
-    }
-
-    let instance;
-    if (
-      isFunction(Tag)
-      && (Tag.prototype && isFunction(Tag.prototype.render))
-      && (Tag.constructor === Function && Tag.prototype.constructor !== Function)
-    ) {
-      instance = new Tag(state, children);
-      instance.props = clone$1(state || {});
-
-      Tag = _state => (instance.state = _state, instance.render()); // eslint-disable-line
-
-      state = isFunction(instance.state) ? instance.state(state) : instance.state || state;
-      actions = getMethods(instance).reduce((memo, key) => {
-        if (key.charAt() !== '_') {
-          const method = instance[key].bind(instance);
-
-          memo[key] = (...args) => () => method(...args);
-          instance[key] = (...args) => memo[key](...args);
-        }
-        return memo;
-      }, {});
-    }
-
-    return {
-      Tag, state, actions, instance,
-    };
-  }
-
-  function createView(Factory, initialState, userActions, refreshCallback) {
-    const children = isArray(userActions) ? userActions : undefined;
-
-    userActions = isPlain(userActions) ? userActions : {};
-
-    if (isFunction(initialState)) {
-      refreshCallback = initialState;
-      initialState = null;
-    }
-
-    const {
-      Tag, state, actions, instance,
-    } = getDecorated(Factory, initialState, userActions, children);
-
-    if (!instance && isFunction(Factory) && arguments.length === 1) {
-      return withContext(Factory, createView);
-    }
-
-    return (el, cb = createElement, hook = refreshCallback) => {
-      const data = clone$1(state || {});
-      const fns = [];
-
-      let context;
-      let vnode;
-      let $;
-
-      function get() {
-        let next = Tag(clone$1(data), $);
-        context = null;
-        if (next && next instanceof nohooks_3) {
-          context = next;
-          next = next.result;
-        }
-        return next;
-      }
-
-      async function sync(result) {
-        await Promise.all(fns.map(fn => fn(data, $)));
-        $.target = await updateElement($.target, vnode, vnode = get(), null, cb);
-        return result;
-      }
-
-      if (hook) {
-        hook(payload => sync(Object.assign(data, payload)));
-      }
-
-      // decorate given actions
-      $ = Object.keys(actions).reduce((memo, fn) => {
-        const method = actions[fn];
-
-        if (!isFunction(method)) {
-          throw new Error(`Invalid action, given ${method} (${fn})`);
-        }
-
-        memo[fn] = (...args) => {
-          const retval = method(...args)(data, $);
-
-          if (isObject(retval) && isFunction(retval.then)) {
-            return retval.then(result => {
-              if (isPlain(result)) {
-                return sync(Object.assign(data, result));
-              }
-              return result;
-            });
-          }
-
-          if (isPlain(retval)) {
-            sync(Object.assign(data, retval));
-          }
-          return retval;
-        };
-
-        if (instance) {
-          instance[fn] = memo[fn];
-        }
-        return memo;
-      }, Object.create(null));
-
-      $.subscribe = fn => {
-        Promise.resolve(fn(data, $)).then(() => fns.push(fn));
-
-        return () => {
-          fns.splice(fns.indexOf(fn), 1);
-        };
-      };
-
-      $.teardown = () => context && context.clear();
-      $.defer = _cb => new Promise(_ => raf(_)).then(_cb);
-      $.target = mountElement(el, vnode = get(), null, cb);
-      $.unmount = _cb => destroyElement($.target, _cb || false);
-
-      Object.defineProperty($, 'state', {
-        configurable: false,
-        enumerable: true,
-        get: () => context || data,
-      });
-
-      if (instance) {
-        $.instance = instance;
-      }
-      return $;
-    };
-  }
-
-  function createThunk(vnode, svg, cb = createElement) {
-    if (typeof svg === 'function') {
-      cb = svg;
-      svg = null;
-    }
-
-    const ctx = {
-      refs: {},
-      stack: [],
-      render: cb,
-      source: null,
-      vnode: vnode || ['div', null],
-      thunk: createView(() => ctx.vnode, null),
-      defer: _cb => new Promise(_ => raf(_)).then(_cb),
-      patch: (target, prev, next) => updateElement(target, prev, next, svg, cb),
-    };
-
-    ctx.unmount = async () => {
-      const tasks = [];
-
-      Object.keys(ctx.refs).forEach(ref => {
-        ctx.refs[ref].forEach(thunk => {
-          tasks.push(thunk.target.remove());
-        });
-      });
-
-      await Promise.all(tasks);
-    };
-
-    ctx.mount = async (el, _vnode) => {
-      await ctx.unmount();
-
-      ctx.vnode = _vnode || ctx.vnode;
-      ctx.source = ctx.thunk(el, ctx.render);
-
-      return ctx;
-    };
-
-    ctx.clear = () => {
-      ctx.stack.forEach(fn => fn());
-    };
-
-    ctx.wrap = (tag, name) => {
-      if (!isFunction(tag)) throw new Error(`Expecting a view factory, given '${tag}'`);
-
-      return (props, children) => {
-        const identity = name || tag.name || 'Thunk';
-        const target = document.createElement('x-fragment');
-        const thunk = tag(props, children)(target, ctx.render);
-
-        if (thunk.teardown) {
-          ctx.stack.push(thunk.teardown);
-        }
-
-        ctx.refs[identity] = ctx.refs[identity] || [];
-        ctx.refs[identity].push(thunk);
-
-        const _remove = thunk.target.remove.bind(thunk.target);
-
-        thunk.target.remove = target.remove = async _cb => {
-          if (thunk.teardown) {
-            thunk.teardown();
-            ctx.stack.splice(ctx.stack.indexOf(thunk.teardown), 1);
-          }
-
-          ctx.refs[identity].splice(ctx.refs[identity].indexOf(thunk), 1);
-          if (!ctx.refs[identity].length) delete ctx.refs[identity];
-          return _remove(_cb);
-        };
-
-        return target;
-      };
-    };
-
-    return ctx;
   }
 
   function values(attrs, cb) {
@@ -1205,155 +667,6 @@
     }
   }
 
-  /* eslint-disable no-plusplus, no-await-in-loop */
-
-  const CACHED_FRAGMENTS = new Map();
-
-  function __validate(children) {
-    if (!isBlock(children)) {
-      throw new Error(`Fragments should be lists of nodes, given '${JSON.stringify(children)}'`);
-    }
-  }
-
-  let FRAGMENT_FX = [];
-  class FragmentList {
-    constructor(props, children, callback = createElement) {
-      if (props instanceof window.HTMLElement) {
-        this.props = {};
-        this.vnode = children;
-        this.target = props;
-        this.render = callback;
-      } else {
-        this.target = document.createElement(props.tag || 'x-fragment');
-
-        delete props.tag;
-
-        this.props = {};
-        this.vnode = null;
-        this.render = callback;
-        this.touch(props, children);
-      }
-
-      this.target.__update = (_, prev, next) => {
-        this.vnode = prev;
-        this.patch(next);
-      };
-
-      let promise = Promise.resolve();
-      Object.defineProperty(this, '__defer', {
-        set: p => promise.then(() => { promise = p; }),
-        get: () => promise,
-      });
-    }
-
-    async update(children) {
-      try {
-        this.patch(children);
-        await tick();
-      } finally {
-        await this.__defer;
-      }
-      return this;
-    }
-
-    prepend(children) { return this.sync(children, -1); }
-
-    append(children) { return this.sync(children, 1); }
-
-    patch(children) {
-      if (this.vnode) {
-        this.__defer = upgradeElements(this.target, this.vnode, this.vnode = children, null, this.render);
-      } else {
-        const frag = this.render(this.vnode = children);
-        const anchor = this.target.firstChild;
-
-        frag.childNodes.forEach(sub => this.target.insertBefore(sub, anchor));
-      }
-      return this;
-    }
-
-    touch(props, children) {
-      delete props.tag;
-      __validate(children);
-      updateProps(this.target, this.props, props, null, this.render);
-      return this.patch(children);
-    }
-
-    sync(children, direction) {
-      __validate(children);
-      if (!direction) return this.patch(children);
-      if (this.mounted) {
-        if (direction < 0) {
-          this.vnode.unshift(...children);
-        } else {
-          this.vnode.push(...children);
-        }
-
-        const frag = this.render(children);
-        if (direction < 0) {
-          frag.mount(this.target, this.target.firstChild);
-        } else {
-          frag.mount(this.target);
-        }
-      }
-      return this;
-    }
-
-    get root() {
-      return this.target
-        && this.target.parentNode;
-    }
-
-    get mounted() {
-      return !!(this.root
-        && this.root.isConnected
-        && this.target.isConnected);
-    }
-
-    static async with(id, cb) {
-      const frag = FragmentList.get(id);
-      const fn = await cb(frag);
-
-      if (typeof fn === 'function') {
-        FRAGMENT_FX.push(fn);
-      }
-      return frag;
-    }
-
-    static from(props, children, callback) {
-      let frag;
-      if (typeof props === 'string') {
-        frag = CACHED_FRAGMENTS.get(props);
-      } else if (!CACHED_FRAGMENTS.has(props.name)) {
-        CACHED_FRAGMENTS.set(props.name, frag = new FragmentList(props, children, callback));
-      } else {
-        frag = CACHED_FRAGMENTS.get(props.name).touch(props, children);
-      }
-      return frag;
-    }
-
-    static stop() {
-      try {
-        FRAGMENT_FX.forEach(fn => fn());
-      } finally {
-        FRAGMENT_FX = [];
-      }
-    }
-
-    static del(id) {
-      CACHED_FRAGMENTS.delete(id);
-    }
-
-    static has(id) {
-      return CACHED_FRAGMENTS.has(id)
-        && CACHED_FRAGMENTS.get(id).mounted;
-    }
-
-    static get(id) {
-      return CACHED_FRAGMENTS.get(id);
-    }
-  }
-
   const h = (tag = 'div', attrs = null, ...children) => {
     if (isScalar(attrs)) return [tag, null, [attrs].concat(children).filter(x => !isNot(x))];
     if (isArray(attrs)) return [tag, null, attrs];
@@ -1373,46 +686,9 @@
 
     const cb = (...args) => (args.length <= 2 ? tag(args[0], args[1], mix) : mix(...args));
 
-    const $ = () => document.createElement('x-fragment');
-
     cb.tags = mix.tags = Object.assign({},
       ...filter(hooks, x => isArray(x) || isPlain(x))
         .reduce((memo, cur) => memo.concat(cur), []).filter(isPlain));
-
-    cb.view = (Tag, name) => {
-      function Factory(ref, props, children) {
-        if (!children && isArray(props)) {
-          children = props;
-          props = ref || null;
-          ref = null;
-        }
-
-        if (this instanceof Factory) {
-          if (isNot(props)) {
-            props = ref;
-            ref = null;
-          }
-
-          return createView(Tag)(props, children)(ref, cb);
-        }
-
-        return createView(Tag)(props, children)(ref || $(), cb);
-      }
-
-      Object.defineProperty(Factory, 'name', {
-        value: name || Tag.name || 'View',
-      });
-
-      return Factory;
-    };
-
-    cb.tag = (Tag, name) => {
-      const mount$ = cb.view(Tag, name);
-
-      return (props, children) => {
-        return mount$($(), props, children).target;
-      };
-    };
 
     return cb;
   };
@@ -1427,7 +703,6 @@
     bind: bind,
     listeners: listeners,
     attributes: attributes,
-    FragmentList: FragmentList,
     raf: raf,
     tick: tick,
     format: format,
@@ -1435,15 +710,6 @@
     patch: updateElement,
     render: createElement,
     unmount: destroyElement,
-    view: createView,
-    thunk: createThunk,
-    equals: nohooks_2,
-    onError: nohooks_6,
-    useRef: nohooks_8,
-    useMemo: nohooks_7,
-    useState: nohooks_9,
-    useEffect: nohooks_10,
-    createContext: nohooks_5,
     styles: applyStyles,
     classes: applyClasses,
     animation: applyAnimations

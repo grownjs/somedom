@@ -135,7 +135,7 @@ export async function upgradeNode(target, prev, next, svg, cb) {
   return updateElement(target, prev.slice(2), next.slice(2), svg, cb);
 }
 
-export async function upgradeFragment(target, next, svg, cb) {
+export async function upgradeElement(target, next, svg, cb) {
   if (isFunction(next[0])) {
     const newNode = createElement(next, svg, cb);
 
@@ -202,7 +202,7 @@ export async function updateElement(target, prev, next, svg, cb, i, c) {
 }
 
 export async function patchNode(target, prev, next, svg, cb) {
-  await upgradeFragment(target, next, svg, cb);
+  await upgradeElement(target, next, svg, cb);
 
   if (isDiff(prev, next)) {
     if (target.nodeType === 3) {

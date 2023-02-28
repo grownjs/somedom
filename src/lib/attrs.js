@@ -2,7 +2,7 @@ import {
   isEmpty, isObject, isFunction, isScalar, isPlain, isDiff, isBlock, isArray, camelCase,
 } from './util';
 
-import { XLINK_NS, ELEM_REGEX } from './shared';
+import { XLINK_PREFIX, XLINK_NS, ELEM_REGEX } from './shared';
 
 export function fixProps(vnode) {
   if (isBlock(vnode)) return vnode;
@@ -87,7 +87,7 @@ export function assignProps(target, attrs, svg, cb) {
     }
 
     const removed = isEmpty(value);
-    const name = prop.replace(/^xlink:?/, '');
+    const name = prop.replace(XLINK_PREFIX, '');
 
     if (svg && prop !== name) {
       if (removed) target.removeAttributeNS(XLINK_NS, name);
