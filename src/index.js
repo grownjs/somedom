@@ -3,10 +3,6 @@ import {
 } from './lib/node';
 
 import {
-  createView as view,
-} from './lib/views';
-
-import {
   invokeProps,
 } from './lib/props';
 
@@ -15,8 +11,6 @@ import {
 } from './lib/util';
 
 import { addEvents } from './lib/events';
-
-export { default as FragmentList } from './lib/fragment-list';
 
 export const h = (tag = 'div', attrs = null, ...children) => {
   if (isScalar(attrs)) return [tag, null, [attrs].concat(children).filter(x => !isNot(x))];
@@ -37,46 +31,9 @@ export const bind = (tag, ...hooks) => {
 
   const cb = (...args) => (args.length <= 2 ? tag(args[0], args[1], mix) : mix(...args));
 
-  const $ = () => document.createElement('x-fragment');
-
   cb.tags = mix.tags = Object.assign({},
     ...filter(hooks, x => isArray(x) || isPlain(x))
       .reduce((memo, cur) => memo.concat(cur), []).filter(isPlain));
-
-  cb.view = (Tag, name) => {
-    function Factory(ref, props, children) {
-      if (!children && isArray(props)) {
-        children = props;
-        props = ref || null;
-        ref = null;
-      }
-
-      if (this instanceof Factory) {
-        if (isNot(props)) {
-          props = ref;
-          ref = null;
-        }
-
-        return view(Tag)(props, children)(ref, cb);
-      }
-
-      return view(Tag)(props, children)(ref || $(), cb);
-    }
-
-    Object.defineProperty(Factory, 'name', {
-      value: name || Tag.name || 'View',
-    });
-
-    return Factory;
-  };
-
-  cb.tag = (Tag, name) => {
-    const mount$ = cb.view(Tag, name);
-
-    return (props, children) => {
-      return mount$($(), props, children).target;
-    };
-  };
 
   return cb;
 };
@@ -94,21 +51,6 @@ export {
   createElement as render,
   destroyElement as unmount,
 } from './lib/node';
-
-export {
-  createView as view,
-  createThunk as thunk,
-} from './lib/views';
-
-export {
-  equals,
-  onError,
-  useRef,
-  useMemo,
-  useState,
-  useEffect,
-  createContext,
-} from './lib/hooks';
 
 export {
   applyStyles as styles,

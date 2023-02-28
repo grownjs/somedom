@@ -4,6 +4,7 @@ export const RE_XML_CLOSE_BEGIN = /^<\/\w/;
 
 export const SVG_NS = 'http://www.w3.org/2000/svg';
 
+export const XLINK_PREFIX = /^xlink:?/;
 export const XLINK_NS = 'http://www.w3.org/1999/xlink';
 export const ELEM_REGEX = /^([\w-]*|[.#]\w+)(#[\w-]+)?(\.[\w-][\w-.]*)*$/;
 

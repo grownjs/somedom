@@ -80,26 +80,6 @@ describe('somedom', () => {
       expect(td.explain(test2).callCount).to.eql(1);
     });
 
-    it('should allow to wrap thunks through view() and tag()', () => {
-      const $$ = bind(render);
-
-      const Tag = $$.tag((props, children) => ['em', props, ['OSOM.', children]]);
-      const View = $$.view((props, children) => [Tag, props, children]);
-
-      mount([View, { style: 'color:red' }, ['SO?']]);
-      expect(document.body.innerHTML).to.eql(trim(`
-        <em style="color:red">OSOM.SO?</em>
-      `));
-    });
-
-    it('should normalize all given arguments on given view calls', () => {
-      const View = bind(render)
-        .view((props, children) => ['a', props, children]);
-
-      expect(new View({ x: 'y' }).target.outerHTML).to.eql('<a x="y"></a>');
-      expect(new View({ x: 'y' }, [-1]).target.outerHTML).to.eql('<a x="y">-1</a>');
-    });
-
     it('should allow to register and render from custom tag extensions', async () => {
       const $$ = bind(render, [{
         test(props, children) {
