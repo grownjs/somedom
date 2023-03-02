@@ -205,7 +205,9 @@ export async function patchNode(target, prev, next, svg, cb) {
       if (isNode(next)) {
         target = await upgradeNode(target, prev, next, svg, cb);
       } else {
-        for (let k = next.length - prev.length; k > 0; k--) await destroyElement(target.nextSibling || null);
+        const rm = [];
+        for (let k = next.length - prev.length; k > 0; k--) rm.push(destroyElement(target.nextSibling || null));
+        await Promise.all(rm);
 
         if (isBlock(prev) && isBlock(next)) {
           detach(target, createElement(next, svg, cb));
