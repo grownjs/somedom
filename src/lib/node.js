@@ -179,11 +179,7 @@ export async function upgradeElements(target, prev, next, svg, cb, i) {
   }
 }
 
-export async function updateElement(target, prev, next, svg, cb, i, c) {
-  if (target.__update) {
-    return target.__update(target, prev, next, svg, cb, i, c);
-  }
-
+export async function updateElement(target, prev, next, svg, cb, i) {
   if (!prev || (isNode(prev) && isNode(next))) {
     return upgradeNode(target, prev, next, svg, cb);
   }
