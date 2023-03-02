@@ -39,7 +39,6 @@ export function datasets(el, name, props) {
 export function nextProps(el, names) {
   return () => new Promise(resolve => {
     let t;
-
     function onEnd() {
       el.removeEventListener('animationend', onEnd);
 
