@@ -6,7 +6,6 @@ export const SVG_NS = 'http://www.w3.org/2000/svg';
 
 export const XLINK_PREFIX = /^xlink:?/;
 export const XLINK_NS = 'http://www.w3.org/1999/xlink';
-export const ELEM_REGEX = /^([\w-]*|[.#]\w+)(#[\w-]+)?(\.[\w-][\w-.]*)*$/;
 
 export const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
 

@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-expressions, no-plusplus */
+/* eslint-disable no-unused-expressions */
 
 import td from 'testdouble';
 import { expect } from 'chai';
@@ -300,12 +300,6 @@ describe('node', () => {
 
     it('should append non-empty values only', () => {
       expect(createElement(['div', null, [null, false, 0]]).outerHTML).to.eql('<div>false0</div>');
-    });
-
-    it('should transform selectors recursively', () => {
-      const x = createElement(['a.foo', null, ['b.bar', null, ['c.baz', null]]]).outerHTML;
-
-      expect(x).to.eql('<a class="foo"><b class="bar"><c class="baz"></c></b></a>');
     });
   });
 

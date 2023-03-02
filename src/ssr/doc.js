@@ -1,5 +1,3 @@
-/* eslint-disable class-methods-use-this */
-
 import { selectAll, selectOne } from 'css-select';
 
 import Fragment from '../lib/fragment';

@@ -8,7 +8,6 @@ export function eventListener(e) {
 
 export function invokeEvent(e, name, value, globals) {
   let skip;
-
   if (isObject(globals)) {
     if (isFunction(globals)) {
       skip = globals(name, e) === false;

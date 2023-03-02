@@ -1,7 +1,4 @@
-/* eslint-disable no-plusplus, no-continue */
-
 import {
-  ELEM_REGEX,
   SKIP_METHODS,
   RE_XML_SPLIT,
   RE_XML_CLOSE_END,
@@ -12,7 +9,6 @@ import Fragment from './fragment';
 
 export const isString = value => typeof value === 'string';
 export const isFunction = value => typeof value === 'function';
-export const isSelector = value => isString(value) && ELEM_REGEX.test(value);
 export const isNot = value => typeof value === 'undefined' || value === null;
 export const isPlain = value => value !== null && Object.prototype.toString.call(value) === '[object Object]';
 export const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');

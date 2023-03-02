@@ -1,11 +1,9 @@
-/* eslint-disable no-restricted-syntax, no-await-in-loop, no-plusplus */
-
 import {
   isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isDiff, isNot, append, detach, zip,
 } from './util';
 
 import {
-  assignProps, updateProps, fixProps,
+  assignProps, updateProps,
 } from './attrs';
 
 import Fragment from './fragment';
@@ -45,7 +43,7 @@ export function createElement(vnode, svg, cb) {
   }
 
   const isSvg = svg || vnode[0].indexOf('svg') === 0;
-  const [tag, props, children] = fixProps(vnode);
+  const [tag, props, ...children] = vnode;
 
   let el = isSvg
     ? document.createElementNS(SVG_NS, tag)

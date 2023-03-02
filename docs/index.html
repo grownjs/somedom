@@ -339,32 +339,6 @@
           });</script>
         </dd>
         <dd>
-          <p>Emmet-like syntax can be used too, just <code>id</code> and <code>class</code> props are supported.</p>
-          <p>As it'll use objects as props dont' forget to bind <code>attributes</code> to make'em work together.</p>
-          <small>output:</small>
-          <script>test(({ pre, bind, render, attributes, classes }, appendChild) => {
-            appendChild(pre(['button#a.b.c', null, 'No props']));
-
-            appendChild(pre(['button#a.b.c',
-              { id: 'x' }, 'Override ID']));
-
-            appendChild(pre(['button#a.b.c',
-              { class: 'test' }, 'Simple class names']));
-
-            var tag = bind(render, attributes({
-              class: classes,
-            }));
-
-            appendChild(pre(['button#a.b.c',
-              { class: ['foo', 'bar'] },
-              'Arrays as class names'], null, tag));
-
-            appendChild(pre(['button#a.b.c',
-              { class: { enabled: 1, disabled: 0 } },
-              'Objects as class names'], null, tag));
-          });</script>
-        </dd>
-        <dd>
           <p>SVG support is handled for you. However, elements without an <code>svg</code> root requires <code>true</code> as second argument.</p>
           <small>output:</small>
           <script>test(({ mount, render }, appendChild) => {
