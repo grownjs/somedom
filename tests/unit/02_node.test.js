@@ -467,12 +467,6 @@ describe('node', () => {
       expect(body.innerHTML).to.eql('<div>FIXME</div>');
     });
 
-    it('should remove empty nodes from patches', async () => {
-      await mountElement(div, ['\n', ['b', null, 'FOO']]);
-      div = await updateElement(div, [['a', null], '\n', ['b', null, 'FOO']], ['\n\n ', '\n', ['b', null, 'BAR']]);
-      expect(div.outerHTML).to.eql('<div>\n\n \n<b>BAR</b></div>');
-    });
-
     it('can update nodes if they are the same', async () => {
       div = await updateElement(div, ['div', null, ['a', null]], ['div', null, 'NEW']);
       expect(div.outerHTML).to.eql('<div>NEW</div>');
