@@ -24,7 +24,8 @@ export function assignProps(target, attrs, svg, cb) {
     } else {
       const name = prop.replace('@', 'data-').replace(XLINK_PREFIX, '');
 
-      let value = attrs[prop] !== true ? attrs[prop] : name;
+      // eslint-disable-next-line no-nested-ternary
+      let value = attrs[prop] !== true ? attrs[prop] : (name.includes('-') ? true : name);
       if (isObject(value)) {
         value = (isFunction(cb) && cb(target, name, value)) || value;
         value = value !== target ? value : null;
