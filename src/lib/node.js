@@ -1,5 +1,5 @@
 import {
-  isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isDiff, isNot, append, detach, zip,
+  isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isDiff, isNot, detach, zip,
 } from './util';
 
 import {
@@ -13,6 +13,28 @@ export function destroyElement(target, wait = cb => cb()) {
   const rm = () => target && target.remove();
 
   return wait === false ? rm() : Promise.resolve().then(() => wait(rm));
+}
+
+export function replaceElement(target, next, svg, cb) {
+  const newNode = createElement(next, svg, cb);
+
+  if (Fragment.valid(newNode)) {
+    detach(target, newNode);
+  } else {
+    target.replaceWith(newNode);
+  }
+  return newNode;
+}
+
+export function insertElement(target, next, svg, cb) {
+  const newNode = createElement(next, svg, cb);
+
+  if (Fragment.valid(newNode)) {
+    newNode.mount(target);
+  } else {
+    target.appendChild(newNode);
+  }
+  return newNode;
 }
 
 export function createElement(vnode, svg, cb) {
@@ -29,8 +51,6 @@ export function createElement(vnode, svg, cb) {
   }
 
   if (!isArray(vnode)) {
-    if (Fragment.valid(vnode)) return vnode;
-    if (vnode.target) return vnode.target;
     return vnode;
   }
 
@@ -100,24 +120,14 @@ export function mountElement(target, view, svg, cb) {
       mountElement(target, node, svg, cb);
     });
   } else if (!isNot(view)) {
-    const newNode = createElement(view, svg, cb);
-
-    append(target, newNode);
-    return newNode;
+    target = insertElement(target, view, svg, cb);
   }
   return target;
 }
 
 export async function upgradeNode(target, prev, next, svg, cb) {
   if (!isNode(prev) || prev[0] !== next[0] || target.nodeType !== 1) {
-    const newNode = createElement(next, svg, cb);
-
-    if (Fragment.valid(newNode)) {
-      detach(target, newNode);
-    } else {
-      target.replaceWith(newNode);
-    }
-    return newNode;
+    return replaceElement(target, next, svg, cb);
   }
 
   if (updateProps(target, prev[1] || {}, next[1] || {}, svg, cb)) {
@@ -133,20 +143,6 @@ export async function upgradeNode(target, prev, next, svg, cb) {
   return updateElement(target, prev.slice(2), next.slice(2), svg, cb);
 }
 
-export async function upgradeElement(target, next, svg, cb) {
-  if (isFunction(next[0])) {
-    const newNode = createElement(next, svg, cb);
-
-    if (Fragment.valid(newNode)) {
-      detach(target, newNode);
-    } else {
-      target.replaceWith(newNode);
-      return newNode;
-    }
-    return target;
-  }
-}
-
 export async function upgradeElements(target, prev, next, svg, cb, i) {
   const stack = [];
   const set = target.childNodes;
@@ -156,24 +152,10 @@ export async function upgradeElements(target, prev, next, svg, cb, i) {
 
   zip(set, prev, next, i || 0, push);
 
-  const keep = stack.filter(x => x.patch);
-
   for (const task of stack) {
-    if (task.rm && !keep.find(x => x.target === task.rm)) {
-      await destroyElement(task.rm);
-    }
-    if (!isNot(task.patch)) {
-      await patchNode(task.target, task.patch, task.with, svg, cb);
-    }
-    if (!isNot(task.add)) {
-      const newNode = createElement(task.add, svg, cb);
-
-      if (Fragment.valid(newNode)) {
-        newNode.mount(target);
-      } else {
-        target.appendChild(newNode);
-      }
-    }
+    if (task.rm) await destroyElement(task.rm);
+    if (!isNot(task.add)) insertElement(target, task.add, svg, cb);
+    if (!isNot(task.patch)) await patchNode(task.target, task.patch, task.with, svg, cb);
   }
 }
 
@@ -196,22 +178,16 @@ export async function updateElement(target, prev, next, svg, cb, i) {
 }
 
 export async function patchNode(target, prev, next, svg, cb) {
-  await upgradeElement(target, next, svg, cb);
+  if (isFunction(next[0]) || (target.nodeType === 1 && target.tagName.toLowerCase() !== next[0])) {
+    return replaceElement(target, next, svg, cb);
+  }
 
   if (isDiff(prev, next)) {
     if (target.nodeType === 3) {
       if (isNode(next)) {
         target = await upgradeNode(target, prev, next, svg, cb);
       } else {
-        const rm = [];
-        for (let k = next.length - prev.length; k > 0; k--) rm.push(destroyElement(target.nextSibling || null));
-        await Promise.all(rm);
-
-        if (isBlock(prev) && isBlock(next)) {
-          detach(target, createElement(next, svg, cb));
-        } else {
-          target.nodeValue = String(next);
-        }
+        target.nodeValue = String(next);
       }
     } else {
       target = await upgradeNode(target, prev, next, svg, cb);

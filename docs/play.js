@@ -12,6 +12,32 @@
 
   const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
 
+  const isArray = value => Array.isArray(value);
+  const isString = value => typeof value === 'string';
+  const isFunction = value => typeof value === 'function';
+  const isNot = value => typeof value === 'undefined' || value === null;
+  const isPlain = value => value !== null && Object.prototype.toString.call(value) === '[object Object]';
+  const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
+  const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
+
+  function isNode(value) {
+    if (!isArray(value)) return false;
+    if (typeof value[0] === 'function') return true;
+    if (value[1] === null || isPlain(value[1])) return true;
+    return false;
+  }
+
+  function isEmpty(value) {
+    if (value === null) return true;
+    if (isFunction(value)) return false;
+    if (isArray(value)) return value.length === 0;
+    if (isPlain(value)) return Object.keys(value).length === 0;
+
+    return isNot(value) || value === false;
+  }
+
+  const isBlock = value => isArray(value) && !isNode(value);
+
   class Fragment {
     constructor() {
       this.childNodes = [];
@@ -44,14 +70,12 @@
         isConnected: { configurable: true, value: true },
       });
 
-      if (target) {
-        const doc = this.getDocumentFragment();
+      const doc = this.getDocumentFragment();
 
-        if (node) {
-          target.insertBefore(doc, node);
-        } else {
-          target.appendChild(doc);
-        }
+      if (node) {
+        target.insertBefore(doc, node);
+      } else {
+        target.appendChild(doc);
       }
     }
 
@@ -70,43 +94,18 @@
     }
   }
 
-  const isString = value => typeof value === 'string';
-  const isFunction = value => typeof value === 'function';
-  const isNot = value => typeof value === 'undefined' || value === null;
-  const isPlain = value => value !== null && Object.prototype.toString.call(value) === '[object Object]';
-  const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
-  const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
-
-  const isArray = value => Array.isArray(value);
-  const isBlock = value => isArray(value) && !isNode(value);
-
   function flat(value) {
     return !isArray(value) ? value : value.reduce((memo, n) => memo.concat(isNode(n) ? [n] : flat(n)), []);
   }
 
-  function isEmpty(value) {
-    if (isFunction(value)) return false;
-    if (isArray(value)) return value.length === 0;
-    if (isPlain(value)) return Object.keys(value).length === 0;
-
-    return isNot(value) || value === false;
-  }
-
-  function isNode(value) {
-    if (!isArray(value)) return false;
-    if (typeof value[0] === 'function') return true;
-    if (typeof value[1] !== 'object' || isArray(value[1])) return false;
-    return true;
-  }
-
-  function zip(set, prev, next, offset, cb, d = 0) {
+  function zip(nodes, prev, next, offset, cb, d = 0) {
     const c = Math.max(prev.length, next.length);
 
     let i = 0;
     let a = 0;
     let b = 0;
     for (; i < c; i++) {
-      const el = set[offset];
+      const el = nodes[offset];
       const x = flat(prev[a]);
       const y = flat(next[b]);
 
@@ -115,17 +114,17 @@
       } else if (isNot(y)) {
         if (isBlock(x)) {
           let k = x.length;
-          while (k--) cb({ rm: set[offset++] });
+          while (k--) cb({ rm: nodes[offset++] });
         } else if (el) {
           cb({ rm: el });
           offset++;
         }
       } else if (isBlock(x) && isBlock(y)) {
-        zip(set, x, y, offset, cb, d + 1);
-        offset += y.length + 2;
+        zip(nodes, x, y, offset, cb, d + 1);
+        offset += Math.max(x.length, y.length) + 2;
       } else if (isBlock(y)) {
-        cb({ patch: [x], with: y, target: el });
-        offset += y.length;
+        zip(nodes, [x], y, offset, cb, d + 1);
+        offset += y.length + 2;
       } else if (el) {
         cb({ patch: x, with: y, target: el });
         offset++;
@@ -137,9 +136,9 @@
       b++;
     }
 
-    if (offset !== set.length) {
-      for (let k = offset; k < set.length; k++) {
-        cb({ rm: set[k] });
+    if (offset !== nodes.length) {
+      for (let k = offset; k < nodes.length; k++) {
+        cb({ rm: nodes[k] });
       }
     }
   }
@@ -205,9 +204,7 @@
   const apply = (cb, length, options = {}) => (...args) => length === args.length && cb(...args, options);
   const raf = cb => ((typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout)(cb);
   const tick = cb => Promise.resolve().then(cb).then(() => new Promise(done => raf(done)));
-
   const remove = (target, node) => target && target.removeChild(node);
-  const append = (target, node) => (Fragment.valid(node) ? node.mount(target) : target.appendChild(node));
 
   const detach = (target, node) => {
     if (node) {
@@ -229,8 +226,6 @@
         };
       } else if (prop === '@html') {
         target.innerHTML = attrs[prop];
-      } else if (prop.charAt() === '@') {
-        target.setAttribute(`data-${prop.substr(1)}`, attrs[prop]);
       } else if (prop.indexOf('class:') === 0) {
         if (!attrs[prop]) {
           target.classList.remove(prop.substr(6));
@@ -240,9 +235,11 @@
       } else if (prop.indexOf('style:') === 0) {
         target.style[camelCase(prop.substr(6))] = attrs[prop];
       } else {
-        let value = attrs[prop] !== true ? attrs[prop] : prop;
+        const name = prop.replace('@', 'data-').replace(XLINK_PREFIX, '');
+
+        let value = attrs[prop] !== true ? attrs[prop] : name;
         if (isObject(value)) {
-          value = (isFunction(cb) && cb(target, prop, value)) || value;
+          value = (isFunction(cb) && cb(target, name, value)) || value;
           value = value !== target ? value : null;
           value = isArray(value)
             ? value.join('')
@@ -250,7 +247,6 @@
         }
 
         const removed = isEmpty(value);
-        const name = prop.replace(XLINK_PREFIX, '');
 
         if (svg && prop !== name) {
           if (removed) target.removeAttributeNS(XLINK_NS, name);
@@ -258,8 +254,8 @@
           return;
         }
 
-        if (removed) target.removeAttribute(prop);
-        else if (isScalar(value)) target.setAttribute(prop, value);
+        if (removed) target.removeAttribute(name);
+        else if (isScalar(value)) target.setAttribute(name, value);
       }
     });
   }
@@ -291,6 +287,28 @@
     return wait === false ? rm() : Promise.resolve().then(() => wait(rm));
   }
 
+  function replaceElement(target, next, svg, cb) {
+    const newNode = createElement(next, svg, cb);
+
+    if (Fragment.valid(newNode)) {
+      detach(target, newNode);
+    } else {
+      target.replaceWith(newNode);
+    }
+    return newNode;
+  }
+
+  function insertElement(target, next, svg, cb) {
+    const newNode = createElement(next, svg, cb);
+
+    if (Fragment.valid(newNode)) {
+      newNode.mount(target);
+    } else {
+      target.appendChild(newNode);
+    }
+    return newNode;
+  }
+
   function createElement(vnode, svg, cb) {
     if (isNot(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
     if (!isNode(vnode)) {
@@ -305,8 +323,6 @@
     }
 
     if (!isArray(vnode)) {
-      if (Fragment.valid(vnode)) return vnode;
-      if (vnode.target) return vnode.target;
       return vnode;
     }
 
@@ -376,24 +392,14 @@
         mountElement(target, node, svg, cb);
       });
     } else if (!isNot(view)) {
-      const newNode = createElement(view, svg, cb);
-
-      append(target, newNode);
-      return newNode;
+      target = insertElement(target, view, svg, cb);
     }
     return target;
   }
 
   async function upgradeNode(target, prev, next, svg, cb) {
     if (!isNode(prev) || prev[0] !== next[0] || target.nodeType !== 1) {
-      const newNode = createElement(next, svg, cb);
-
-      if (Fragment.valid(newNode)) {
-        detach(target, newNode);
-      } else {
-        target.replaceWith(newNode);
-      }
-      return newNode;
+      return replaceElement(target, next, svg, cb);
     }
 
     if (updateProps(target, prev[1] || {}, next[1] || {}, svg, cb)) {
@@ -409,20 +415,6 @@
     return updateElement(target, prev.slice(2), next.slice(2), svg, cb);
   }
 
-  async function upgradeElement(target, next, svg, cb) {
-    if (isFunction(next[0])) {
-      const newNode = createElement(next, svg, cb);
-
-      if (Fragment.valid(newNode)) {
-        detach(target, newNode);
-      } else {
-        target.replaceWith(newNode);
-        return newNode;
-      }
-      return target;
-    }
-  }
-
   async function upgradeElements(target, prev, next, svg, cb, i) {
     const stack = [];
     const set = target.childNodes;
@@ -432,24 +424,10 @@
 
     zip(set, prev, next, i || 0, push);
 
-    const keep = stack.filter(x => x.patch);
-
     for (const task of stack) {
-      if (task.rm && !keep.find(x => x.target === task.rm)) {
-        await destroyElement(task.rm);
-      }
-      if (!isNot(task.patch)) {
-        await patchNode(task.target, task.patch, task.with, svg, cb);
-      }
-      if (!isNot(task.add)) {
-        const newNode = createElement(task.add, svg, cb);
-
-        if (Fragment.valid(newNode)) {
-          newNode.mount(target);
-        } else {
-          target.appendChild(newNode);
-        }
-      }
+      if (task.rm) await destroyElement(task.rm);
+      if (!isNot(task.add)) insertElement(target, task.add, svg, cb);
+      if (!isNot(task.patch)) await patchNode(task.target, task.patch, task.with, svg, cb);
     }
   }
 
@@ -472,22 +450,16 @@
   }
 
   async function patchNode(target, prev, next, svg, cb) {
-    await upgradeElement(target, next, svg, cb);
+    if (isFunction(next[0]) || (target.nodeType === 1 && target.tagName.toLowerCase() !== next[0])) {
+      return replaceElement(target, next, svg, cb);
+    }
 
     if (isDiff(prev, next)) {
       if (target.nodeType === 3) {
         if (isNode(next)) {
           target = await upgradeNode(target, prev, next, svg, cb);
         } else {
-          const rm = [];
-          for (let k = next.length - prev.length; k > 0; k--) rm.push(destroyElement(target.nextSibling || null));
-          await Promise.all(rm);
-
-          if (isBlock(prev) && isBlock(next)) {
-            detach(target, createElement(next, svg, cb));
-          } else {
-            target.nodeValue = String(next);
-          }
+          target.nodeValue = String(next);
         }
       } else {
         target = await upgradeNode(target, prev, next, svg, cb);

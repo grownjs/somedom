@@ -13,8 +13,6 @@ export function assignProps(target, attrs, svg, cb) {
       };
     } else if (prop === '@html') {
       target.innerHTML = attrs[prop];
-    } else if (prop.charAt() === '@') {
-      target.setAttribute(`data-${prop.substr(1)}`, attrs[prop]);
     } else if (prop.indexOf('class:') === 0) {
       if (!attrs[prop]) {
         target.classList.remove(prop.substr(6));
@@ -24,9 +22,11 @@ export function assignProps(target, attrs, svg, cb) {
     } else if (prop.indexOf('style:') === 0) {
       target.style[camelCase(prop.substr(6))] = attrs[prop];
     } else {
-      let value = attrs[prop] !== true ? attrs[prop] : prop;
+      const name = prop.replace('@', 'data-').replace(XLINK_PREFIX, '');
+
+      let value = attrs[prop] !== true ? attrs[prop] : name;
       if (isObject(value)) {
-        value = (isFunction(cb) && cb(target, prop, value)) || value;
+        value = (isFunction(cb) && cb(target, name, value)) || value;
         value = value !== target ? value : null;
         value = isArray(value)
           ? value.join('')
@@ -34,7 +34,6 @@ export function assignProps(target, attrs, svg, cb) {
       }
 
       const removed = isEmpty(value);
-      const name = prop.replace(XLINK_PREFIX, '');
 
       if (svg && prop !== name) {
         if (removed) target.removeAttributeNS(XLINK_NS, name);
@@ -42,8 +41,8 @@ export function assignProps(target, attrs, svg, cb) {
         return;
       }
 
-      if (removed) target.removeAttribute(prop);
-      else if (isScalar(value)) target.setAttribute(prop, value);
+      if (removed) target.removeAttribute(name);
+      else if (isScalar(value)) target.setAttribute(name, value);
     }
   });
 }
