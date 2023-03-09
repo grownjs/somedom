@@ -83,6 +83,12 @@ describe('node', () => {
         div = document.createElement('div');
       });
 
+      it('should remove blank nodes prior patching', async () => {
+        div.innerHTML = '\n <b>OK</b>';
+        await updateElement(div, [], [42]);
+        expect(div.outerHTML).to.eql('<div>42</div>');
+      });
+
       it('should skip anchors while patching fragments', async () => {
         x = factory('just: ', 'x');
         y = factory('just: ', 'y');
@@ -301,6 +307,13 @@ describe('node', () => {
     it('should append non-empty values only', () => {
       expect(createElement(['div', null, [null, false, 0]]).outerHTML).to.eql('<div>false0</div>');
     });
+
+    it('should call oncreate through ref props', () => {
+      const ref = {};
+      const node = createElement(['div', { ref }, 42]);
+
+      expect(ref.current).to.eql(node);
+    });
   });
 
   describe('mountElement', () => {
@@ -452,6 +465,12 @@ describe('node', () => {
 
       div = await updateElement(div, [['a', null]], 'FIXME');
       expect(body.innerHTML).to.eql('<div>FIXME</div>');
+    });
+
+    it('should remove empty nodes from patches', async () => {
+      await mountElement(div, ['\n', ['b', null, 'FOO']]);
+      div = await updateElement(div, [['a', null], '\n', ['b', null, 'FOO']], ['\n\n ', '\n', ['b', null, 'BAR']]);
+      expect(div.outerHTML).to.eql('<div>\n\n \n<b>BAR</b></div>');
     });
 
     it('can update nodes if they are the same', async () => {

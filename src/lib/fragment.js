@@ -30,14 +30,12 @@ export default class Fragment {
       isConnected: { configurable: true, value: true },
     });
 
-    if (target) {
-      const doc = this.getDocumentFragment();
+    const doc = this.getDocumentFragment();
 
-      if (node) {
-        target.insertBefore(doc, node);
-      } else {
-        target.appendChild(doc);
-      }
+    if (node) {
+      target.insertBefore(doc, node);
+    } else {
+      target.appendChild(doc);
     }
   }
 

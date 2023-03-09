@@ -1,49 +1,26 @@
 import {
-  SKIP_METHODS,
   RE_XML_SPLIT,
   RE_XML_CLOSE_END,
   RE_XML_CLOSE_BEGIN,
+  isNot, isBlock, isPlain, isEmpty, isNode, isArray,
 } from './shared';
 
 import Fragment from './fragment';
 
-export const isString = value => typeof value === 'string';
-export const isFunction = value => typeof value === 'function';
-export const isNot = value => typeof value === 'undefined' || value === null;
-export const isPlain = value => value !== null && Object.prototype.toString.call(value) === '[object Object]';
-export const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
-export const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
-
-export const isArray = value => Array.isArray(value);
-export const isBlock = value => isArray(value) && !isNode(value);
+export * from './shared';
 
 export function flat(value) {
   return !isArray(value) ? value : value.reduce((memo, n) => memo.concat(isNode(n) ? [n] : flat(n)), []);
 }
 
-export function isEmpty(value) {
-  if (isFunction(value)) return false;
-  if (isArray(value)) return value.length === 0;
-  if (isPlain(value)) return Object.keys(value).length === 0;
-
-  return isNot(value) || value === false;
-}
-
-export function isNode(value) {
-  if (!isArray(value)) return false;
-  if (typeof value[0] === 'function') return true;
-  if (typeof value[1] !== 'object' || isArray(value[1])) return false;
-  return true;
-}
-
-export function zip(set, prev, next, offset, cb, d = 0) {
+export function zip(nodes, prev, next, offset, cb, d = 0) {
   const c = Math.max(prev.length, next.length);
 
   let i = 0;
   let a = 0;
   let b = 0;
   for (; i < c; i++) {
-    const el = set[offset];
+    const el = nodes[offset];
     const x = flat(prev[a]);
     const y = flat(next[b]);
 
@@ -52,17 +29,17 @@ export function zip(set, prev, next, offset, cb, d = 0) {
     } else if (isNot(y)) {
       if (isBlock(x)) {
         let k = x.length;
-        while (k--) cb({ rm: set[offset++] });
+        while (k--) cb({ rm: nodes[offset++] });
       } else if (el) {
         cb({ rm: el });
         offset++;
       }
     } else if (isBlock(x) && isBlock(y)) {
-      zip(set, x, y, offset, cb, d + 1);
-      offset += y.length + 2;
+      zip(nodes, x, y, offset, cb, d + 1);
+      offset += Math.max(x.length, y.length) + 2;
     } else if (isBlock(y)) {
-      cb({ patch: [x], with: y, target: el });
-      offset += y.length;
+      zip(nodes, [x], y, offset, cb, d + 1);
+      offset += y.length + 2;
     } else if (el) {
       cb({ patch: x, with: y, target: el });
       offset++;
@@ -74,9 +51,9 @@ export function zip(set, prev, next, offset, cb, d = 0) {
     b++;
   }
 
-  if (offset !== set.length) {
-    for (let k = offset; k < set.length; k++) {
-      cb({ rm: set[k] });
+  if (offset !== nodes.length) {
+    for (let k = offset; k < nodes.length; k++) {
+      cb({ rm: nodes[k] });
     }
   }
 }
@@ -99,29 +76,6 @@ export function isDiff(prev, next) {
       if (isDiff(prev[a[i]], next[b[i]])) return true;
     }
   } else return prev !== next;
-}
-
-export function getMethods(obj) {
-  const stack = [];
-
-  do {
-    stack.push(obj);
-  } while (obj = Object.getPrototypeOf(obj)); // eslint-disable-line
-
-  stack.pop();
-
-  return stack.reduce((memo, cur) => {
-    const keys = Object.getOwnPropertyNames(cur);
-
-    keys.forEach(key => {
-      if (!SKIP_METHODS.includes(key)
-        && isFunction(cur[key])
-        && !memo.includes(key)
-      ) memo.push(key);
-    });
-
-    return memo;
-  }, []);
 }
 
 export const camelCase = value => value.replace(/-([a-z])/g, (_, $1) => $1.toUpperCase());
@@ -171,7 +125,6 @@ export function trim(value) {
 }
 
 export function clone(value) {
-  if (!value || !isObject(value)) return value;
   if (isArray(value)) return value.map(x => clone(x));
   if (value instanceof Date) return new Date(value.getTime());
   if (value instanceof RegExp) return new RegExp(value.source, value.flags);
@@ -182,9 +135,9 @@ export const apply = (cb, length, options = {}) => (...args) => length === args.
 export const raf = cb => ((typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout)(cb);
 export const tick = cb => Promise.resolve().then(cb).then(() => new Promise(done => raf(done)));
 
+export const append = (target, node) => target.appendChild(node);
 export const remove = (target, node) => target && target.removeChild(node);
 export const replace = (target, node, i) => target.replaceChild(node, target.childNodes[i]);
-export const append = (target, node) => (Fragment.valid(node) ? node.mount(target) : target.appendChild(node));
 
 export const detach = (target, node) => {
   if (node) {
