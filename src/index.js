@@ -14,12 +14,12 @@ import { addEvents } from './lib/events';
 
 export const h = (tag = 'div', attrs = null, ...children) => {
   if (isScalar(attrs)) return [tag, null, [attrs].concat(children).filter(x => !isNot(x))];
-  if (isArray(attrs)) return [tag, null, attrs];
+  if (isArray(attrs) && !children.length) return [tag, null, attrs];
   return [tag, attrs || null, children];
 };
 
 export const pre = (vnode, svg, cb = render) => {
-  return cb(['pre', { class: 'highlight' }, format(cb(vnode, svg).outerHTML)], svg);
+  return cb(['pre', ['class', 'highlight'], format(cb(vnode, svg).outerHTML)], svg);
 };
 
 export const bind = (tag, ...hooks) => {
@@ -44,6 +44,10 @@ export const attributes = opts => apply(invokeProps, 3, opts);
 export {
   raf, tick, format,
 } from './lib/util';
+
+export {
+  toProxy as proxy,
+} from './lib/shared';
 
 export {
   mountElement as mount,

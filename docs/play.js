@@ -1,16 +1,17 @@
 (function () {
   'use strict';
 
+  const RE_NUMBER = /^\d+$/;
   const RE_XML_SPLIT = /(>)(<)(\/*)/g;
   const RE_XML_CLOSE_END = /.+<\/\w[^>]*>$/;
   const RE_XML_CLOSE_BEGIN = /^<\/\w/;
-
-  const SVG_NS = 'http://www.w3.org/2000/svg';
 
   const XLINK_PREFIX = /^xlink:?/;
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
 
   const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
+
+  const IS_PROXY = Symbol('$$proxy');
 
   const isArray = value => Array.isArray(value);
   const isString = value => typeof value === 'string';
@@ -20,11 +21,15 @@
   const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
   const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
 
+  function isTuple(value) {
+    if (!(isArray(value) && isEven(value.length))) return false;
+    return toKeys(value).every(isString);
+  }
+
   function isNode(value) {
-    if (!isArray(value)) return false;
-    if (typeof value[0] === 'function') return true;
-    if (value[1] === null || isPlain(value[1])) return true;
-    return false;
+    if (isArray(value) && isFunction(value[0])) return true;
+    if (!value || !(isArray(value) && isString(value[0]))) return false;
+    return value[1] === null || (value.length >= 2 && (isPlain(value[1]) || isTuple(value[1])));
   }
 
   function isEmpty(value) {
@@ -37,6 +42,62 @@
   }
 
   const isBlock = value => isArray(value) && !isNode(value);
+  const isEven = value => value % 2 === 0;
+
+  function toProxy(values) {
+    if (!isArray(values)) values = [];
+    if (IS_PROXY in values) return values;
+
+    Object.defineProperty(values, IS_PROXY, { value: true });
+
+    return new Proxy(values, {
+      get(target, prop) {
+        if (prop === Symbol.for('nodejs.util.inspect.custom')) return target;
+        if (prop === Symbol.isConcatSpreadable) return target;
+        if (prop === Symbol.toStringTag) return target;
+        if (prop === Symbol.iterator) return target[Symbol.iterator].bind(target);
+        if (prop === 'filter') return target.filter.bind(target);
+        if (prop === 'length') return target.length;
+        if (RE_NUMBER.test(prop)) return target[prop];
+
+        for (let i = 0; i < target.length; i += 2) {
+          /* istanbul ignore else */
+          if (target[i] === prop) return target[i + 1];
+        }
+      },
+      set(target, prop, value) {
+        if (RE_NUMBER.test(prop)) {
+          target[prop] = value;
+          return true;
+        }
+
+        for (let i = 0; i < target.length; i += 2) {
+          if (target[i] === prop) {
+            target[i + 1] = value;
+            return true;
+          }
+        }
+
+        target.push(prop, value);
+        return true;
+      },
+    });
+  }
+
+  function toProps(value) {
+    return Object.entries(value).reduce((memo, [k, v]) => {
+      memo.push(k, v);
+      return memo;
+    }, []);
+  }
+
+  function toKeys(value) {
+    return value.filter((_, i) => isEven(i));
+  }
+
+  function toFragment(vnode) {
+    return vnode.slice(2);
+  }
 
   class Fragment {
     constructor() {
@@ -95,7 +156,7 @@
   }
 
   function flat(value) {
-    return !isArray(value) ? value : value.reduce((memo, n) => memo.concat(isNode(n) ? [n] : flat(n)), []);
+    return !isArray(value) ? value : value.reduce((memo, n) => memo.concat(isNode(n) || isTuple(n) ? [n] : flat(n)), []);
   }
 
   function zip(nodes, prev, next, offset, cb, d = 0) {
@@ -218,27 +279,30 @@
   };
 
   function assignProps(target, attrs, svg, cb) {
-    Object.keys(attrs).forEach(prop => {
-      if (prop === 'key') return;
+    for (let i = 0; i < attrs.length; i += 2) {
+      const prop = attrs[i];
+      const val = attrs[i + 1];
+
+      if (prop === 'key') continue;
       if (prop === 'ref') {
         target.oncreate = el => {
-          attrs[prop].current = el;
+          val.current = el;
         };
       } else if (prop === '@html') {
-        target.innerHTML = attrs[prop];
+        target.innerHTML = val;
       } else if (prop.indexOf('class:') === 0) {
-        if (!attrs[prop]) {
+        if (!val) {
           target.classList.remove(prop.substr(6));
         } else {
           target.classList.add(prop.substr(6));
         }
       } else if (prop.indexOf('style:') === 0) {
-        target.style[camelCase(prop.substr(6))] = attrs[prop];
+        target.style[camelCase(prop.substr(6))] = val;
       } else {
         const name = prop.replace('@', 'data-').replace(XLINK_PREFIX, '');
 
         // eslint-disable-next-line no-nested-ternary
-        let value = attrs[prop] !== true ? attrs[prop] : (name.includes('-') ? true : name);
+        let value = val !== true ? val : (name.includes('-') ? true : name);
         if (isObject(value)) {
           value = (isFunction(cb) && cb(target, name, value)) || value;
           value = value !== target ? value : null;
@@ -252,34 +316,37 @@
         if (svg && prop !== name) {
           if (removed) target.removeAttributeNS(XLINK_NS, name);
           else target.setAttributeNS(XLINK_NS, name, value);
-          return;
+          continue;
         }
 
         if (removed) target.removeAttribute(name);
         else if (isScalar(value)) target.setAttribute(name, value);
       }
-    });
+    }
   }
 
   function updateProps(target, prev, next, svg, cb) {
-    const keys = Object.keys(prev).concat(Object.keys(next));
+    const [old, keys] = [prev, next].map(toKeys);
+    const set = prev.concat(next);
+    const data = new Map();
+    const props = [];
 
-    let changed;
-    const props = keys.reduce((all, k) => {
-      if (k !== '@html') {
-        if (k in prev && !(k in next)) {
-          all[k] = null;
-          changed = true;
-        } else if (isDiff(prev[k], next[k])) {
-          all[k] = next[k];
-          changed = true;
-        }
-      }
-      return all;
-    }, {});
+    for (let i = 0; i < set.length; i += 2) {
+      const k = set[i];
+      const v = set[i + 1];
 
-    if (changed) assignProps(target, props, svg, cb);
-    return changed;
+      /* istanbul ignore else */
+      if (old.includes(k)) {
+        if (!data.has(k)) data.set(k, v);
+        if (!keys.includes(k)) props.push(k, null);
+        else if (isDiff(data.get(k), v)) props.push(k, v);
+      } else if (isDiff(data.get(k), v)) props.push(k, v);
+    }
+
+    if (props.length > 0) {
+      assignProps(target, props, svg, cb);
+      return true;
+    }
   }
 
   function destroyElement(target, wait = cb => cb()) {
@@ -319,8 +386,12 @@
       return (isScalar(vnode) && document.createTextNode(String(vnode))) || vnode;
     }
 
+    if (isPlain(vnode[1])) {
+      vnode[1] = toProps(vnode[1]);
+    }
+
     while (vnode && isFunction(vnode[0])) {
-      vnode = vnode[0](vnode[1], vnode.slice(2));
+      vnode = vnode[0](toProxy(vnode[1]), toFragment(vnode));
     }
 
     if (!isArray(vnode)) {
@@ -328,7 +399,7 @@
     }
 
     if (cb && cb.tags && cb.tags[vnode[0]]) {
-      return createElement(cb.tags[vnode[0]](vnode[1], vnode.slice(2), cb), svg, cb);
+      return createElement(cb.tags[vnode[0]](toProxy(vnode[1]), toFragment(vnode), cb), svg, cb);
     }
 
     if (!isNode(vnode)) {
@@ -339,7 +410,7 @@
     const [tag, props, ...children] = vnode;
 
     let el = isSvg
-      ? document.createElementNS(SVG_NS, tag)
+      ? document.createElementNS('http://www.w3.org/2000/svg', tag)
       : document.createElement(tag);
 
     if (isFunction(cb)) {
@@ -403,17 +474,12 @@
       return replaceElement(target, next, svg, cb);
     }
 
-    if (updateProps(target, prev[1] || {}, next[1] || {}, svg, cb)) {
+    if (updateProps(target, prev[1] || [], next[1] || [], svg, cb)) {
       if (isFunction(target.onupdate)) await target.onupdate(target);
       if (isFunction(target.update)) await target.update();
     }
 
-    if (next[1] && next[1]['@html']) {
-      target.innerHTML = next[1]['@html'];
-      return target;
-    }
-
-    return updateElement(target, prev.slice(2), next.slice(2), svg, cb);
+    return next[1] && toKeys(next[1]).includes('@html') ? target : updateElement(target, toFragment(prev), toFragment(next), svg, cb);
   }
 
   async function upgradeElements(target, prev, next, svg, cb, i) {
@@ -580,12 +646,12 @@
 
   const h = (tag = 'div', attrs = null, ...children) => {
     if (isScalar(attrs)) return [tag, null, [attrs].concat(children).filter(x => !isNot(x))];
-    if (isArray(attrs)) return [tag, null, attrs];
+    if (isArray(attrs) && !children.length) return [tag, null, attrs];
     return [tag, attrs || null, children];
   };
 
   const pre = (vnode, svg, cb = createElement) => {
-    return cb(['pre', { class: 'highlight' }, format(cb(vnode, svg).outerHTML)], svg);
+    return cb(['pre', ['class', 'highlight'], format(cb(vnode, svg).outerHTML)], svg);
   };
 
   const bind = (tag, ...hooks) => {
@@ -617,6 +683,7 @@
     raf: raf,
     tick: tick,
     format: format,
+    proxy: toProxy,
     mount: mountElement,
     patch: updateElement,
     render: createElement,
@@ -636,7 +703,7 @@
 
     mountElement(parentNode, ['details', null, [
       ['summary', null, ['View executed code']],
-      ['pre', { class: 'highlight' }, trim(code)],
+      ['pre', ['class', 'highlight'], trim(code)],
     ]]);
   }
 
@@ -671,13 +738,13 @@
         t.cb(somedom, x => appendChild(t.el, x));
       } catch (e) {
         console.log(e);
-        appendChild(t.el, createElement(['div', { class: 'error' }, e.toString()]));
+        appendChild(t.el, createElement(['div', ['class', 'error'], e.toString()]));
       }
     });
 
     window.hijs = '.highlight';
 
-    mountElement('head', ['script', { src: '//cdn.rawgit.com/cloudhead/hijs/0eaa0031/hijs.js' }]);
+    mountElement('head', ['script', ['src', '//cdn.rawgit.com/cloudhead/hijs/0eaa0031/hijs.js']]);
   });
 
 })();

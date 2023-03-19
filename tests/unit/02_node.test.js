@@ -145,11 +145,13 @@ describe('node', () => {
 
       it('should handle updates with @html attributes', async () => {
         mountElement(document.body, [
-          ['div', { '@html': '<b>OSOM</b>' }],
+          ['div', ['@html', '<b>OSOM</b>']],
         ]);
 
-        const old = [['div', { class: 'x' }, ['b', null, 'OSOM']]];
-        const next = [['div', { class: 'y', '@html': '<em>OK</em>' }]];
+        expect(document.body.innerHTML).to.eql('<div><b>OSOM</b></div>');
+
+        const old = [['div', ['class', 'x'], ['b', null, 'OSOM']]];
+        const next = [['div', ['class', 'y', '@html', '<em>OK</em>']]];
 
         await updateElement(document.body, old, next);
 
@@ -158,7 +160,7 @@ describe('node', () => {
 
       it('should expand @ into data- attributes', async () => {
         mountElement(document.body, [
-          ['b', { '@foo': 'bar' }, 'OK'],
+          ['b', ['@foo', 'bar'], 'OK'],
         ]);
 
         expect(document.body.innerHTML).to.eql('<b data-foo="bar">OK</b>');
@@ -206,25 +208,57 @@ describe('node', () => {
       expect(createElement(['svg', null]).namespaceURI).to.contains('svg');
     });
 
+    it('should convert props to array', () => {
+      const test = createElement(['p', { style: 'color: red' }, 'OSOM']);
+
+      expect(test.outerHTML).to.eql('<p style="color: red">OSOM</p>');
+    });
+
+    it('should pass props through a proxy', () => {
+      function Test(props, children) {
+        expect(Array.isArray(props)).to.be.true;
+        expect(props.value).to.eql(42);
+
+        props.value = 'OSOM';
+        props.other = -1;
+
+        const copy = [...props];
+
+        expect(props[Symbol.for('nodejs.util.inspect.custom')]).to.eql(copy);
+        expect(props[Symbol.isConcatSpreadable]).to.eql(copy);
+        expect(props[Symbol.toStringTag]).to.eql(copy);
+
+        expect(typeof props[Symbol.iterator]).to.eql('function');
+        expect(typeof props.filter).to.eql('function');
+        expect(props.length).to.eql(4);
+
+        return ['div', props, children];
+      }
+
+      const target = createElement([Test, ['value', 42]]);
+
+      expect(target.outerHTML).to.eql('<div value="OSOM" other="-1"></div>');
+    });
+
     it('should call factories recursively', () => {
       let count = null;
-
       function Tag(props, children) {
         if (count === null) {
           count = props.count;
-          return [Tag, props, children];
+          return [Tag, props, ...children];
         }
 
         if (count > 3) {
-          return ['b', props, children];
+          return ['b', props, ...children];
         }
 
         count += 1;
+        props.count = count;
 
-        return [Tag, { ...props, count }, children];
+        return [Tag, props, ...children];
       }
 
-      const target = createElement([Tag, { count: 0 }, 42]);
+      const target = createElement([Tag, ['count', 0], 42]);
 
       expect(target.outerHTML).to.eql('<b count="4">42</b>');
     });
@@ -252,7 +286,7 @@ describe('node', () => {
     });
 
     it('should handle functions as elements', () => {
-      const attrs = {};
+      const attrs = [];
       const nodes = [];
 
       const Spy = td.func('Component');
@@ -263,7 +297,7 @@ describe('node', () => {
     });
 
     it('should pass given attributes to assignProps()', () => {
-      const foo = createElement(['code', { foo: 'bar' }]).attributes.foo;
+      const foo = createElement(['code', ['foo', 'bar']]).attributes.foo;
 
       expect(foo.nodeValue || foo.value || foo).to.eql('bar');
     });
@@ -310,7 +344,7 @@ describe('node', () => {
 
     it('should call oncreate through ref props', () => {
       const ref = {};
-      const node = createElement(['div', { ref }, 42]);
+      const node = createElement(['div', ['ref', ref], 42]);
 
       expect(ref.current).to.eql(node);
     });
@@ -478,7 +512,7 @@ describe('node', () => {
     });
 
     it('can patch node attributes', async () => {
-      await updateElement(a, ['a', null], ['a', { href: '#' }]);
+      await updateElement(a, ['a', null], ['a', ['href', '#']]);
       expect(a.outerHTML).to.eql('<a href="#"></a>');
     });
 
@@ -491,7 +525,7 @@ describe('node', () => {
       a.onupdate = td.func('onupdate');
       a.update = td.func('update');
 
-      await updateElement(a, ['a', null], ['a', { href: '#' }]);
+      await updateElement(a, ['a', null], ['a', ['href', '#']]);
 
       expect(td.explain(a.onupdate).callCount).to.eql(1);
       expect(td.explain(a.update).callCount).to.eql(1);

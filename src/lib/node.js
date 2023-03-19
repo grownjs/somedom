@@ -1,13 +1,16 @@
 import {
-  isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isDiff, isNot, detach, zip,
+  isFunction, isScalar, isArray, isPlain, isNode, isEmpty, isBlock, isDiff, isNot, detach, zip,
 } from './util';
 
 import {
   assignProps, updateProps,
 } from './attrs';
 
+import {
+  toKeys, toProps, toProxy, toFragment,
+} from './shared';
+
 import Fragment from './fragment';
-import { SVG_NS } from './shared';
 
 export function destroyElement(target, wait = cb => cb()) {
   const rm = () => target && target.remove();
@@ -46,8 +49,12 @@ export function createElement(vnode, svg, cb) {
     return (isScalar(vnode) && document.createTextNode(String(vnode))) || vnode;
   }
 
+  if (isPlain(vnode[1])) {
+    vnode[1] = toProps(vnode[1]);
+  }
+
   while (vnode && isFunction(vnode[0])) {
-    vnode = vnode[0](vnode[1], vnode.slice(2));
+    vnode = vnode[0](toProxy(vnode[1]), toFragment(vnode));
   }
 
   if (!isArray(vnode)) {
@@ -55,7 +62,7 @@ export function createElement(vnode, svg, cb) {
   }
 
   if (cb && cb.tags && cb.tags[vnode[0]]) {
-    return createElement(cb.tags[vnode[0]](vnode[1], vnode.slice(2), cb), svg, cb);
+    return createElement(cb.tags[vnode[0]](toProxy(vnode[1]), toFragment(vnode), cb), svg, cb);
   }
 
   if (!isNode(vnode)) {
@@ -66,7 +73,7 @@ export function createElement(vnode, svg, cb) {
   const [tag, props, ...children] = vnode;
 
   let el = isSvg
-    ? document.createElementNS(SVG_NS, tag)
+    ? document.createElementNS('http://www.w3.org/2000/svg', tag)
     : document.createElement(tag);
 
   if (isFunction(cb)) {
@@ -130,17 +137,12 @@ export async function upgradeNode(target, prev, next, svg, cb) {
     return replaceElement(target, next, svg, cb);
   }
 
-  if (updateProps(target, prev[1] || {}, next[1] || {}, svg, cb)) {
+  if (updateProps(target, prev[1] || [], next[1] || [], svg, cb)) {
     if (isFunction(target.onupdate)) await target.onupdate(target);
     if (isFunction(target.update)) await target.update();
   }
 
-  if (next[1] && next[1]['@html']) {
-    target.innerHTML = next[1]['@html'];
-    return target;
-  }
-
-  return updateElement(target, prev.slice(2), next.slice(2), svg, cb);
+  return next[1] && toKeys(next[1]).includes('@html') ? target : updateElement(target, toFragment(prev), toFragment(next), svg, cb);
 }
 
 export async function upgradeElements(target, prev, next, svg, cb, i) {
