@@ -44,9 +44,9 @@ describe('somedom', () => {
         sample = encodeText(sample, false);
       }
 
-      expect(pre(['div', null, [
-        ['span', { foo: 'bar', baz: true }, ['TEXT']],
-      ]]).outerHTML).to.eql(`<pre class="highlight">${sample}</pre>`);
+      expect(pre(['div', null,
+        ['span', ['foo', 'bar', 'baz', true], 'TEXT'],
+      ]).outerHTML).to.eql(`<pre class="highlight">${sample}</pre>`);
     });
   });
 
@@ -104,7 +104,7 @@ describe('somedom', () => {
       mount(document.body, ['\n']);
 
       const c = ['\n'];
-      const d = ['\n', ['p', { class: 'ok' }, ['OSOM']], '\n'];
+      const d = ['\n', ['p', ['class', 'ok'], ['OSOM']], '\n'];
 
       await patch(document.body, c, d);
       expect(document.body.outerHTML).to.eql('<body>\n<p class="ok">OSOM</p>\n</body>');
@@ -127,14 +127,14 @@ describe('somedom', () => {
         ['nav', null, [
           ['ul', null, [
             ['li', null, ['Home']],
-            ['fragment', { key: 'user-menu' }, [
+            ['fragment', ['key', 'user-menu'], [
               '\n',
               ['li', null, ['Profile']],
               '\n',
             ]],
           ]],
         ]],
-        ['fragment', { key: 'flash-info' }, ['\n']],
+        ['fragment', ['key', 'flash-info'], ['\n']],
         ['main', null, ['MARKUP']],
       ];
 
@@ -150,10 +150,10 @@ describe('somedom', () => {
         ['nav', null, [
           ['ul', null, [
             ['li', null, ['Home']],
-            ['fragment', { key: 'user-menu' }, ['\n']],
+            ['fragment', ['key', 'user-menu'], ['\n']],
           ]],
         ]],
-        ['fragment', { key: 'flash-info' }, [['p', null, 'Done.'], '\n']],
+        ['fragment', ['key', 'flash-info'], [['p', null, 'Done.'], '\n']],
         ['main', null, ['FORM']],
       ];
 
@@ -195,7 +195,7 @@ describe('somedom', () => {
       data.map(x => td.when(rm(x.id)).thenDo(() => filter(x.id)));
 
       function view() {
-        const partial = ['ul', null, data.map(x => ['li', { onclick: () => rm(x.id) }, x.value])];
+        const partial = ['ul', null, data.map(x => ['li', ['onclick', () => rm(x.id)], x.value])];
 
         return useFragment
           ? [partial]

@@ -2,7 +2,7 @@ import {
   RE_XML_SPLIT,
   RE_XML_CLOSE_END,
   RE_XML_CLOSE_BEGIN,
-  isNot, isBlock, isPlain, isEmpty, isNode, isArray,
+  isNot, isBlock, isPlain, isEmpty, isNode, isArray, isTuple,
 } from './shared';
 
 import Fragment from './fragment';
@@ -10,7 +10,7 @@ import Fragment from './fragment';
 export * from './shared';
 
 export function flat(value) {
-  return !isArray(value) ? value : value.reduce((memo, n) => memo.concat(isNode(n) ? [n] : flat(n)), []);
+  return !isArray(value) ? value : value.reduce((memo, n) => memo.concat(isNode(n) || isTuple(n) ? [n] : flat(n)), []);
 }
 
 export function zip(nodes, prev, next, offset, cb, d = 0) {
