@@ -1,5 +1,5 @@
 import {
-  isFunction, isScalar, isArray, isPlain, isNode, isEmpty, isBlock, isDiff, isNot, detach, zip,
+  isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isDiff, isNot, detach, zip,
 } from './util';
 
 import {
@@ -7,7 +7,7 @@ import {
 } from './attrs';
 
 import {
-  toKeys, toProps, toProxy, toFragment,
+  toKeys, toProxy, toFragment,
 } from './shared';
 
 import Fragment from './fragment';
@@ -47,10 +47,6 @@ export function createElement(vnode, svg, cb) {
       return Fragment.from(v => createElement(v, svg, cb), vnode);
     }
     return (isScalar(vnode) && document.createTextNode(String(vnode))) || vnode;
-  }
-
-  if (isPlain(vnode[1])) {
-    vnode[1] = toProps(vnode[1]);
   }
 
   while (vnode && isFunction(vnode[0])) {

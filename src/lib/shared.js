@@ -1,4 +1,3 @@
-export const RE_NUMBER = /^\d+$/;
 export const RE_XML_SPLIT = /(>)(<)(\/*)/g;
 export const RE_XML_CLOSE_END = /.+<\/\w[^>]*>$/;
 export const RE_XML_CLOSE_BEGIN = /^<\/\w/;
@@ -62,47 +61,47 @@ export function toProxy(values) {
   if (!isArray(values)) values = [];
   if (IS_PROXY in values) return values;
 
-  Object.defineProperty(values, IS_PROXY, { value: true });
+  const keys = values.filter((_, i) => isEven(i));
 
   return new Proxy(values, {
-    get(target, prop) {
-      if (prop === Symbol.for('nodejs.util.inspect.custom')) return target;
-      if (prop === Symbol.isConcatSpreadable) return target;
-      if (prop === Symbol.toStringTag) return target;
-      if (prop === Symbol.iterator) return target[Symbol.iterator].bind(target);
-      if (prop === 'filter') return target.filter.bind(target);
-      if (prop === 'length') return target.length;
-      if (RE_NUMBER.test(prop)) return target[prop];
+    deleteProperty(target, prop) {
+      const offset = keys.indexOf(prop);
 
+      if (offset >= 0) {
+        for (let i = 0; i < target.length; i += 2) {
+          if (target[i] === prop) {
+            keys.splice(offset, 1);
+            target.splice(i, 2);
+            break;
+          }
+        }
+      }
+      return true;
+    },
+    has(_, prop) {
+      return prop === IS_PROXY || keys.includes(prop);
+    },
+    get(target, prop) {
+      if (!keys.includes(prop)) {
+        return Reflect.get(target, prop);
+      }
       for (let i = 0; i < target.length; i += 2) {
         /* istanbul ignore else */
         if (target[i] === prop) return target[i + 1];
       }
     },
     set(target, prop, value) {
-      if (RE_NUMBER.test(prop)) {
-        target[prop] = value;
-        return true;
-      }
-
       for (let i = 0; i < target.length; i += 2) {
         if (target[i] === prop) {
           target[i + 1] = value;
           return true;
         }
       }
-
       target.push(prop, value);
+      keys.push(prop);
       return true;
     },
   });
-}
-
-export function toProps(value) {
-  return Object.entries(value).reduce((memo, [k, v]) => {
-    memo.push(k, v);
-    return memo;
-  }, []);
 }
 
 export function toKeys(value) {
