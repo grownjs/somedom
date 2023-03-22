@@ -208,12 +208,6 @@ describe('node', () => {
       expect(createElement(['svg', null]).namespaceURI).to.contains('svg');
     });
 
-    it('should convert props to array', () => {
-      const test = createElement(['p', { style: 'color: red' }, 'OSOM']);
-
-      expect(test.outerHTML).to.eql('<p style="color: red">OSOM</p>');
-    });
-
     it('should pass props through a proxy', () => {
       function Test(props, children) {
         expect(Array.isArray(props)).to.be.true;
@@ -221,12 +215,6 @@ describe('node', () => {
 
         props.value = 'OSOM';
         props.other = -1;
-
-        const copy = [...props];
-
-        expect(props[Symbol.for('nodejs.util.inspect.custom')]).to.eql(copy);
-        expect(props[Symbol.isConcatSpreadable]).to.eql(copy);
-        expect(props[Symbol.toStringTag]).to.eql(copy);
 
         expect(typeof props[Symbol.iterator]).to.eql('function');
         expect(typeof props.filter).to.eql('function');

@@ -16,6 +16,7 @@ import {
   isDiff,
   dashCase,
   toArray,
+  toProxy,
   raf,
   replace,
   remove,
@@ -188,6 +189,22 @@ describe('util', () => {
       expect(toArray(null)).to.eql([]);
       expect(toArray(false)).to.eql([]);
       expect(toArray(undefined)).to.eql([]);
+    });
+  });
+
+  describe('toProxy', () => {
+    it('should wrap array-props with a proxy', () => {
+      const p = toProxy([]);
+
+      p.x = 'y';
+      p.a = 'b';
+
+      expect(p).to.eql(['x', 'y', 'a', 'b']);
+
+      expect('a' in p).to.be.true;
+      delete p.a;
+      delete p.undef;
+      expect('a' in p).to.be.false;
     });
   });
 
