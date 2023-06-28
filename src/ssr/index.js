@@ -19,6 +19,7 @@ export { bindHelpers } from './doc.js';
 export * from '../index.js';
 
 /* global globalThis */
+const _global = typeof global === 'undefined' ? globalThis : global;
 
 let patched;
 let builtin;
@@ -35,9 +36,9 @@ export function enable(env) {
       ({ window } = new JSDOM());
     }
 
-    globalThis.document = window.document;
-    globalThis.window = window;
-    globalThis.Event = window.Event;
+    _global.document = window.document;
+    _global.window = window;
+    if (typeof Deno === 'undefined' && typeof Bun === 'undefined') _global.Event = window.Event;
   } else {
     patchDocument();
     patchWindow();
@@ -49,8 +50,8 @@ export function enable(env) {
 export function disable() {
   if (!patched) return;
   if (!builtin) {
-    delete globalThis.document;
-    delete globalThis.window;
+    delete _global.document;
+    delete _global.window;
   } else {
     dropDocument();
     dropWindow();
