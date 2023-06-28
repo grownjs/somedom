@@ -1,9 +1,9 @@
-import { isFunction, isObject } from './util';
+import { isFunction, isObject } from './util.js';
 
-import { EE_SUPPORTED } from './shared';
+import { EE_SUPPORTED } from './shared.js';
 
-export function eventListener(e) {
-  return e.currentTarget.events[e.type](e);
+export function eventListener(type) {
+  return e => e.currentTarget.events[type](e);
 }
 
 export function invokeEvent(e, name, value, globals) {
@@ -21,12 +21,13 @@ export function invokeEvent(e, name, value, globals) {
 
 export function addEvents(el, name, value, globals) {
   if (isFunction(value)) {
+    el.listeners = el.listeners || {};
     el.events = el.events || {};
 
     if (!el.teardown) {
       el.teardown = () => {
         Object.keys(el.events).forEach(x => {
-          el.removeEventListener(x, eventListener);
+          el.removeEventListener(x, el.listeners[x]);
           el.events[x] = [];
         });
       };
@@ -35,7 +36,10 @@ export function addEvents(el, name, value, globals) {
     if (name.substr(0, 2) === 'on' && EE_SUPPORTED.indexOf(name) === -1) {
       const type = name.substr(2);
 
-      if (!el.events[type]) el.addEventListener(type, eventListener, false);
+      if (!el.events[type]) {
+        el.listeners[type] = eventListener(type);
+        el.addEventListener(type, el.listeners[type], false);
+      }
 
       el.events[type] = e => invokeEvent(e, name, value, globals);
     } else {

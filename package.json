@@ -2,7 +2,8 @@
   "name": "somedom",
   "version": "0.6.1",
   "description": "Building blocks for the DOM.",
-  "main": "dist/somedom.js",
+  "type": "module",
+  "main": "dist/somedom.cjs",
   "module": "dist/somedom.mjs",
   "unpkg": "dist/somedom.umd.js",
   "files": [
@@ -13,12 +14,12 @@
   "exports": {
     ".": {
       "import": "./dist/somedom.mjs",
-      "require": "./dist/somedom.js",
+      "require": "./dist/somedom.cjs",
       "browser": "./dist/somedom.umd.js"
     },
     "./ssr": {
       "import": "./dist/index.ssr.mjs",
-      "require": "./dist/index.ssr.js"
+      "require": "./dist/index.ssr.cjs"
     }
   },
   "scripts": {
@@ -28,11 +29,12 @@
     "serve": "sirv docs --dev --quiet --single --port 8080",
     "test:e2e": "npm run test:run -- -a 'npm run serve' tests/e2e/cases",
     "test:ci": "npm run coverage:unit && npm run report -- -r ${LCOV_OUTPUT:-lcov}",
-    "test:ssr": "NODE_ENV=test _mocha --exit --colors --recursive -r esm -bR spec tests/unit",
+    "_test:ssr": "NODE_ENV=test _mocha --exit --colors --recursive -r esm -bR spec tests/unit",
+    "test:ssr": "NODE_ENV=test _mocha --exit --colors --recursive --parallel --loader=testdouble -bR tests/unit/*.test.js",
     "test": "npm run test:ssr && USE_JSDOM=true npm run test:ssr && npm run test:e2e",
-    "coverage": "nyc --x '**/tests/**' -x '**/*.spec.js' -x 'src/ssr/himalaya/**'",
+    "coverage": "c8 --x '**/tests/**' -x '**/*.spec.js' -x 'src/ssr/himalaya/**'",
     "coverage:unit": "npm run coverage -- npm run test:ssr",
-    "report": "nyc report",
+    "report": "c8 report",
     "lint": "eslint src tests",
     "pretest": "NODE_ENV=test npm run build",
     "prebuild": "node prebuild.js",
@@ -44,6 +46,7 @@
   "author": "Alvaro Cabrera <pateketrueke@gmail.com>",
   "license": "MIT",
   "devDependencies": {
+    "c8": "^8.0.0",
     "chai": "^4.1.2",
     "codecov": "^3.8.1",
     "cookie-signature": ">=1.0.4",
@@ -68,7 +71,6 @@
     "minimist": ">=1.2.3",
     "mocha": "^8.1.3",
     "moment": ">=2.19.3",
-    "nyc": "^15.1.0",
     "qs": ">=1.0.0",
     "rollup": "^2.79.1",
     "rollup-plugin-commonjs": "^10.1.0",
@@ -79,7 +81,7 @@
     "set-value": ">=2.0.1",
     "sirv-cli": "^1.0.6",
     "testcafe": "1.18.3",
-    "testdouble": "^3.11.0",
+    "testdouble": "^3.18.0",
     "tough-cookie": ">=2.3.3",
     "uglify-js": ">=2.6.0",
     "useragent": ">=2.1.13",

@@ -1,12 +1,12 @@
 import { selectAll, selectOne } from 'css-select';
 
-import Fragment from '../lib/fragment';
-import { markupAdapter } from './adapter';
-import { CLOSE_TAGS } from '../lib/shared';
-import { parse, parseDefaults } from './himalaya';
-import { isNot, dashCase } from '../lib/util';
+import Fragment from '../lib/fragment.js';
+import { markupAdapter } from './adapter.js';
+import { CLOSE_TAGS } from '../lib/shared.js';
+import { parse, parseDefaults } from './himalaya/index.js';
+import { isNot, dashCase } from '../lib/util.js';
 
-const isNode = !(typeof Deno !== 'undefined' || typeof Bun !== 'undefined');
+/* global globalThis */
 
 export class Event {
   constructor(type, params) {
@@ -368,7 +368,7 @@ export function createComment(content) {
 }
 
 export function patchDocument() {
-  global.document = {
+  globalThis.document = {
     body: createElement('body'),
     getElementsByClassName() {
       throw new Error('DOCUMENT.getElementsByClassName() not implemented');
@@ -391,12 +391,10 @@ export function patchDocument() {
 }
 
 export function patchWindow() {
-  if (isNode) {
-    global.Event = Event;
-  }
-
-  global.window = {
+  globalThis.Event = Event;
+  globalThis.window = {
     eventListeners: {},
+    Event,
     HTMLElement,
     dispatchEvent,
     addEventListener,
@@ -405,13 +403,9 @@ export function patchWindow() {
 }
 
 export function dropDocument() {
-  delete global.document;
+  delete globalThis.document;
 }
 
 export function dropWindow() {
-  delete global.window;
-
-  if (isNode) {
-    delete global.Event;
-  }
+  delete globalThis.window;
 }

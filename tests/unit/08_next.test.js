@@ -4,13 +4,13 @@ import { expect } from 'chai';
 
 import {
   render, mount, patch,
-} from '../../src';
+} from '../../src/index.js';
 
 import {
   trim, plain, format,
-} from '../../src/lib/util';
+} from '../../src/lib/util.js';
 
-import doc from './fixtures/env';
+import doc from './fixtures/env.js';
 
 /* global beforeEach, afterEach, describe, it */
 

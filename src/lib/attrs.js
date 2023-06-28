@@ -1,8 +1,8 @@
 import {
   isEmpty, isObject, isFunction, isScalar, isDiff, isArray, camelCase,
-} from './util';
+} from './util.js';
 
-import { XLINK_PREFIX, XLINK_NS, toKeys } from './shared';
+import { XLINK_PREFIX, XLINK_NS, toKeys } from './shared.js';
 
 export function assignProps(target, attrs, svg, cb) {
   for (let i = 0; i < attrs.length; i += 2) {

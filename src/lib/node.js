@@ -1,16 +1,16 @@
 import {
   isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isDiff, isNot, detach, zip,
-} from './util';
+} from './util.js';
 
 import {
   assignProps, updateProps,
-} from './attrs';
+} from './attrs.js';
 
 import {
   toKeys, toProxy, toFragment,
-} from './shared';
+} from './shared.js';
 
-import Fragment from './fragment';
+import Fragment from './fragment.js';
 
 export function destroyElement(target, wait = cb => cb()) {
   const rm = () => target && target.remove();
