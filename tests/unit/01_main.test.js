@@ -1,18 +1,18 @@
 /* eslint-disable no-unused-expressions */
 
-import td from 'testdouble';
+import * as td from 'testdouble';
 import { expect } from 'chai';
 
 import {
   h, pre, bind, mount, patch, render, listeners, attributes,
-} from '../../src';
+} from '../../src/index.js';
 
-import { tick, trim, format } from '../../src/lib/util';
-import { bindHelpers as $ } from '../../src/ssr';
-import { encodeText } from '../../src/ssr/doc';
+import { tick, trim, format } from '../../src/lib/util.js';
+import { bindHelpers as $ } from '../../src/ssr/index.js';
+import { encodeText } from '../../src/ssr/doc.js';
 
-import Fragment from '../../src/lib/fragment';
-import doc from './fixtures/env';
+import Fragment from '../../src/lib/fragment.js';
+import doc from './fixtures/env.js';
 
 /* global beforeEach, afterEach, describe, it */
 

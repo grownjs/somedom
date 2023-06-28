@@ -1,15 +1,15 @@
 /* eslint-disable no-unused-expressions */
 
-import td from 'testdouble';
+import * as td from 'testdouble';
 import { expect } from 'chai';
 
 import {
   createElement, mountElement, destroyElement, updateElement,
-} from '../../src/lib/node';
+} from '../../src/lib/node.js';
 
-import { trim, format } from '../../src/lib/util';
-import Fragment from '../../src/lib/fragment';
-import doc from './fixtures/env';
+import { trim, format } from '../../src/lib/util.js';
+import Fragment from '../../src/lib/fragment.js';
+import doc from './fixtures/env.js';
 
 /* global beforeEach, afterEach, describe, it */
 

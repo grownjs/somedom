@@ -1,14 +1,14 @@
 /* eslint-disable no-unused-expressions */
 
-import td from 'testdouble';
+import * as td from 'testdouble';
 import { expect } from 'chai';
 import {
   eventListener,
   invokeEvent,
   addEvents,
-} from '../../src/lib/events';
+} from '../../src/lib/events.js';
 
-import doc from './fixtures/env';
+import doc from './fixtures/env.js';
 
 /* global beforeEach, afterEach, describe, it */
 
@@ -42,7 +42,7 @@ describe('events', () => {
 
   describe('eventListener', () => {
     it('will call through hooked-nodes', () => {
-      expect(eventListener(e)).to.eql('OK');
+      expect(eventListener(e.type)(e)).to.eql('OK');
     });
   });
 

@@ -1,13 +1,13 @@
 /* eslint-disable no-unused-expressions */
 
-import td from 'testdouble';
+import * as td from 'testdouble';
 import { expect } from 'chai';
 
 import {
   assignProps, updateProps,
-} from '../../src/lib/attrs';
+} from '../../src/lib/attrs.js';
 
-import doc from './fixtures/env';
+import doc from './fixtures/env.js';
 
 /* global beforeEach, afterEach, describe, it */
 

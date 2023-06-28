@@ -1,4 +1,4 @@
-import td from 'testdouble';
+import * as td from 'testdouble';
 import { expect } from 'chai';
 import {
   values,
@@ -10,10 +10,10 @@ import {
   applyStyles,
   applyClasses,
   applyAnimations,
-} from '../../src/lib/props';
+} from '../../src/lib/props.js';
 
-import { tick } from '../../src/lib/util';
-import doc from './fixtures/env';
+import { tick } from '../../src/lib/util.js';
+import doc from './fixtures/env.js';
 
 /* global beforeEach, afterEach, describe, it */
 

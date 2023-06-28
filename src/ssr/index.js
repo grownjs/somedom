@@ -1,24 +1,24 @@
 import { selectAll, selectOne } from 'css-select';
 
-import { isFunction, format } from '../lib/util';
-import { parse, parseDefaults } from './himalaya';
-import { mountElement, createElement } from '../lib/node';
+import { isFunction, format } from '../lib/util.js';
+import { parse, parseDefaults } from './himalaya/index.js';
+import { mountElement, createElement } from '../lib/node.js';
 
 import {
   patchDocument,
   patchWindow,
   dropDocument,
   dropWindow,
-} from './doc';
+} from './doc.js';
 
-import { markupAdapter } from './adapter';
+import { markupAdapter } from './adapter.js';
 
-export { markupAdapter } from './adapter';
-export { bindHelpers } from './doc';
+export { markupAdapter } from './adapter.js';
+export { bindHelpers } from './doc.js';
 
-export * from '../index';
+export * from '../index.js';
 
-const isNode = !(typeof Deno !== 'undefined' || typeof Bun !== 'undefined');
+/* global globalThis */
 
 let patched;
 let builtin;
@@ -35,12 +35,9 @@ export function enable(env) {
       ({ window } = new JSDOM());
     }
 
-    global.document = window.document;
-    global.window = window;
-
-    if (isNode) {
-      global.Event = window.Event;
-    }
+    globalThis.document = window.document;
+    globalThis.window = window;
+    globalThis.Event = window.Event;
   } else {
     patchDocument();
     patchWindow();
@@ -52,12 +49,8 @@ export function enable(env) {
 export function disable() {
   if (!patched) return;
   if (!builtin) {
-    delete global.document;
-    delete global.window;
-
-    if (isNode) {
-      delete global.Event;
-    }
+    delete globalThis.document;
+    delete globalThis.window;
   } else {
     dropDocument();
     dropWindow();

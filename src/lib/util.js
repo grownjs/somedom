@@ -3,11 +3,11 @@ import {
   RE_XML_CLOSE_END,
   RE_XML_CLOSE_BEGIN,
   isNot, isBlock, isPlain, isEmpty, isNode, isArray, isTuple,
-} from './shared';
+} from './shared.js';
 
-import Fragment from './fragment';
+import Fragment from './fragment.js';
 
-export * from './shared';
+export * from './shared.js';
 
 export function flat(value) {
   return !isArray(value) ? value : value.reduce((memo, n) => memo.concat(isNode(n) || isTuple(n) ? [n] : flat(n)), []);

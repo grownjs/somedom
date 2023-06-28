@@ -1,6 +1,6 @@
 import {
   dashCase, isFunction, isObject, isScalar, isArray, isNot, filter, raf,
-} from './util';
+} from './util.js';
 
 export function values(attrs, cb) {
   if (isNot(attrs)) return [];
