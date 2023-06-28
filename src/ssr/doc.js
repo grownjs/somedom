@@ -6,8 +6,6 @@ import { CLOSE_TAGS } from '../lib/shared.js';
 import { parse, parseDefaults } from './himalaya/index.js';
 import { isNot, dashCase } from '../lib/util.js';
 
-/* global globalThis */
-
 export class Event {
   constructor(type, params) {
     Object.assign(this, { type, ...params });
@@ -367,8 +365,11 @@ export function createComment(content) {
   });
 }
 
+/* global globalThis */
+const _global = typeof global === 'undefined' ? globalThis : global;
+
 export function patchDocument() {
-  globalThis.document = {
+  _global.document = {
     body: createElement('body'),
     getElementsByClassName() {
       throw new Error('DOCUMENT.getElementsByClassName() not implemented');
@@ -391,8 +392,8 @@ export function patchDocument() {
 }
 
 export function patchWindow() {
-  globalThis.Event = Event;
-  globalThis.window = {
+  if (typeof Deno === 'undefined' && typeof Bun === 'undefined') _global.Event = Event;
+  _global.window = {
     eventListeners: {},
     Event,
     HTMLElement,
@@ -403,9 +404,9 @@ export function patchWindow() {
 }
 
 export function dropDocument() {
-  delete globalThis.document;
+  delete _global.document;
 }
 
 export function dropWindow() {
-  delete globalThis.window;
+  delete _global.window;
 }
