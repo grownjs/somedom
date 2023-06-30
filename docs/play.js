@@ -159,10 +159,14 @@
   function toNodes(node, children) {
     if (isNot(node)) return;
     if (isArray(node)) return node.map(x => toNodes(x, children));
+
     if (typeof NodeList !== 'undefined' && node instanceof NodeList) return toNodes(node.values(), children);
-    if (node.nodeType === 1) return [node.tagName.toLowerCase(), toAttrs(node), children ? node.childNodes.map(x => toNodes(x, children)) : []];
+
     if (node.nodeType === 3) return node.nodeValue;
+    if (node.nodeType === 1) return [node.tagName.toLowerCase(), toAttrs(node), children ? node.childNodes.map(x => toNodes(x, children)) : []];
+
     if (node.childNodes) return node.childNodes.map(x => toNodes(x, children));
+
     return toNodes([...node], children);
   }
 
@@ -580,6 +584,10 @@
 
     if (!isNode(prev) || prev[0] !== next[0] || target.nodeType !== 1) {
       return replaceElement(target, next, svg, cb);
+    }
+
+    if (!isArray(next[1])) {
+      next[1] = toProxy(next[1]);
     }
 
     if (updateProps(target, prev[1] || [], next[1] || [], svg, cb)) {

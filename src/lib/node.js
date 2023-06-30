@@ -136,6 +136,10 @@ export async function upgradeNode(target, prev, next, svg, cb) {
     return replaceElement(target, next, svg, cb);
   }
 
+  if (!isArray(next[1])) {
+    next[1] = toProxy(next[1]);
+  }
+
   if (updateProps(target, prev[1] || [], next[1] || [], svg, cb)) {
     if (isFunction(target.onupdate)) await target.onupdate(target);
     if (isFunction(target.update)) await target.update();
