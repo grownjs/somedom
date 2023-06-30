@@ -1,5 +1,5 @@
 import {
-  isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isDiff, isNot, detach, zip,
+  isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isDiff, isNot, detach, morph, flatten,
 } from './util.js';
 
 import {
@@ -42,15 +42,14 @@ export function insertElement(target, next, svg, cb) {
 
 export function createElement(vnode, svg, cb) {
   if (isNot(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
+
+  vnode = flatten(vnode);
+
   if (!isNode(vnode)) {
     if (isArray(vnode)) {
       return Fragment.from(v => createElement(v, svg, cb), vnode);
     }
     return (isScalar(vnode) && document.createTextNode(String(vnode))) || vnode;
-  }
-
-  while (vnode && isFunction(vnode[0])) {
-    vnode = vnode[0](toProxy(vnode[1]), toFragment(vnode));
   }
 
   if (!isArray(vnode)) {
@@ -118,7 +117,7 @@ export function mountElement(target, view, svg, cb) {
     target = document.querySelector(target);
   }
 
-  if (isArray(view) && !isNode(view)) {
+  if (isBlock(view)) {
     view.forEach(node => {
       mountElement(target, node, svg, cb);
     });
@@ -129,6 +128,10 @@ export function mountElement(target, view, svg, cb) {
 }
 
 export async function upgradeNode(target, prev, next, svg, cb) {
+  if (isScalar(next)) {
+    return replaceElement(target, next, svg, cb);
+  }
+
   if (!isNode(prev) || prev[0] !== next[0] || target.nodeType !== 1) {
     return replaceElement(target, next, svg, cb);
   }
@@ -141,16 +144,13 @@ export async function upgradeNode(target, prev, next, svg, cb) {
   return next[1] && toKeys(next[1]).includes('@html') ? target : updateElement(target, toFragment(prev), toFragment(next), svg, cb);
 }
 
-export async function upgradeElements(target, prev, next, svg, cb, i) {
-  const stack = [];
-  const set = target.childNodes;
-  const push = v => stack.push(v);
+export async function upgradeElements(target, vnode, svg, cb, i) {
+  const tasks = [];
+  const push = task => tasks.push(task);
 
-  if (!isBlock(next)) next = [next];
+  morph(target, flatten(vnode), i || 0, push);
 
-  zip(set, prev, next, i || 0, push);
-
-  for (const task of stack) {
+  for (const task of tasks) {
     if (task.rm) await destroyElement(task.rm);
     if (!isNot(task.add)) insertElement(target, task.add, svg, cb);
     if (!isNot(task.patch)) await patchNode(task.target, task.patch, task.with, svg, cb);
@@ -163,7 +163,7 @@ export async function updateElement(target, prev, next, svg, cb, i) {
   }
 
   if (isNode(prev)) {
-    if (next.length === 1) next = next[0];
+    while (isArray(next) && next.length === 1) next = next[0];
     return updateElement(target, [prev], next, svg, cb);
   }
 
@@ -171,25 +171,34 @@ export async function updateElement(target, prev, next, svg, cb, i) {
     return upgradeNode(target, prev, next, svg, cb);
   }
 
-  await upgradeElements(target, prev, next, svg, cb, i);
+  await upgradeElements(target, [next], svg, cb, i);
   return target;
 }
 
 export async function patchNode(target, prev, next, svg, cb) {
+  if (Fragment.valid(next)) {
+    let anchor = target;
+    while (next.childNodes.length > 0) {
+      const node = next.childNodes.pop();
+
+      target.parentNode.insertBefore(node, anchor);
+      anchor = node;
+    }
+
+    detach(target);
+    return anchor;
+  }
+
   if (isFunction(next[0]) || (target.nodeType === 1 && target.tagName.toLowerCase() !== next[0])) {
     return replaceElement(target, next, svg, cb);
   }
 
-  if (isDiff(prev, next)) {
-    if (target.nodeType === 3) {
-      if (isNode(next)) {
-        target = await upgradeNode(target, prev, next, svg, cb);
-      } else {
-        target.nodeValue = String(next);
-      }
-    } else {
-      target = await upgradeNode(target, prev, next, svg, cb);
+  if (target.nodeType === 3 && isScalar(next)) {
+    if (isDiff(prev, next)) {
+      target.nodeValue = String(next);
     }
+  } else {
+    target = await upgradeNode(target, prev, next, svg, cb);
   }
   return target;
 }
