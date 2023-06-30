@@ -2,27 +2,14 @@
 
 import td from 'testdouble';
 import { expect } from 'chai';
+
 import {
-  clone,
-  apply,
-  filter,
-  isNot,
-  isArray,
-  isFunction,
-  isObject,
-  isScalar,
-  isNode,
-  isEmpty,
-  isDiff,
-  dashCase,
-  toArray,
-  toProxy,
-  raf,
-  replace,
-  remove,
-  append,
-  detach,
+  raf, clone, apply, filter, dashCase, replace, remove, append, detach,
 } from '../../src/lib/util';
+
+import {
+  isNot, isArray, isFunction, isObject, isScalar, isNode, isEmpty, toArray, toProxy, isDiff,
+} from '../../src/lib/shared';
 
 import doc from './fixtures/env';
 

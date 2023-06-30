@@ -6,9 +6,11 @@ ci: src deps ## Run CI scripts
 	@JS_DOM=1 npm run test:ssr
 	@HAPPY_DOM=1 npm run test:ssr
 	@npm run test:ssr
+ifeq ($(UNIT),)
 	@npm run test:e2e
 	@touch src/lib/*.js
 	@npm run test:ci
+endif
 ifneq ($(CI),)
 	@npm run codecov
 endif

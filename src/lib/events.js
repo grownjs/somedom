@@ -1,6 +1,4 @@
-import { isFunction, isObject } from './util.js';
-
-import { EE_SUPPORTED } from './shared.js';
+import { EE_SUPPORTED, isFunction, isObject } from './shared.js';
 
 export function eventListener(type) {
   return e => e.currentTarget.events[type](e);

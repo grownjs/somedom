@@ -1,14 +1,16 @@
 import {
-  createElement as render,
-} from './lib/node.js';
-
-import {
   invokeProps,
 } from './lib/props.js';
 
 import {
-  apply, format, filter, isNot, isScalar, isArray, isFunction, isPlain,
+  apply, format, filter,
 } from './lib/util.js';
+
+import { createElement as render } from './lib/node.js';
+
+import {
+  isNot, isArray, isScalar, isFunction, isPlain,
+} from './lib/shared.js';
 
 import { addEvents } from './lib/events.js';
 
@@ -41,13 +43,8 @@ export const bind = (tag, ...hooks) => {
 export const listeners = opts => apply(addEvents, 3, opts);
 export const attributes = opts => apply(invokeProps, 3, opts);
 
-export {
-  raf, tick, vdom, format,
-} from './lib/util.js';
-
-export {
-  toProxy as proxy,
-} from './lib/shared.js';
+export * from './lib/util.js';
+export * from './lib/shared.js';
 
 export {
   mountElement as mount,
