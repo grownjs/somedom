@@ -154,51 +154,90 @@
     }
   }
 
-  function flat(value) {
-    return !isArray(value) ? value : value.reduce((memo, n) => memo.concat(isNode(n) || isTuple(n) ? [n] : flat(n)), []);
+  const SEEN_ARRAY = Symbol('@@seen');
+
+  function lock(value) {
+    if (isArray(value) && !(SEEN_ARRAY in value)) {
+      while (value.length === 1 && !isFunction(value[0])) value = value[0];
+
+      Object.defineProperty(value, SEEN_ARRAY, { value: 1 });
+
+      if (isNode(value)) {
+        let fn;
+        while (value && isFunction(value[0])) {
+          fn = value[0];
+          value = fn(toProxy(value[1]), flatten(toFragment(value)));
+        }
+
+        if (value instanceof Fragment) return value;
+        if (isNode(value) && !(SEEN_ARRAY in value)) {
+          Object.defineProperty(value, SEEN_ARRAY, { value: 1 });
+
+          value[2] = flatten(toFragment(value));
+          value[1] = toProxy(value[1]);
+          value.length = 3;
+        }
+      }
+    }
+    return value;
   }
 
-  function zip(nodes, prev, next, offset, cb, d = 0) {
-    const c = Math.max(prev.length, next.length);
+  function flatten(value) {
+    if (!isArray(value)) return value;
+    if (isNode(value)) return lock(value);
+
+    return value.reduce((memo, n) => {
+      return memo.concat(isTuple(n) || isNode(n) ? [lock(n)] : flatten(n));
+    }, []);
+  }
+
+  function props(node) {
+    if (node.attributes && !node.getAttributeNames) return [].concat(...Object.entries(node.attributes));
+    const data = node.getAttributeNames().reduce((memo, key) => memo.concat([key, node.getAttribute(key)]), []);
+    return data;
+  }
+
+  function vdom(node) {
+    if (isNot(node)) return;
+    if (isArray(node)) return node.map(vdom);
+    if (typeof NodeList !== 'undefined' && node instanceof NodeList) return vdom(node.values());
+    if (node.nodeType === 1) return [node.tagName.toLowerCase(), props(node)];
+    if (node.nodeType === 3) return node.nodeValue;
+    if (node.childNodes) return node.childNodes.map(vdom);
+    return vdom([...node]);
+  }
+
+  async function morph(target, next, offset, cb) {
+    const c = Math.max(target.childNodes.length, next.length);
 
     let i = 0;
-    let a = 0;
-    let b = 0;
-    for (; i < c; i++) {
-      const el = nodes[offset];
-      const x = flat(prev[a]);
-      const y = flat(next[b]);
+    let old;
+    let el;
+    let x;
+    for (; i < c; i += 1) {
+      if (old !== offset) {
+        el = target.childNodes[offset];
+        x = vdom(el);
+        old = offset;
+      }
 
-      if (isNot(x)) {
+      const y = next.shift();
+
+      if (isNot(y)) {
+        cb({ rm: el });
+        old = null;
+      } else if (isNot(x)) {
         cb({ add: y });
-      } else if (isNot(y)) {
-        if (isBlock(x)) {
-          let k = x.length;
-          while (k--) cb({ rm: nodes[offset++] });
-        } else if (el) {
-          cb({ rm: el });
-          offset++;
-        }
-      } else if (isBlock(x) && isBlock(y)) {
-        zip(nodes, x, y, offset, cb, d + 1);
-        offset += Math.max(x.length, y.length) + 2;
-      } else if (isBlock(y)) {
-        zip(nodes, [x], y, offset, cb, d + 1);
-        offset += y.length + 2;
-      } else if (el) {
-        cb({ patch: x, with: y, target: el });
         offset++;
       } else {
-        cb({ add: y });
+        cb({ patch: x, with: y, target: el });
         offset++;
       }
-      a++;
-      b++;
     }
 
-    if (offset !== nodes.length) {
-      for (let k = offset; k < nodes.length; k++) {
-        cb({ rm: nodes[k] });
+    if (offset !== target.childNodes.length) {
+      for (let k = target.childNodes.length; k > offset; k--) {
+        cb({ rm: target.childNodes[k] });
       }
     }
   }
@@ -378,15 +417,14 @@
 
   function createElement(vnode, svg, cb) {
     if (isNot(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
+
+    vnode = flatten(vnode);
+
     if (!isNode(vnode)) {
       if (isArray(vnode)) {
         return Fragment.from(v => createElement(v, svg, cb), vnode);
       }
       return (isScalar(vnode) && document.createTextNode(String(vnode))) || vnode;
-    }
-
-    while (vnode && isFunction(vnode[0])) {
-      vnode = vnode[0](toProxy(vnode[1]), toFragment(vnode));
     }
 
     if (!isArray(vnode)) {
@@ -454,7 +492,7 @@
       target = document.querySelector(target);
     }
 
-    if (isArray(view) && !isNode(view)) {
+    if (isBlock(view)) {
       view.forEach(node => {
         mountElement(target, node, svg, cb);
       });
@@ -465,6 +503,10 @@
   }
 
   async function upgradeNode(target, prev, next, svg, cb) {
+    if (isScalar(next)) {
+      return replaceElement(target, next, svg, cb);
+    }
+
     if (!isNode(prev) || prev[0] !== next[0] || target.nodeType !== 1) {
       return replaceElement(target, next, svg, cb);
     }
@@ -477,16 +519,13 @@
     return next[1] && toKeys(next[1]).includes('@html') ? target : updateElement(target, toFragment(prev), toFragment(next), svg, cb);
   }
 
-  async function upgradeElements(target, prev, next, svg, cb, i) {
-    const stack = [];
-    const set = target.childNodes;
-    const push = v => stack.push(v);
+  async function upgradeElements(target, vnode, svg, cb, i) {
+    const tasks = [];
+    const push = task => tasks.push(task);
 
-    if (!isBlock(next)) next = [next];
+    morph(target, flatten(vnode), i || 0, push);
 
-    zip(set, prev, next, i || 0, push);
-
-    for (const task of stack) {
+    for (const task of tasks) {
       if (task.rm) await destroyElement(task.rm);
       if (!isNot(task.add)) insertElement(target, task.add, svg, cb);
       if (!isNot(task.patch)) await patchNode(task.target, task.patch, task.with, svg, cb);
@@ -499,7 +538,7 @@
     }
 
     if (isNode(prev)) {
-      if (next.length === 1) next = next[0];
+      while (isArray(next) && next.length === 1) next = next[0];
       return updateElement(target, [prev], next, svg, cb);
     }
 
@@ -507,25 +546,34 @@
       return upgradeNode(target, prev, next, svg, cb);
     }
 
-    await upgradeElements(target, prev, next, svg, cb, i);
+    await upgradeElements(target, [next], svg, cb, i);
     return target;
   }
 
   async function patchNode(target, prev, next, svg, cb) {
+    if (Fragment.valid(next)) {
+      let anchor = target;
+      while (next.childNodes.length > 0) {
+        const node = next.childNodes.pop();
+
+        target.parentNode.insertBefore(node, anchor);
+        anchor = node;
+      }
+
+      detach(target);
+      return anchor;
+    }
+
     if (isFunction(next[0]) || (target.nodeType === 1 && target.tagName.toLowerCase() !== next[0])) {
       return replaceElement(target, next, svg, cb);
     }
 
-    if (isDiff(prev, next)) {
-      if (target.nodeType === 3) {
-        if (isNode(next)) {
-          target = await upgradeNode(target, prev, next, svg, cb);
-        } else {
-          target.nodeValue = String(next);
-        }
-      } else {
-        target = await upgradeNode(target, prev, next, svg, cb);
+    if (target.nodeType === 3 && isScalar(next)) {
+      if (isDiff(prev, next)) {
+        target.nodeValue = String(next);
       }
+    } else {
+      target = await upgradeNode(target, prev, next, svg, cb);
     }
     return target;
   }
@@ -681,6 +729,7 @@
     attributes: attributes,
     raf: raf,
     tick: tick,
+    vdom: vdom,
     format: format,
     proxy: toProxy,
     mount: mountElement,
