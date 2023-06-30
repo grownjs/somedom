@@ -1,5 +1,5 @@
 import {
-  isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isDiff, isNot, detach, morph, flatten,
+  detach, freeze,
 } from './util.js';
 
 import {
@@ -7,7 +7,7 @@ import {
 } from './attrs.js';
 
 import {
-  toKeys, toProxy, toFragment,
+  toKeys, toProxy, toArray, toNodes, toFragment, isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isDiff, isNot,
 } from './shared.js';
 
 import Fragment from './fragment.js';
@@ -43,7 +43,7 @@ export function insertElement(target, next, svg, cb) {
 export function createElement(vnode, svg, cb) {
   if (isNot(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
 
-  vnode = flatten(vnode);
+  vnode = toArray(vnode, freeze);
 
   if (!isNode(vnode)) {
     if (isArray(vnode)) {
@@ -144,11 +144,41 @@ export async function upgradeNode(target, prev, next, svg, cb) {
   return next[1] && toKeys(next[1]).includes('@html') ? target : updateElement(target, toFragment(prev), toFragment(next), svg, cb);
 }
 
-export async function upgradeElements(target, vnode, svg, cb, i) {
+export async function upgradeElements(target, vnode, svg, cb) {
   const tasks = [];
-  const push = task => tasks.push(task);
+  const next = toArray(vnode, freeze);
+  const c = Math.max(target.childNodes.length, next.length);
 
-  morph(target, flatten(vnode), i || 0, push);
+  let off = 0;
+  let old;
+  let el;
+  let x;
+  for (let i = 0; i < c; i += 1) {
+    if (old !== off) {
+      el = target.childNodes[off];
+      x = toNodes(el);
+      old = off;
+    }
+
+    const y = next.shift();
+
+    if (isNot(y)) {
+      tasks.push({ rm: el });
+      old = null;
+    } else if (isNot(x)) {
+      tasks.push({ add: y });
+      off++;
+    } else {
+      tasks.push({ patch: x, with: y, target: el });
+      off++;
+    }
+  }
+
+  if (off !== target.childNodes.length) {
+    for (let k = target.childNodes.length; k > off; k--) {
+      tasks.push({ rm: target.childNodes[k] });
+    }
+  }
 
   for (const task of tasks) {
     if (task.rm) await destroyElement(task.rm);
@@ -157,7 +187,7 @@ export async function upgradeElements(target, vnode, svg, cb, i) {
   }
 }
 
-export async function updateElement(target, prev, next, svg, cb, i) {
+export async function updateElement(target, prev, next, svg, cb) {
   if (!prev || (isNode(prev) && isNode(next))) {
     return upgradeNode(target, prev, next, svg, cb);
   }
@@ -171,7 +201,7 @@ export async function updateElement(target, prev, next, svg, cb, i) {
     return upgradeNode(target, prev, next, svg, cb);
   }
 
-  await upgradeElements(target, [next], svg, cb, i);
+  await upgradeElements(target, [next], svg, cb);
   return target;
 }
 
@@ -187,10 +217,6 @@ export async function patchNode(target, prev, next, svg, cb) {
 
     detach(target);
     return anchor;
-  }
-
-  if (isFunction(next[0]) || (target.nodeType === 1 && target.tagName.toLowerCase() !== next[0])) {
-    return replaceElement(target, next, svg, cb);
   }
 
   if (target.nodeType === 3 && isScalar(next)) {

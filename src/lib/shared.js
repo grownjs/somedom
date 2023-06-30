@@ -25,6 +25,7 @@ export const CLOSE_TAGS = [
 ];
 
 export const IS_PROXY = Symbol('$$proxy');
+export const IS_ARRAY = Symbol('$$array');
 
 export const isArray = value => Array.isArray(value);
 export const isString = value => typeof value === 'string';
@@ -57,9 +58,30 @@ export function isEmpty(value) {
 export const isBlock = value => isArray(value) && !isNode(value);
 export const isEven = value => value % 2 === 0;
 
+export function isDiff(prev, next) {
+  if (typeof prev !== typeof next) return true;
+  if (isArray(prev)) {
+    if (!isArray(next) || prev.length !== next.length) return true;
+
+    for (let i = 0; i < next.length; i += 1) {
+      if (isDiff(prev[i], next[i])) return true;
+    }
+  } else if (isPlain(prev) && isPlain(next)) {
+    const a = Object.keys(prev).sort();
+    const b = Object.keys(next).sort();
+
+    if (isDiff(a, b)) return true;
+
+    for (let i = 0; i < a.length; i += 1) {
+      if (isDiff(prev[a[i]], next[b[i]])) return true;
+    }
+  } else return prev !== next;
+}
+
 export function toProxy(values) {
-  if (!isArray(values)) values = [];
+  if (isNot(values)) values = [];
   if (IS_PROXY in values) return values;
+  if (!isArray(values)) values = [].concat(...Object.entries(values));
 
   const keys = values.filter((_, i) => isEven(i));
 
@@ -110,4 +132,37 @@ export function toKeys(value) {
 
 export function toFragment(vnode) {
   return vnode.slice(2);
+}
+
+export function toArray(value, callback) {
+  if (!isArray(value) || IS_ARRAY in value) return value;
+  if (isNode(value)) return callback(value);
+
+  return value.reduce((memo, n) => {
+    return memo.concat(isTuple(n) || isNode(n) ? [callback(n)] : toArray(n, callback));
+  }, []);
+}
+
+export function toAttrs(node) {
+  if (node.attributes && !node.getAttributeNames) {
+    return [].concat(...Object.entries(node.attributes));
+  }
+  return node.getAttributeNames().reduce((memo, key) => {
+    memo.push(key.replace('data-', '@'), node[key] || node.getAttribute(key));
+    return memo;
+  }, []);
+}
+
+export function toNodes(node, children) {
+  if (isNot(node)) return;
+  if (isArray(node)) return node.map(x => toNodes(x, children));
+
+  if (typeof NodeList !== 'undefined' && node instanceof NodeList) return toNodes(node.values(), children);
+
+  if (node.nodeType === 3) return node.nodeValue;
+  if (node.nodeType === 1) return [node.tagName.toLowerCase(), toAttrs(node), children ? node.childNodes.map(x => toNodes(x, children)) : []];
+
+  if (node.childNodes) return node.childNodes.map(x => toNodes(x, children));
+
+  return toNodes([...node], children);
 }

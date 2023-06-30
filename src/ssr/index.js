@@ -1,6 +1,7 @@
 import { selectAll, selectOne } from 'css-select';
 
-import { isFunction, format } from '../lib/util.js';
+import { format } from '../lib/util.js';
+import { isFunction } from '../lib/shared.js';
 import { parse, parseDefaults } from './himalaya/index.js';
 import { mountElement, createElement } from '../lib/node.js';
 

@@ -1,10 +1,10 @@
 import { selectAll, selectOne } from 'css-select';
 
 import Fragment from '../lib/fragment.js';
+import { dashCase } from '../lib/util.js';
 import { markupAdapter } from './adapter.js';
-import { CLOSE_TAGS } from '../lib/shared.js';
+import { CLOSE_TAGS, isNot } from '../lib/shared.js';
 import { parse, parseDefaults } from './himalaya/index.js';
-import { isNot, dashCase } from '../lib/util.js';
 
 export class Event {
   constructor(type, params) {
