@@ -83,7 +83,7 @@
 
   function toProxy(values) {
     if (isNot(values)) values = [];
-    if (IS_PROXY in values) return values;
+    if (Object.isFrozen(values) || IS_PROXY in values) return values;
     if (!isArray(values)) values = [].concat(...Object.entries(values));
 
     const keys = values.filter((_, i) => isEven(i));
