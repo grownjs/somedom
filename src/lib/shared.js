@@ -5,7 +5,7 @@ export const RE_XML_CLOSE_BEGIN = /^<\/\w/;
 export const XLINK_PREFIX = /^xlink:?/;
 export const XLINK_NS = 'http://www.w3.org/1999/xlink';
 
-export const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
+export const EE_SUPPORTED = ['oncreate', 'onupdate', 'onreplace', 'ondestroy'];
 
 export const CLOSE_TAGS = [
   'area',

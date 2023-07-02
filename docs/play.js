@@ -8,7 +8,7 @@
   const XLINK_PREFIX = /^xlink:?/;
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
 
-  const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
+  const EE_SUPPORTED = ['oncreate', 'onupdate', 'onreplace', 'ondestroy'];
 
   const CLOSE_TAGS = [
     'area',
@@ -227,15 +227,20 @@
   }
 
   function freeze(value) {
-    if (isArray(value) && !(IS_ARRAY in value)) {
+    if (isArray(value)) {
+      if (!isNode(value)) {
+        value = value.filter(x => !isNot(x));
+      }
+
       while (value.length === 1 && !isFunction(value[0])) value = value[0];
 
-      Object.defineProperty(value, IS_ARRAY, { value: 1 });
+      if (isNode(value) && !(IS_ARRAY in value)) {
+        Object.defineProperty(value, IS_ARRAY, { value: 1 });
 
-      if (isNode(value)) {
         let fn;
         while (value && isFunction(value[0])) {
           fn = value[0];
+          if (fn.length === 1 && !value[2]) break;
           value = fn(toProxy(value[1]), toArray(toFragment(value), freeze));
         }
 
@@ -469,6 +474,8 @@
   }
 
   function replaceElement(target, next, svg, cb) {
+    if (isFunction(target.onreplace)) return target.onreplace(next, svg, cb);
+
     const newNode = createElement(next, svg, cb);
 
     if (Fragment.valid(newNode)) {
@@ -512,6 +519,10 @@
 
     if (!isNode(vnode)) {
       return Fragment.from(v => createElement(v, svg, cb), vnode);
+    }
+
+    if (isFunction(vnode[0])) {
+      return vnode[0](vnode[1], svg, cb);
     }
 
     const isSvg = svg || vnode[0].indexOf('svg') === 0;
@@ -578,11 +589,7 @@
   }
 
   async function upgradeNode(target, prev, next, svg, cb) {
-    if (isScalar(next)) {
-      return replaceElement(target, next, svg, cb);
-    }
-
-    if (!isNode(prev) || prev[0] !== next[0] || target.nodeType !== 1) {
+    if (isScalar(next) || (!isNode(prev) || prev[0] !== next[0] || target.nodeType !== 1)) {
       return replaceElement(target, next, svg, cb);
     }
 
@@ -595,7 +602,8 @@
       if (isFunction(target.update)) await target.update();
     }
 
-    return next[1] && toKeys(next[1]).includes('@html') ? target : updateElement(target, toFragment(prev), toFragment(next), svg, cb);
+    return next[1] && toKeys(next[1]).includes('@html')
+      ? target : updateElement(target, toFragment(prev), toFragment(next), svg, cb);
   }
 
   async function upgradeElements(target, vnode, svg, cb) {
