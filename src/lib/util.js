@@ -26,7 +26,7 @@ export function freeze(value) {
         value = fn(toProxy(value[1]), toArray(toFragment(value), freeze));
       }
 
-      if (value instanceof Fragment) return value;
+      if (Fragment.valid(value)) return value;
 
       if (isNode(value) && !(IS_ARRAY in value)) {
         Object.defineProperty(value, IS_ARRAY, { value: 1 });

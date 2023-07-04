@@ -43,6 +43,8 @@ export const bind = (tag, ...hooks) => {
 export const listeners = opts => apply(addEvents, 3, opts);
 export const attributes = opts => apply(invokeProps, 3, opts);
 
+export * from 'he';
+
 export * from './lib/util.js';
 export * from './lib/shared.js';
 

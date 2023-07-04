@@ -160,7 +160,17 @@ export function toNodes(node, children) {
   if (typeof NodeList !== 'undefined' && node instanceof NodeList) return toNodes(node.values(), children);
 
   if (node.nodeType === 3) return node.nodeValue;
-  if (node.nodeType === 1) return [node.tagName.toLowerCase(), toAttrs(node), children ? node.childNodes.map(x => toNodes(x, children)) : []];
+  if (node.nodeType === 1) {
+    const nodes = [];
+
+    if (children) {
+      node.childNodes.forEach(x => {
+        nodes.push(toNodes(x, children));
+      });
+    }
+
+    return [node.tagName.toLowerCase(), toAttrs(node), nodes];
+  }
 
   if (node.childNodes) return node.childNodes.map(x => toNodes(x, children));
 

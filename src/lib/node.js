@@ -138,7 +138,7 @@ export async function upgradeNode(target, prev, next, svg, cb) {
     return replaceElement(target, next, svg, cb);
   }
 
-  if (!isArray(next[1])) {
+  if (next[1] && !isArray(next[1])) {
     next[1] = toProxy(next[1]);
   }
 

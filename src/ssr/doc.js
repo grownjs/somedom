@@ -1,3 +1,4 @@
+import he from 'he';
 import { selectAll, selectOne } from 'css-select';
 
 import Fragment from '../lib/fragment.js';
@@ -77,6 +78,11 @@ export function traverse(target, children) {
   children.forEach(node => {
     switch (node.type) {
       case 'element': {
+        if (node.tagName === '!doctype') {
+          target.appendChild(document.implementation.createDocumentType(...node.attributes.map(x => x.key)));
+          break;
+        }
+
         const el = document.createElement(node.tagName);
 
         node.attributes.forEach(attr => {
@@ -149,13 +155,16 @@ export function bindHelpers(target) {
   return Object.assign(target, { withText, findText });
 }
 
-export function encodeText(value, quotes) {
-  value = String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+export function encodeText(value, opts = {}) {
+  value = he.encode(value, { allowUnsafeSymbols: true });
 
-  if (quotes !== false) {
+  if (opts.unsafe !== true) {
+    value = value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+  if (opts.quotes !== false) {
     value = value.replace(/"/g, '&quot;');
   }
   return value;
@@ -176,6 +185,10 @@ export function removeEventListener(name, callback) {
   if (this.eventListeners[name]) {
     this.eventListeners[name].splice(this.eventListeners[name].indexOf(callback), 1);
   }
+}
+
+export function createDocumentType(...args) {
+  return { outerHTML: `<!DOCTYPE${args.length > 0 ? ` ${args.join(' ')}` : ''}>` };
 }
 
 export function createElementNode(name, props) {
@@ -236,7 +249,7 @@ export function createElementNode(name, props) {
       return self.childNodes.map(node => {
         return node.nodeType === 8
           ? `<!--${node.nodeValue}-->`
-          : node.outerHTML || encodeText(node.nodeValue, false);
+          : node.outerHTML || encodeText(node.nodeValue, { quotes: false });
       }).join('');
     },
     get outerHTML() {
@@ -327,6 +340,23 @@ export function createElementNode(name, props) {
       delete self.attributes[k];
     },
   });
+
+  if (['a', 'base', 'link', 'area'].includes(name)) {
+    let _url;
+    ['href', 'origin', 'protocol', 'username', 'password', 'host', 'hostname', 'port', 'pathname', 'search', 'hash'].forEach(key => {
+      Object.defineProperty(self, key, {
+        get: () => {
+          if (!_url) _url = new URL(self.attributes.href, window.location);
+          return _url[key];
+        },
+        set: v => {
+          if (!_url) _url = new URL(self.attributes.href, window.location);
+          _url[key] = v;
+        },
+      });
+    });
+  }
+
   return self;
 }
 
@@ -371,6 +401,7 @@ const _global = typeof global === 'undefined' ? globalThis : global;
 export function patchDocument() {
   _global.document = {
     body: createElement('body'),
+    implementation: { createDocumentType },
     getElementsByClassName() {
       throw new Error('DOCUMENT.getElementsByClassName() not implemented');
     },
@@ -389,6 +420,11 @@ export function patchDocument() {
     createComment,
     createDocumentFragment,
   };
+
+  Object.defineProperty(_global.document, 'location', {
+    get: () => _global.window.location,
+    set: v => { _global.window.location = v; },
+  });
 }
 
 export function patchWindow() {
@@ -401,6 +437,12 @@ export function patchWindow() {
     addEventListener,
     removeEventListener,
   };
+
+  let _location = new URL('http://0.0.0.0');
+  Object.defineProperty(_global.window, 'location', {
+    get: () => _location,
+    set: v => { _location = new URL(v); },
+  });
 }
 
 export function dropDocument() {

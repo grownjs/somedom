@@ -2,7 +2,6 @@ export default class Fragment {
   constructor() {
     this.childNodes = [];
     this.nodeType = 11;
-    this.length = 0;
   }
 
   appendChild(node) {
@@ -12,22 +11,23 @@ export default class Fragment {
       });
     } else {
       this.childNodes.push(node);
-      this.length += 1;
     }
   }
 
   mount(target, node) {
     while (this.childNodes.length > 0) {
+      const next = this.childNodes.shift();
+
       if (node) {
-        target.insertBefore(this.childNodes.shift(), node);
+        target.insertBefore(next, node);
       } else {
-        target.appendChild(this.childNodes.shift());
+        target.appendChild(next);
       }
     }
   }
 
   static valid(value) {
-    if (value instanceof Fragment) return true;
+    return value instanceof Fragment;
   }
 
   static from(render, value) {

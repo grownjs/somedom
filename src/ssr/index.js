@@ -15,7 +15,7 @@ import {
 import { markupAdapter } from './adapter.js';
 
 export { markupAdapter } from './adapter.js';
-export { bindHelpers } from './doc.js';
+export { bindHelpers, encodeText } from './doc.js';
 
 export * from '../index.js';
 

@@ -41,7 +41,7 @@ describe('somedom', () => {
 
       // why no escape this happy-dom?
       if (!process.env.HAPPY_DOM) {
-        sample = encodeText(sample, false);
+        sample = encodeText(sample, { quotes: false });
       }
 
       expect(pre(['div', null,

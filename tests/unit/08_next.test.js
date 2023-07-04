@@ -25,6 +25,62 @@ describe('@next', () => {
     old = undefined;
   });
 
+  describe('dom checks', () => {
+    it('should handle doctype as expected', () => {
+      const html = '<!DOCTYPE html><h1>OSOM</h1>';
+
+      if (document.open) {
+        const newHTML = document.open('text/html', 'replace');
+
+        newHTML.write(html);
+        newHTML.close();
+
+        // this is weird but OK!
+        expect(newHTML.documentElement.outerHTML).to.eql(!process.env.JS_DOM
+          ? '<html><head></head><body><!DOCTYPE html><h1>OSOM</h1></body></html>'
+          : '<html><head></head><body><h1>OSOM</h1></body></html>');
+      } else {
+        const root = document.createElement('root');
+
+        root.innerHTML = html;
+
+        expect(root.innerHTML).to.eql(html);
+      }
+    });
+
+    // why these drivers are not working?
+    if (!process.env.HAPPY_DOM) {
+      it('should setup .href from some tags', () => {
+        const a = render(['a', ['href', 'https://soypache.co?q=42'], 'Link']);
+
+        expect(a.href).to.eql('https://soypache.co/?q=42');
+        expect(a.search).to.eql('?q=42');
+
+        if (!process.env.JS_DOM) {
+          document.location = 'http://website.com/a/b/c';
+        } else {
+          Object.defineProperty(window, 'location', {
+            value: new URL('http://website.com/a/b/c'),
+            writable: true,
+          });
+        }
+
+        const b = render(['a', ['href', '../foo'], 'Link']);
+
+        b.hash = 'osom';
+        b.search = '?ok=42';
+
+        expect(b.href).to.eql(process.env.JS_DOM ? '../foo' : 'http://website.com/a/foo?ok=42#osom');
+      });
+    }
+
+    it('should preserve html-entitites from attrs', () => {
+      const span = render(['span', ['title', 'foo&bar'], 'OSOM']);
+
+      expect(span.outerHTML).to.eql('<span title="foo&amp;bar">OSOM</span>');
+    });
+  });
+
   describe('quick check', () => {
     it('flatten vnodes', async () => {
       const target = render(['div', null]);
