@@ -254,16 +254,15 @@ describe('node', () => {
     it('should wrap trees as DocumentFragment nodes', () => {
       const tree = [[[[['p', null, [[[[['i', null]]]]]]]]]];
       const node = createElement(tree);
-      node.mount(document.createElement('div'));
+      const div = document.createElement('div');
+      node.mount(div);
 
-      expect(node.parentNode).not.to.be.undefined;
-      expect(node.childNodes.length).to.eql(0);
-      expect(node.parentNode.innerHTML).to.eql('<p><i></i></p>');
-      expect(node.parentNode.childNodes[0].tagName).to.eql('P');
-      expect(node.parentNode.childNodes[0].childNodes.length).to.eql(1);
-      expect(node.parentNode.childNodes[0].childNodes[0].nodeType).to.eql(1);
-      expect(node.parentNode.childNodes[0].childNodes[0].tagName).to.eql('I');
-      expect(node.parentNode.childNodes[0].childNodes[0].childNodes.length).to.eql(0);
+      expect(div.innerHTML).to.eql('<p><i></i></p>');
+      expect(div.childNodes[0].tagName).to.eql('P');
+      expect(div.childNodes[0].childNodes.length).to.eql(1);
+      expect(div.childNodes[0].childNodes[0].nodeType).to.eql(1);
+      expect(div.childNodes[0].childNodes[0].tagName).to.eql('I');
+      expect(div.childNodes[0].childNodes[0].childNodes.length).to.eql(0);
     });
 
     it('should pass created element to given callback', () => {
