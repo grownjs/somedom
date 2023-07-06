@@ -422,14 +422,17 @@ export function patchDocument() {
     createDocumentFragment,
   };
 
-  Object.defineProperty(_global.document, 'location', {
-    get: () => _global.window.location,
-    set: v => { _global.window.location = v; },
-  });
+  if (typeof Deno === 'undefined') {
+    Object.defineProperty(_global.document, 'location', {
+      get: () => _global.window.location,
+      set: v => { _global.window.location = v; },
+    });
+  }
 }
 
 export function patchWindow() {
   if (typeof Deno === 'undefined' && typeof Bun === 'undefined') _global.Event = Event;
+
   _global.window = {
     eventListeners: {},
     Event,
@@ -439,11 +442,13 @@ export function patchWindow() {
     removeEventListener,
   };
 
-  let _location = new URL('http://0.0.0.0');
-  Object.defineProperty(_global.window, 'location', {
-    get: () => _location,
-    set: v => { _location = new URL(v); },
-  });
+  if (typeof Deno === 'undefined') {
+    let _location = new URL('http://0.0.0.0');
+    Object.defineProperty(_global.window, 'location', {
+      get: () => _location,
+      set: v => { _location = new URL(v); },
+    });
+  }
 }
 
 export function dropDocument() {
