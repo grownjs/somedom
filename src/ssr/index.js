@@ -19,6 +19,8 @@ export { bindHelpers, encodeText } from './doc.js';
 
 export * from '../index.js';
 
+export * from 'he';
+
 /* global globalThis */
 const _global = typeof global === 'undefined' ? globalThis : global;
 

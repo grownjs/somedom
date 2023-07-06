@@ -160,15 +160,15 @@ export function encodeText(value, opts = {}) {
 
   if (opts.unsafe !== true) {
     value = value
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
 
       // for some reaso he double-encode these!
-      .replace(/&amp;(#x[a-fA-F\d]+;)/, '&$1');
+      .replace(/&amp;(#x[a-fA-F\d]+;)/g, '&$1');
   }
   if (opts.quotes !== false) {
-    value = value.replaceAll('"', '&quot;');
+    value = value.replace(/"/g, '&quot;');
   }
   return value;
 }
