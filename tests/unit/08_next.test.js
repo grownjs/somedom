@@ -50,35 +50,55 @@ describe('@next', () => {
     });
 
     // why these drivers are not working?
-    if (!process.env.HAPPY_DOM) {
-      it('should setup .href from some tags', () => {
-        const a = render(['a', ['href', 'https://soypache.co?q=42'], 'Link']);
+    it('should setup .href from some tags', () => {
+      const a = render(['a', ['href', 'https://soypache.co?q=42'], 'Link']);
 
+      if (process.env.HAPPY_DOM) {
+        expect(a.getAttribute('href')).to.eql('https://soypache.co?q=42');
+        expect(a.href).to.be.undefined;
+        expect(a.search).to.be.undefined;
+      } else {
         expect(a.href).to.eql('https://soypache.co/?q=42');
         expect(a.search).to.eql('?q=42');
+        expect(a.protocol).to.equal('https:');
+        expect(a.host).to.equal('soypache.co');
+      }
 
-        if (!process.env.JS_DOM) {
-          document.location = 'http://website.com/a/b/c';
-        } else {
-          Object.defineProperty(window, 'location', {
-            value: new URL('http://website.com/a/b/c'),
-            writable: true,
-          });
-        }
+      if (!(process.env.JS_DOM || process.env.HAPPY_DOM)) {
+        document.location = 'http://website.com/a/b/c';
+      } else {
+        Object.defineProperty(window, 'location', {
+          value: new URL('http://website.com/a/b/c'),
+          writable: true,
+        });
+      }
 
-        const b = render(['a', ['href', '../foo'], 'Link']);
+      const b = render(['a', ['href', '../foo'], 'Link']);
 
-        b.hash = 'osom';
-        b.search = '?ok=42';
+      b.hash = 'osom';
+      b.search = '?ok=42';
 
+      if (process.env.HAPPY_DOM) {
+        expect(b.getAttribute('href')).to.eql('../foo');
+        expect(b.href).to.be.undefined;
+        expect(b.search).to.eql('?ok=42');
+      } else {
+        // c'mon jsdom you still can!
         expect(b.href).to.eql(process.env.JS_DOM ? '../foo' : 'http://website.com/a/foo?ok=42#osom');
-      });
-    }
+      }
+    });
 
     it('should preserve html-entitites from attrs', () => {
       const span = render(['span', ['title', 'foo&bar'], 'OSOM']);
 
       expect(span.outerHTML).to.eql('<span title="foo&amp;bar">OSOM</span>');
+
+      const p = document.createElement('p');
+      p.innerHTML = '<a href="https://boxfactura.com?source=somedom&amp;t=🦄">OSOM</a>';
+
+      expect(p.outerHTML).to.eql((process.env.JS_DOM || process.env.HAPPY_DOM)
+        ? '<p><a href="https://boxfactura.com?source=somedom&amp;t=🦄">OSOM</a></p>'
+        : '<p><a href="https://boxfactura.com?source=somedom&amp;t=&#x1F984;">OSOM</a></p>');
     });
   });
 

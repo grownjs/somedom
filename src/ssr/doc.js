@@ -86,7 +86,7 @@ export function traverse(target, children) {
         const el = document.createElement(node.tagName);
 
         node.attributes.forEach(attr => {
-          el.setAttribute(attr.key, attr.value === null ? true : attr.value);
+          el.setAttribute(attr.key, attr.value === null ? true : he.decode(attr.value, { isAttributeValue: true }));
         });
 
         if (node.children) {
@@ -160,12 +160,15 @@ export function encodeText(value, opts = {}) {
 
   if (opts.unsafe !== true) {
     value = value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+
+      // for some reaso he double-encode these!
+      .replace(/&amp;(#x[a-fA-F\d]+;)/, '&$1');
   }
   if (opts.quotes !== false) {
-    value = value.replace(/"/g, '&quot;');
+    value = value.replaceAll('"', '&quot;');
   }
   return value;
 }
