@@ -316,8 +316,6 @@ export function createElementNode(name, props) {
           self.appendChild(sub);
         });
         n.childNodes = [];
-      } else if (self.tagName === 'PRE') {
-        self.childNodes.push(n);
       } else {
         self.childNodes.push(n);
       }
