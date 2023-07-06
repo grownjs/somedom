@@ -759,15 +759,6 @@ console.log(html);
 var dom = renderToString(vnode, $);
 var html = await dom();</pre>
         </dd>
-        <dd>
-          <p>Views can be rendered too, e.g.</p>
-          <pre class="highlight">var app = view($view, $state, $actions);
-var dom = renderToString(app, $);
-
-await dom.up(1);
-
-var html = await dom();</pre>
-        </dd>
       </dl>
     </details>
   </main>

@@ -19,6 +19,8 @@ export function destroyElement(target, wait = cb => cb()) {
 }
 
 export function replaceElement(target, next, svg, cb) {
+  if (isFunction(target.onreplace)) return target.onreplace(next, svg, cb);
+
   const newNode = createElement(next, svg, cb);
 
   if (Fragment.valid(newNode)) {
@@ -62,6 +64,10 @@ export function createElement(vnode, svg, cb) {
 
   if (!isNode(vnode)) {
     return Fragment.from(v => createElement(v, svg, cb), vnode);
+  }
+
+  if (isFunction(vnode[0])) {
+    return vnode[0](vnode[1], svg, cb);
   }
 
   const isSvg = svg || vnode[0].indexOf('svg') === 0;
@@ -128,15 +134,11 @@ export function mountElement(target, view, svg, cb) {
 }
 
 export async function upgradeNode(target, prev, next, svg, cb) {
-  if (isScalar(next)) {
+  if (isScalar(next) || (!isNode(prev) || prev[0] !== next[0] || target.nodeType !== 1)) {
     return replaceElement(target, next, svg, cb);
   }
 
-  if (!isNode(prev) || prev[0] !== next[0] || target.nodeType !== 1) {
-    return replaceElement(target, next, svg, cb);
-  }
-
-  if (!isArray(next[1])) {
+  if (next[1] && !isArray(next[1])) {
     next[1] = toProxy(next[1]);
   }
 
@@ -145,7 +147,8 @@ export async function upgradeNode(target, prev, next, svg, cb) {
     if (isFunction(target.update)) await target.update();
   }
 
-  return next[1] && toKeys(next[1]).includes('@html') ? target : updateElement(target, toFragment(prev), toFragment(next), svg, cb);
+  return next[1] && toKeys(next[1]).includes('@html')
+    ? target : updateElement(target, toFragment(prev), toFragment(next), svg, cb);
 }
 
 export async function upgradeElements(target, vnode, svg, cb) {

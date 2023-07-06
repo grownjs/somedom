@@ -3,25 +3,30 @@ import {
   RE_XML_SPLIT,
   RE_XML_CLOSE_END,
   RE_XML_CLOSE_BEGIN,
-  isEmpty, isArray, isNode, isFunction, toProxy, toArray, toFragment,
+  isEmpty, isArray, isNode, isNot, isFunction, toProxy, toArray, toFragment,
 } from './shared.js';
 
 import Fragment from './fragment.js';
 
 export function freeze(value) {
-  if (isArray(value) && !(IS_ARRAY in value)) {
+  if (isArray(value)) {
+    if (!isNode(value)) {
+      value = value.filter(x => !isNot(x));
+    }
+
     while (value.length === 1 && !isFunction(value[0])) value = value[0];
 
-    Object.defineProperty(value, IS_ARRAY, { value: 1 });
+    if (isNode(value) && !(IS_ARRAY in value)) {
+      Object.defineProperty(value, IS_ARRAY, { value: 1 });
 
-    if (isNode(value)) {
       let fn;
       while (value && isFunction(value[0])) {
         fn = value[0];
+        if (fn.length === 1 && !value[2]) break;
         value = fn(toProxy(value[1]), toArray(toFragment(value), freeze));
       }
 
-      if (value instanceof Fragment) return value;
+      if (Fragment.valid(value)) return value;
 
       if (isNode(value) && !(IS_ARRAY in value)) {
         Object.defineProperty(value, IS_ARRAY, { value: 1 });

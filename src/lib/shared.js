@@ -5,7 +5,7 @@ export const RE_XML_CLOSE_BEGIN = /^<\/\w/;
 export const XLINK_PREFIX = /^xlink:?/;
 export const XLINK_NS = 'http://www.w3.org/1999/xlink';
 
-export const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
+export const EE_SUPPORTED = ['oncreate', 'onupdate', 'onreplace', 'ondestroy'];
 
 export const CLOSE_TAGS = [
   'area',
@@ -80,7 +80,7 @@ export function isDiff(prev, next) {
 
 export function toProxy(values) {
   if (isNot(values)) values = [];
-  if (IS_PROXY in values) return values;
+  if (Object.isFrozen(values) || IS_PROXY in values) return values;
   if (!isArray(values)) values = [].concat(...Object.entries(values));
 
   const keys = values.filter((_, i) => isEven(i));
@@ -160,7 +160,17 @@ export function toNodes(node, children) {
   if (typeof NodeList !== 'undefined' && node instanceof NodeList) return toNodes(node.values(), children);
 
   if (node.nodeType === 3) return node.nodeValue;
-  if (node.nodeType === 1) return [node.tagName.toLowerCase(), toAttrs(node), children ? node.childNodes.map(x => toNodes(x, children)) : []];
+  if (node.nodeType === 1) {
+    const nodes = [];
+
+    if (children) {
+      node.childNodes.forEach(x => {
+        nodes.push(toNodes(x, children));
+      });
+    }
+
+    return [node.tagName.toLowerCase(), toAttrs(node), nodes];
+  }
 
   if (node.childNodes) return node.childNodes.map(x => toNodes(x, children));
 

@@ -8,7 +8,7 @@
   const XLINK_PREFIX = /^xlink:?/;
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
 
-  const EE_SUPPORTED = ['oncreate', 'onupdate', 'ondestroy'];
+  const EE_SUPPORTED = ['oncreate', 'onupdate', 'onreplace', 'ondestroy'];
 
   const CLOSE_TAGS = [
     'area',
@@ -83,7 +83,7 @@
 
   function toProxy(values) {
     if (isNot(values)) values = [];
-    if (IS_PROXY in values) return values;
+    if (Object.isFrozen(values) || IS_PROXY in values) return values;
     if (!isArray(values)) values = [].concat(...Object.entries(values));
 
     const keys = values.filter((_, i) => isEven(i));
@@ -163,7 +163,17 @@
     if (typeof NodeList !== 'undefined' && node instanceof NodeList) return toNodes(node.values(), children);
 
     if (node.nodeType === 3) return node.nodeValue;
-    if (node.nodeType === 1) return [node.tagName.toLowerCase(), toAttrs(node), children ? node.childNodes.map(x => toNodes(x, children)) : []];
+    if (node.nodeType === 1) {
+      const nodes = [];
+
+      if (children) {
+        node.childNodes.forEach(x => {
+          nodes.push(toNodes(x, children));
+        });
+      }
+
+      return [node.tagName.toLowerCase(), toAttrs(node), nodes];
+    }
 
     if (node.childNodes) return node.childNodes.map(x => toNodes(x, children));
 
@@ -174,7 +184,6 @@
     constructor() {
       this.childNodes = [];
       this.nodeType = 11;
-      this.length = 0;
     }
 
     appendChild(node) {
@@ -184,35 +193,23 @@
         });
       } else {
         this.childNodes.push(node);
-        this.length += 1;
       }
     }
 
-    getDocumentFragment() {
-      const doc = document.createDocumentFragment();
-
-      this.childNodes.forEach(sub => doc.appendChild(sub));
-      this.childNodes = [];
-      return doc;
-    }
-
     mount(target, node) {
-      Object.defineProperties(this, {
-        parentNode: { configurable: true, value: target },
-        isConnected: { configurable: true, value: true },
-      });
+      while (this.childNodes.length > 0) {
+        const next = this.childNodes.shift();
 
-      const doc = this.getDocumentFragment();
-
-      if (node) {
-        target.insertBefore(doc, node);
-      } else {
-        target.appendChild(doc);
+        if (node) {
+          target.insertBefore(next, node);
+        } else {
+          target.appendChild(next);
+        }
       }
     }
 
     static valid(value) {
-      if (value instanceof Fragment) return true;
+      return value instanceof Fragment;
     }
 
     static from(render, value) {
@@ -227,19 +224,24 @@
   }
 
   function freeze(value) {
-    if (isArray(value) && !(IS_ARRAY in value)) {
+    if (isArray(value)) {
+      if (!isNode(value)) {
+        value = value.filter(x => !isNot(x));
+      }
+
       while (value.length === 1 && !isFunction(value[0])) value = value[0];
 
-      Object.defineProperty(value, IS_ARRAY, { value: 1 });
+      if (isNode(value) && !(IS_ARRAY in value)) {
+        Object.defineProperty(value, IS_ARRAY, { value: 1 });
 
-      if (isNode(value)) {
         let fn;
         while (value && isFunction(value[0])) {
           fn = value[0];
+          if (fn.length === 1 && !value[2]) break;
           value = fn(toProxy(value[1]), toArray(toFragment(value), freeze));
         }
 
-        if (value instanceof Fragment) return value;
+        if (Fragment.valid(value)) return value;
 
         if (isNode(value) && !(IS_ARRAY in value)) {
           Object.defineProperty(value, IS_ARRAY, { value: 1 });
@@ -469,6 +471,8 @@
   }
 
   function replaceElement(target, next, svg, cb) {
+    if (isFunction(target.onreplace)) return target.onreplace(next, svg, cb);
+
     const newNode = createElement(next, svg, cb);
 
     if (Fragment.valid(newNode)) {
@@ -512,6 +516,10 @@
 
     if (!isNode(vnode)) {
       return Fragment.from(v => createElement(v, svg, cb), vnode);
+    }
+
+    if (isFunction(vnode[0])) {
+      return vnode[0](vnode[1], svg, cb);
     }
 
     const isSvg = svg || vnode[0].indexOf('svg') === 0;
@@ -578,15 +586,11 @@
   }
 
   async function upgradeNode(target, prev, next, svg, cb) {
-    if (isScalar(next)) {
+    if (isScalar(next) || (!isNode(prev) || prev[0] !== next[0] || target.nodeType !== 1)) {
       return replaceElement(target, next, svg, cb);
     }
 
-    if (!isNode(prev) || prev[0] !== next[0] || target.nodeType !== 1) {
-      return replaceElement(target, next, svg, cb);
-    }
-
-    if (!isArray(next[1])) {
+    if (next[1] && !isArray(next[1])) {
       next[1] = toProxy(next[1]);
     }
 
@@ -595,7 +599,8 @@
       if (isFunction(target.update)) await target.update();
     }
 
-    return next[1] && toKeys(next[1]).includes('@html') ? target : updateElement(target, toFragment(prev), toFragment(next), svg, cb);
+    return next[1] && toKeys(next[1]).includes('@html')
+      ? target : updateElement(target, toFragment(prev), toFragment(next), svg, cb);
   }
 
   async function upgradeElements(target, vnode, svg, cb) {

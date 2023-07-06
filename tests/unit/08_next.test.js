@@ -25,6 +25,83 @@ describe('@next', () => {
     old = undefined;
   });
 
+  describe('dom checks', () => {
+    it('should handle doctype as expected', () => {
+      const doctype = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">`;
+
+      if (document.open) {
+        const newHTML = document.open('text/html', 'replace');
+
+        newHTML.write(doctype);
+        newHTML.close();
+
+        // this is weird but OK!
+        expect(newHTML.documentElement.outerHTML).to.eql(!process.env.JS_DOM
+          ? `<html><head></head><body>${doctype.replace('\n', ' ')}</body></html>`
+          : '<html><head></head><body></body></html>');
+      } else {
+        const root = document.createElement('root');
+
+        root.innerHTML = doctype;
+
+        expect(root.innerHTML).to.eql(doctype.replace('\n', ' '));
+      }
+    });
+
+    // why these drivers are not working?
+    it('should setup .href from some tags', () => {
+      const a = render(['a', ['href', 'https://soypache.co?q=42'], 'Link']);
+
+      if (process.env.HAPPY_DOM) {
+        expect(a.getAttribute('href')).to.eql('https://soypache.co?q=42');
+        expect(a.href).to.be.undefined;
+        expect(a.search).to.be.undefined;
+      } else {
+        expect(a.href).to.eql('https://soypache.co/?q=42');
+        expect(a.search).to.eql('?q=42');
+        expect(a.protocol).to.equal('https:');
+        expect(a.host).to.equal('soypache.co');
+      }
+
+      if (!(process.env.JS_DOM || process.env.HAPPY_DOM)) {
+        document.location = 'http://website.com/a/b/c';
+      } else {
+        Object.defineProperty(window, 'location', {
+          value: new URL('http://website.com/a/b/c'),
+          writable: true,
+        });
+      }
+
+      const b = render(['a', ['href', '../foo'], 'Link']);
+
+      b.hash = 'osom';
+      b.search = '?ok=42';
+
+      if (process.env.HAPPY_DOM) {
+        expect(b.getAttribute('href')).to.eql('../foo');
+        expect(b.href).to.be.undefined;
+        expect(b.search).to.eql('?ok=42');
+      } else {
+        // c'mon jsdom you still can!
+        expect(b.href).to.eql(process.env.JS_DOM ? '../foo' : 'http://website.com/a/foo?ok=42#osom');
+      }
+    });
+
+    it('should preserve html-entitites from attrs', () => {
+      const span = render(['span', ['title', 'foo&bar'], 'OSOM']);
+
+      expect(span.outerHTML).to.eql('<span title="foo&amp;bar">OSOM</span>');
+
+      const p = document.createElement('p');
+      p.innerHTML = '<a href="https://boxfactura.com?source=somedom&amp;t=🦄">OSOM</a>';
+
+      expect(p.outerHTML).to.eql((process.env.JS_DOM || process.env.HAPPY_DOM)
+        ? '<p><a href="https://boxfactura.com?source=somedom&amp;t=🦄">OSOM</a></p>'
+        : '<p><a href="https://boxfactura.com?source=somedom&amp;t=&#x1F984;">OSOM</a></p>');
+    });
+  });
+
   describe('quick check', () => {
     it('flatten vnodes', async () => {
       const target = render(['div', null]);
