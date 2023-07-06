@@ -403,17 +403,17 @@ export function patchDocument() {
   _global.document = {
     body: createElement('body'),
     implementation: { createDocumentType },
-    getElementsByClassName() {
-      throw new Error('DOCUMENT.getElementsByClassName() not implemented');
+    getElementsByClassName(cls) {
+      return this.body.getElementsByClassName(cls);
     },
-    getElementById() {
-      throw new Error('DOCUMENT.getElementById() not implemented');
+    getElementById(id) {
+      return this.body.getElementById(id);
     },
-    querySelectorAll() {
-      throw new Error('DOCUMENT.querySelectorAll() not implemented');
+    querySelectorAll(css) {
+      return this.body.querySelectorAll(css);
     },
-    querySelector() {
-      throw new Error('DOCUMENT.querySelector() not implemented');
+    querySelector(css) {
+      return this.body.querySelector(css);
     },
     createElementNS,
     createElement,
