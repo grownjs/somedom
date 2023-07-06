@@ -27,24 +27,25 @@ describe('@next', () => {
 
   describe('dom checks', () => {
     it('should handle doctype as expected', () => {
-      const html = '<!DOCTYPE html><h1>OSOM</h1>';
+      const doctype = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">`;
 
       if (document.open) {
         const newHTML = document.open('text/html', 'replace');
 
-        newHTML.write(html);
+        newHTML.write(doctype);
         newHTML.close();
 
         // this is weird but OK!
         expect(newHTML.documentElement.outerHTML).to.eql(!process.env.JS_DOM
-          ? '<html><head></head><body><!DOCTYPE html><h1>OSOM</h1></body></html>'
-          : '<html><head></head><body><h1>OSOM</h1></body></html>');
+          ? `<html><head></head><body>${doctype.replace('\n', ' ')}</body></html>`
+          : '<html><head></head><body></body></html>');
       } else {
         const root = document.createElement('root');
 
-        root.innerHTML = html;
+        root.innerHTML = doctype;
 
-        expect(root.innerHTML).to.eql(html);
+        expect(root.innerHTML).to.eql(doctype.replace('\n', ' '));
       }
     });
 
