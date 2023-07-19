@@ -155,6 +155,10 @@ export function bindHelpers(target) {
   return Object.assign(target, { withText, findText });
 }
 
+export function decodeEnts(value, opts) {
+  return he.decode(value, opts);
+}
+
 export function encodeText(value, opts = {}) {
   value = he.encode(value, { allowUnsafeSymbols: true });
 

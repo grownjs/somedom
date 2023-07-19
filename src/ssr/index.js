@@ -15,11 +15,9 @@ import {
 import { markupAdapter } from './adapter.js';
 
 export { markupAdapter } from './adapter.js';
-export { bindHelpers, encodeText } from './doc.js';
+export { bindHelpers, encodeText, decodeEnts } from './doc.js';
 
 export * from '../index.js';
-
-export * from 'he';
 
 /* global globalThis */
 const _global = typeof global === 'undefined' ? globalThis : global;
