@@ -71,7 +71,7 @@
           <p>This function will produce a <code>vnode</code> value.</p>
           <small>output:</small>
           <script>test(({ h }, appendChild) => {
-            var vnode = h('a', ['href', '#'], 'This is', 'JSON');
+            var vnode = h('a', { href: '#' }, 'This is', 'JSON');
 
             appendChild(document.createTextNode(JSON.stringify(vnode)));
           });</script>
@@ -88,11 +88,11 @@
           <small>output:</small>
           <script>test(({ pre }, appendChild) => {
             appendChild(pre(['root', null, [
-              ['children', ['boolean', true], [
-                ['node', ['string', 'value']],
+              ['children', { boolean: true }, [
+                ['node', { string: 'value' }],
                 ['node', null,
                   '\nSome text: ',
-                  ['subnode', ['number', 1]],
+                  ['subnode', { number: 1 }],
                   'More text here.\n'
                 ],
               ]]
@@ -123,7 +123,7 @@
 
             var tag = bind(render, { Test });
 
-            appendChild(tag(['Test', ['style', 'color:red'], [42]]));
+            appendChild(tag(['Test', { style: 'color:red' }, [42]]));
           });</script>
         </dd>
         <dd>
@@ -192,7 +192,7 @@
                 'because',
                 ' ',
                 ['em', null, ['it is']],
-                [' ', [['strong', ['style', css], 'possible!']]],
+                [' ', [['strong', { style: css }, 'possible!']]],
               ],
             ]);
             appendChild();
@@ -257,18 +257,18 @@
               var len = Math.round(Math.random() * 10) + 1;
 
               return Array.from({ length: len })
-                .map((_, k) => ['li', [
-                  'update', ['animated', 'fadeIn'],
-                  'enter', ['animated', 'fadeIn'],
-                  'exit', ['animated', 'fadeOut', 'faster'],
-                  'style', {
+                .map((_, k) => ['li', {
+                  update: ['animated', 'fadeIn'],
+                  enter: ['animated', 'fadeIn'],
+                  exit: ['animated', 'fadeOut', 'faster'],
+                  style: {
                     transition: 'color .2s',
                     color: [
                       'red',
                       'blue',
                     ][+(Math.random() > 0.5)],
                   },
-                ], ['Item ', k + 1]]);
+                }, ['Item ', k + 1]]);
             }
 
             function view() {
@@ -295,10 +295,10 @@
             }
 
             appendChild(tag(['label', null, [
-              ['input', [
-                'onclick', toggle,
-                'type', 'checkbox'
-              ]],
+              ['input', {
+                onclick: toggle,
+                type: 'checkbox',
+              }],
               'Play',
             ]]));
           });</script>
@@ -334,18 +334,18 @@
           <script>test(({ render }, appendChild) => {
             appendChild(render(['b', null, ['Bold, ']]));
             appendChild(render(['em', null, [['span', null, 'Italic ']]]));
-            appendChild(render(['span', ['style', 'color:red'], '& Colored.']));
+            appendChild(render(['span', { style: 'color:red' }, '& Colored.']));
           });</script>
         </dd>
         <dd>
           <p>SVG support is handled for you. However, elements without an <code>svg</code> root requires <code>true</code> as second argument.</p>
           <small>output:</small>
           <script>test(({ mount, render }, appendChild) => {
-            var attrs = [
-              'width', 16,
-              'height', 16,
-              'viewBox', '0 0 32 32',
-            ];
+            var attrs = {
+              width: 16,
+              height: 16,
+              viewBox: '0 0 32 32',
+            };
 
             var icons = {
               play: 'M6 4l20 12-20 12z',
@@ -353,7 +353,7 @@
             };
 
             function getIcon(name) {
-              return ['path', ['d', icons[name]]];
+              return ['path', { d: icons[name] }];
             }
 
             appendChild(render(['svg', attrs, [getIcon('play')]]));
@@ -393,8 +393,8 @@
           <script>test(({ bind, render, mount, unmount, listeners }, appendChild) => {
             var tag = bind(render, listeners());
 
-            function Button(label, onClick) {
-              return ['button', ['onclick', onClick], label];
+            function Button(label, onclick) {
+              return ['button', { onclick }, label];
             }
 
             function remove(target) {
@@ -444,7 +444,7 @@
             }
 
             appendChild(tag(['button',
-              ['onclick', click], 'Click me']));
+              { onclick: click }, 'Click me']));
           });</script>
         </dd>
         <dd>
@@ -462,18 +462,18 @@
             var calls = [];
 
             function Button(label) {
-              return ['button', [
-                'onclick', () => calls.shift()(),
-                'oncreate', () => {
+              return ['button', {
+                onclick: () => calls.shift()(),
+                oncreate: () => {
                   info.innerHTML = 'Created.';
                 },
-                'onupdate', () => {
+                onupdate: () => {
                   info.innerHTML = 'Updated.';
                 },
-                'ondestroy', () => {
+                ondestroy: () => {
                   info.innerHTML = 'Destroyed.';
                 },
-              ], label];
+              }, label];
             }
 
             calls.push(() => {
@@ -507,15 +507,15 @@
               style: styles,
             }));
 
-            var props = [
-              'style', {
+            var props = {
+              style: {
                 color: 'purple',
               },
-              'class', {
+              class: {
                 present: 1,
                 hidden: 0,
               },
-            ];
+            };
 
             appendChild(pre(['span', props, 'EXAMPLE'], null, tag));
           });</script>
@@ -537,14 +537,14 @@
               }));
 
             function append() {
-              var item = tag(['li', [
-                'enter', ['animated', 'fadeIn'],
-                'exit', ['animated', 'slideUp', 'faster'],
-              ], [
+              var item = tag(['li', {
+                enter: ['animated', 'fadeIn'],
+                exit: ['animated', 'slideUp', 'faster'],
+              }, [
                 ['button',
-                  ['onclick', () => {
+                  { onclick: () => {
                     unmount(item);
-                  }], 'Remove'],
+                  }}, 'Remove'],
                 ['span', null, ['EXAMPLE']],
               ]]);
 
@@ -552,7 +552,7 @@
             }
 
             var button = ['button',
-              ['onclick', append], 'Add item'];
+              { onclick: append }, 'Add item'];
 
             mount('#test4', tag(['li', null, [button]]));
             appendChild();
@@ -567,9 +567,9 @@
                 json: value => JSON.stringify(value),
               }));
 
-            var props = [
-              'json', [1, 2, [3, 4, [5]]],
-            ];
+            var props = {
+              json: [1, 2, [3, 4, [5]]],
+            };
 
             appendChild(pre(['span', props, 'EXAMPLE'], null, attrs));
           });</script>
@@ -580,19 +580,19 @@
           <script>test(({ pre, bind, render, attributes }, appendChild) => {
             var attrs = bind(render, attributes());
 
-            var props = [
-              'data', {
+            var props = {
+              data: {
                 title: 'Example',
               },
-              'arrays', ['TESTING'],
-              'objects', {
+              arrays: ['TESTING'],
+              objects: {
                 prop: 'A string.',
                 nested: {
                   key: 'value',
                   values: [1, 2, 3],
                 },
               },
-            ];
+            };
 
             appendChild(pre(['span', props, 'EXAMPLE'], null, attrs));
           });</script>
@@ -743,7 +743,7 @@ console.log(ast);
         <dt><code>renderToString(vnode[, cb])</code></dt>
         <dd>
           <p>Returns a new function, when invoked it'll produce HTML as its output.</p>
-          <pre class="highlight">var test = ['h1', ['It works!']];
+          <pre class="highlight">var test = ['h1', null, ['It works!']];
 var dom = renderToString(test);
 var html = await dom();
 

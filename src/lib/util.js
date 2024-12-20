@@ -1,44 +1,12 @@
 import {
-  IS_ARRAY,
+  isEmpty,
+  isArray,
   RE_XML_SPLIT,
   RE_XML_CLOSE_END,
   RE_XML_CLOSE_BEGIN,
-  isEmpty, isArray, isNode, isNot, isFunction, toProxy, toArray, toFragment,
 } from './shared.js';
 
 import Fragment from './fragment.js';
-
-export function freeze(value) {
-  if (isArray(value)) {
-    if (!isNode(value)) {
-      value = value.filter(x => !isNot(x));
-    }
-
-    while (value.length === 1 && !isFunction(value[0])) value = value[0];
-
-    if (isNode(value) && !(IS_ARRAY in value)) {
-      Object.defineProperty(value, IS_ARRAY, { value: 1 });
-
-      let fn;
-      while (value && isFunction(value[0])) {
-        fn = value[0];
-        if (fn.length === 1 && !value[2]) break;
-        value = fn(toProxy(value[1]), toArray(toFragment(value), freeze));
-      }
-
-      if (Fragment.valid(value)) return value;
-
-      if (isNode(value) && !(IS_ARRAY in value)) {
-        Object.defineProperty(value, IS_ARRAY, { value: 1 });
-
-        value[2] = toArray(toFragment(value), freeze);
-        value[1] = toProxy(value[1]);
-        value.length = 3;
-      }
-    }
-  }
-  return value;
-}
 
 export const camelCase = value => value.replace(/-([a-z])/g, (_, $1) => $1.toUpperCase());
 export const dashCase = value => value.replace(/[A-Z]/g, '-$&').toLowerCase();

@@ -4,15 +4,12 @@ import {
 
 import {
   XLINK_PREFIX, XLINK_NS,
-  toKeys, isDiff, isEmpty, isArray, isObject, isFunction, isScalar,
+  isDiff, isEmpty, isArray, isObject, isFunction, isScalar,
 } from './shared.js';
 
 export function assignProps(target, attrs, svg, cb) {
-  for (let i = 0; i < attrs.length; i += 2) {
-    const prop = attrs[i];
-    const val = attrs[i + 1];
-
-    if (prop === 'key') continue;
+  Object.entries(attrs).forEach(([prop, val]) => {
+    if (prop === 'key') return;
     if (prop === 'ref') {
       target.oncreate = el => {
         val.current = el;
@@ -45,35 +42,30 @@ export function assignProps(target, attrs, svg, cb) {
       if (svg && prop !== name) {
         if (removed) target.removeAttributeNS(XLINK_NS, name);
         else target.setAttributeNS(XLINK_NS, name, value);
-        continue;
+        return;
       }
 
       if (removed) target.removeAttribute(name);
       else if (isScalar(value)) target.setAttribute(name, value);
     }
-  }
+  });
 }
 
 export function updateProps(target, prev, next, svg, cb) {
-  const [old, keys] = [prev, next].map(toKeys);
-  const set = prev.concat(next);
-  const data = new Map();
-  const props = [];
+  const keys = Object.keys(prev).concat(Object.keys(next));
 
-  for (let i = 0; i < set.length; i += 2) {
-    const k = set[i];
-    const v = set[i + 1];
+  let changed;
+  const props = keys.reduce((all, k) => {
+    if (k in prev && !(k in next)) {
+      all[k] = null;
+      changed = true;
+    } else if (isDiff(prev[k], next[k], true)) {
+      all[k] = next[k];
+      changed = true;
+    }
+    return all;
+  }, {});
 
-    /* istanbul ignore else */
-    if (old.includes(k)) {
-      if (!data.has(k)) data.set(k, v);
-      if (!keys.includes(k)) props.push(k, null);
-      else if (isDiff(data.get(k), v, true)) props.push(k, v);
-    } else if (isDiff(data.get(k), v, true)) props.push(k, v);
-  }
-
-  if (props.length > 0) {
-    assignProps(target, props, svg, cb);
-    return true;
-  }
+  if (changed) assignProps(target, props, svg, cb);
+  return changed;
 }

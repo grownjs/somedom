@@ -1,5 +1,5 @@
 import {
-  detach, freeze,
+  detach,
 } from './util.js';
 
 import {
@@ -7,7 +7,7 @@ import {
 } from './attrs.js';
 
 import {
-  toKeys, toProxy, toArray, toNodes, toFragment, isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isDiff, isNot,
+  toArray, toNodes, toFragment, isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isDiff, isNot,
 } from './shared.js';
 
 import Fragment from './fragment.js';
@@ -45,8 +45,6 @@ export function insertElement(target, next, svg, cb) {
 export function createElement(vnode, svg, cb) {
   if (isNot(vnode)) throw new Error(`Invalid vnode, given '${vnode}'`);
 
-  vnode = toArray(vnode, freeze);
-
   if (!isNode(vnode)) {
     if (isArray(vnode)) {
       return Fragment.from(v => createElement(v, svg, cb), vnode);
@@ -59,7 +57,7 @@ export function createElement(vnode, svg, cb) {
   }
 
   if (cb && cb.tags && cb.tags[vnode[0]]) {
-    return createElement(cb.tags[vnode[0]](toProxy(vnode[1]), toFragment(vnode), cb), svg, cb);
+    return createElement(cb.tags[vnode[0]](vnode[1], toFragment(vnode), cb), svg, cb);
   }
 
   if (!isNode(vnode)) {
@@ -67,7 +65,7 @@ export function createElement(vnode, svg, cb) {
   }
 
   if (isFunction(vnode[0])) {
-    return vnode[0](vnode[1], svg, cb);
+    return createElement(vnode[0](vnode[1], vnode.slice(2)), svg, cb);
   }
 
   const isSvg = svg || vnode[0].indexOf('svg') === 0;
@@ -80,7 +78,6 @@ export function createElement(vnode, svg, cb) {
   if (isFunction(cb)) {
     el = cb(el, tag, props, children) || el;
   }
-
   if (isFunction(el)) return createElement(el(), isSvg, cb);
   if (!isEmpty(props)) assignProps(el, props, isSvg, cb);
   if (isFunction(el.oncreate)) el.oncreate(el);
@@ -138,22 +135,18 @@ export async function upgradeNode(target, prev, next, svg, cb) {
     return replaceElement(target, next, svg, cb);
   }
 
-  if (next[1] && !isArray(next[1])) {
-    next[1] = toProxy(next[1]);
-  }
-
   if (updateProps(target, prev[1] || [], next[1] || [], svg, cb)) {
     if (isFunction(target.onupdate)) await target.onupdate(target);
     if (isFunction(target.update)) await target.update();
   }
 
-  return next[1] && toKeys(next[1]).includes('@html')
+  return next[1] && next[1]['@html']
     ? target : updateElement(target, toFragment(prev), toFragment(next), svg, cb);
 }
 
 export async function upgradeElements(target, vnode, svg, cb) {
   const tasks = [];
-  const next = toArray(vnode, freeze);
+  const next = toArray(vnode);
   const c = Math.max(target.childNodes.length, next.length);
 
   let off = 0;

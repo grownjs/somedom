@@ -1,7 +1,5 @@
-/* eslint-disable no-unused-expressions */
-
 import * as td from 'testdouble';
-import { expect } from 'chai';
+import { test } from '@japa/runner';
 
 import {
   assignProps, updateProps,
@@ -9,110 +7,114 @@ import {
 
 import doc from './fixtures/env.js';
 
-/* global beforeEach, afterEach, describe, it */
-
-describe('attrs', () => {
-  beforeEach(doc.enable);
-  afterEach(doc.disable);
+test.group('assignProps', t => {
+  t.each.teardown(doc.disable);
+  t.each.setup(doc.enable);
 
   let div;
-  beforeEach(() => {
+  t.each.setup(() => {
     div = document.createElement('div');
   });
 
-  describe('assignProps', () => {
-    it('should keep empty attributes', () => {
-      assignProps(div, ['foo', '']);
-      expect(div.getAttribute('foo')).to.eql('');
-    });
-
-    it('should append given attributes', () => {
-      assignProps(div, ['foo', 'bar']);
-      expect(div.getAttribute('foo')).to.eql('bar');
-    });
-
-    it('should skip special attributes, like key', () => {
-      assignProps(div, ['key', 'bar']);
-      expect(div.getAttribute('key')).to.be.null;
-    });
-
-    it('should pass special attributes to given callback', () => {
-      const spy = td.func('callback');
-
-      assignProps(div, ['baz', ['buzz']], null, spy);
-      expect(td.explain(spy).callCount).to.eql(1);
-    });
-
-    it('should handle boolean attributes as expected', () => {
-      assignProps(div, ['test', true]);
-      expect(div.getAttribute('test')).to.eql('test');
-    });
-
-    it('should handle attributes from svg-elements too', () => {
-      const svg = document.createElementNS('xmlns', 'svg');
-
-      assignProps(svg, ['xlink:href', 'z'], true);
-      expect(svg.getAttribute('href')).to.eql('z');
-    });
-
-    it('should remove attributes on falsy values', () => {
-      div.setAttribute('foo', 'bar');
-      div.setAttribute('hrez', 'baz');
-
-      assignProps(div, [
-        'foo', false,
-        'xlink:href', null,
-        'notFalsy', 0,
-        'emptyValue', '',
-      ], true);
-
-      expect(div.getAttribute('foo')).to.eql(null);
-      expect(div.getAttribute('href')).to.eql(null);
-      expect(div.getAttribute('notFalsy')).to.eql('0');
-      expect(div.getAttribute('emptyValue')).to.eql('');
-    });
-
-    it('should handle the @html prop', () => {
-      assignProps(div, ['@html', '<b>OSOM</b>'], true);
-
-      expect(div.outerHTML).to.eql('<div><b>OSOM</b></div>');
-    });
-
-    it('should skip :static props', () => {
-      assignProps(div, [':disabled', true], true);
-
-      expect(div.outerHTML).to.not.contains(' disabled');
-    });
-
-    it('should handle class/style directives', () => {
-      assignProps(div, [
-        'style:backgroundColor', 'red',
-        'style:font-size', '12px',
-        'class:enabled', 1,
-        'class:disabled', null,
-      ]);
-
-      expect(div.outerHTML).to.contains(' class="enabled"');
-      expect(div.outerHTML).to.contains(' style="background-color: red; font-size: 12px;"');
-    });
+  test('should keep empty attributes', ({ expect }) => {
+    assignProps(div, { foo: '' });
+    expect(div.getAttribute('foo')).toEqual('');
   });
 
-  describe('updateProps', () => {
-    it('should update changed values only', () => {
-      div.setAttribute('a', 'b');
-      div.setAttribute('foo', 'bar');
-      div.setAttribute('href', 'baz');
+  test('should append given attributes', ({ expect }) => {
+    assignProps(div, { foo: 'bar' });
+    expect(div.getAttribute('foo')).toEqual('bar');
+  });
 
-      const attrs = Object.keys(div.attributes).reduce((memo, cur) => memo.concat(cur, div.attributes[cur]), []);
+  test('should skip special attributes, like key', ({ expect }) => {
+    assignProps(div, { key: 'bar' });
+    expect(div.getAttribute('key')).toBeNull();
+  });
 
-      updateProps(div, attrs, ['foo', 'BAR', 'a', 'b']);
-      expect(div.getAttribute('foo')).to.eql('BAR');
-      expect(div.getAttribute('a')).to.eql('b');
+  test('should pass special attributes to given callback', ({ expect }) => {
+    const spy = td.func('callback');
+
+    assignProps(div, { baz: ['buzz'] }, null, spy);
+    expect(td.explain(spy).callCount).toEqual(1);
+  });
+
+  test('should handle boolean attributes as expected', ({ expect }) => {
+    assignProps(div, { test: true });
+    expect(div.getAttribute('test')).toEqual('test');
+  });
+
+  test('should handle attributes from svg-elements too', ({ expect }) => {
+    const svg = document.createElementNS('xmlns', 'svg');
+
+    assignProps(svg, { 'xlink:href': 'z' }, true);
+    expect(svg.getAttribute('href')).toEqual('z');
+  });
+
+  test('should remove attributes on falsy values', ({ expect }) => {
+    div.setAttribute('foo', 'bar');
+    div.setAttribute('hrez', 'baz');
+
+    assignProps(div, {
+      foo: false,
+      'xlink:href': null,
+      notFalsy: 0,
+      emptyValue: '',
+    }, true);
+
+    expect(div.getAttribute('foo')).toEqual(null);
+    expect(div.getAttribute('href')).toEqual(null);
+    expect(div.getAttribute('notFalsy')).toEqual('0');
+    expect(div.getAttribute('emptyValue')).toEqual('');
+  });
+
+  test('should handle the @html prop', ({ expect }) => {
+    assignProps(div, { '@html': '<b>OSOM</b>' }, true);
+
+    expect(div.outerHTML).toEqual('<div><b>OSOM</b></div>');
+  });
+
+  test('should skip :static props', ({ expect }) => {
+    assignProps(div, { ':disabled': true }, true);
+
+    expect(div.outerHTML).not.toContain(' disabled');
+  });
+
+  test('should handle class/style directives', ({ expect }) => {
+    assignProps(div, {
+      'style:backgroundColor': 'red',
+      'style:font-size': '12px',
+      'class:enabled': 1,
+      'class:disabled': null,
     });
 
-    it('should assign new props', () => {
-      updateProps(div, [], ['class', 'red']);
-      expect(div.getAttribute('class')).to.eql('red');
-    });
+    expect(div.outerHTML).toContain(' class="enabled"');
+    expect(div.outerHTML).toContain(' style="background-color: red; font-size: 12px;"');
+  });
+});
+
+test.group('updateProps', t => {
+  t.each.teardown(doc.disable);
+  t.each.setup(doc.enable);
+
+  let div;
+  t.each.setup(() => {
+    div = document.createElement('div');
+  });
+
+  test('should update changed values only', ({ expect }) => {
+    div.setAttribute('a', 'b');
+    div.setAttribute('foo', 'bar');
+    div.setAttribute('href', 'baz');
+
+    const attrs = { ...div.attributes };
+
+    updateProps(div, attrs, { foo: 'BAR', a: 'b' });
+    expect(div.getAttribute('foo')).toEqual('BAR');
+    expect(div.getAttribute('a')).toEqual('b');
+  });
+
+  test('should assign new props', ({ expect }) => {
+    updateProps(div, {}, { class: 'red' });
+    expect(div.getAttribute('class')).toEqual('red');
   });
 });
