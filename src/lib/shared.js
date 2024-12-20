@@ -24,9 +24,6 @@ export const CLOSE_TAGS = [
   'wbr',
 ];
 
-export const IS_PROXY = Symbol('$$proxy');
-export const IS_ARRAY = Symbol('$$array');
-
 export const isArray = value => Array.isArray(value);
 export const isString = value => typeof value === 'string';
 export const isFunction = value => typeof value === 'function';
@@ -35,15 +32,10 @@ export const isPlain = value => value !== null && Object.prototype.toString.call
 export const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
 export const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
 
-export function isTuple(value) {
-  if (!(isArray(value) && isEven(value.length))) return false;
-  return toKeys(value).every(isString);
-}
-
 export function isNode(value) {
   if (isArray(value) && isFunction(value[0])) return true;
   if (!value || !(isArray(value) && isString(value[0]))) return false;
-  return value[1] === null || (value.length >= 2 && (isPlain(value[1]) || isTuple(value[1])));
+  return value[1] === null || (value.length >= 2 && isPlain(value[1]));
 }
 
 export function isEmpty(value) {
@@ -78,69 +70,14 @@ export function isDiff(prev, next) {
   } else return prev !== next;
 }
 
-export function toProxy(values) {
-  if (isNot(values)) values = [];
-  if (Object.isFrozen(values) || IS_PROXY in values) return values;
-  if (!isArray(values)) values = [].concat(...Object.entries(values));
-
-  const keys = values.filter((_, i) => isEven(i));
-
-  return new Proxy(values, {
-    deleteProperty(target, prop) {
-      const offset = keys.indexOf(prop);
-
-      if (offset >= 0) {
-        for (let i = 0; i < target.length; i += 2) {
-          if (target[i] === prop) {
-            keys.splice(offset, 1);
-            target.splice(i, 2);
-            break;
-          }
-        }
-      }
-      return true;
-    },
-    has(_, prop) {
-      return prop === IS_PROXY || keys.includes(prop);
-    },
-    get(target, prop) {
-      if (!keys.includes(prop)) {
-        return Reflect.get(target, prop);
-      }
-      for (let i = 0; i < target.length; i += 2) {
-        /* istanbul ignore else */
-        if (target[i] === prop) return target[i + 1];
-      }
-    },
-    set(target, prop, value) {
-      for (let i = 0; i < target.length; i += 2) {
-        if (target[i] === prop) {
-          target[i + 1] = value;
-          return true;
-        }
-      }
-      target.push(prop, value);
-      keys.push(prop);
-      return true;
-    },
-  });
-}
-
-export function toKeys(value) {
-  return value.filter((_, i) => isEven(i));
-}
-
 export function toFragment(vnode) {
   return vnode.slice(2);
 }
 
-export function toArray(value, callback) {
-  if (!isArray(value) || IS_ARRAY in value) return value;
-  if (isNode(value)) return callback(value);
-
-  return value.reduce((memo, n) => {
-    return memo.concat(isTuple(n) || isNode(n) ? [callback(n)] : toArray(n, callback));
-  }, []);
+export function toArray(value) {
+  if (isNode(value)) return value;
+  if (!isArray(value)) return isEmpty(value) ? [] : [value];
+  return value.reduce((memo, n) => memo.concat(isNode(n) ? [n] : toArray(n)), []);
 }
 
 export function toAttrs(node) {

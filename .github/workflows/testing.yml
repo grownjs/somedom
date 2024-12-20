@@ -9,7 +9,10 @@ jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: tacoss/nodejs@v3
+      - uses: actions/setup-node@v4
         with:
-          args: make ci CODECOV_TOKEN=${{ secrets.USE_CODECOV_TOKEN }}
+          node-version: 23.1.0
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run all tests
+        run: make ci CODECOV_TOKEN=${{ secrets.USE_CODECOV_TOKEN }}

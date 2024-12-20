@@ -22,7 +22,7 @@ e2e: src deps ## Run E2E tests locally
 	@npm run test:run -- tests/e2e/cases
 
 test: src deps ## Start dev+testing flow
-	@npm run watch
+	@node --watch tests/main.js
 
 check: src deps ## Run coverage checks locally
 	@LCOV_OUTPUT=html npm run test:ci

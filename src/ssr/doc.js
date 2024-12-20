@@ -316,6 +316,10 @@ export function createElementNode(name, props) {
       }
     },
     appendChild(n) {
+      if (Array.isArray(n)) {
+        throw new Error(`Unexpected array, given '${JSON.stringify(n)}'`);
+      }
+
       mount(n, self);
 
       if (Fragment.valid(n)) {

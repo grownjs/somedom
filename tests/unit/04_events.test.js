@@ -1,7 +1,6 @@
-/* eslint-disable no-unused-expressions */
-
 import * as td from 'testdouble';
-import { expect } from 'chai';
+import { test } from '@japa/runner';
+
 import {
   eventListener,
   invokeEvent,
@@ -10,15 +9,17 @@ import {
 
 import doc from './fixtures/env.js';
 
-/* global beforeEach, afterEach, describe, it */
+let div;
+let e;
+let cb;
+let hook;
 
-describe('events', () => {
-  let div;
-  let e;
-  let cb;
-  let hook;
-
-  beforeEach(() => {
+function setup(t) {
+  t.each.teardown(() => {
+    doc.disable();
+    td.reset();
+  });
+  t.each.setup(() => {
     doc.enable();
     div = document.createElement('div');
     div.events = { test: td.func('testEvent') };
@@ -34,100 +35,101 @@ describe('events', () => {
     td.when(div.events.test(e))
       .thenReturn('OK');
   });
+}
 
-  afterEach(() => {
-    doc.disable();
-    td.reset();
+test.group('eventListener', t => {
+  setup(t);
+
+  test('will call through hooked-nodes', ({ expect }) => {
+    expect(eventListener(e.type)(e)).toEqual('OK');
+  });
+});
+
+test.group('invokeEvent', t => {
+  setup(t);
+
+  test('will skip missing or invalid globals', ({ expect }) => {
+    invokeEvent(e, 'test', cb);
+    invokeEvent(e, 'test', cb, { test: -1 });
+
+    expect(td.explain(cb).callCount).toEqual(2);
   });
 
-  describe('eventListener', () => {
-    it('will call through hooked-nodes', () => {
-      expect(eventListener(e.type)(e)).to.eql('OK');
-    });
+  test('will invoke global if is given as function', ({ expect }) => {
+    invokeEvent(e, 'test', cb, hook);
+
+    expect(td.explain(cb).callCount).toEqual(1);
+    expect(td.explain(hook).callCount).toEqual(1);
   });
 
-  describe('invokeEvent', () => {
-    it('will skip missing or invalid globals', () => {
-      invokeEvent(e, 'test', cb);
-      invokeEvent(e, 'test', cb, { test: -1 });
+  test('will skip event-handlers if any globals return false', ({ expect }) => {
+    td.when(hook('test', e))
+      .thenReturn(false);
 
-      expect(td.explain(cb).callCount).to.eql(2);
-    });
+    invokeEvent(e, 'test', cb, hook);
 
-    it('will invoke global if is given as function', () => {
-      invokeEvent(e, 'test', cb, hook);
-
-      expect(td.explain(cb).callCount).to.eql(1);
-      expect(td.explain(hook).callCount).to.eql(1);
-    });
-
-    it('will skip event-handlers if any globals return false', () => {
-      td.when(hook('test', e))
-        .thenReturn(false);
-
-      invokeEvent(e, 'test', cb, hook);
-
-      expect(td.explain(cb).callCount).to.eql(0);
-      expect(td.explain(hook).callCount).to.eql(1);
-    });
-
-    it('will also works if globals is given as an object', () => {
-      invokeEvent(e, 'test', cb, { test: hook });
-
-      expect(td.explain(cb).callCount).to.eql(1);
-      expect(td.explain(hook).callCount).to.eql(1);
-    });
+    expect(td.explain(cb).callCount).toEqual(0);
+    expect(td.explain(hook).callCount).toEqual(1);
   });
 
-  describe('addEvents', () => {
-    it('should skip non valid functions', () => {
-      addEvents(div, 'example');
-      expect(div.events.example).to.be.undefined;
-    });
+  test('will also works if globals is given as an object', ({ expect }) => {
+    invokeEvent(e, 'test', cb, { test: hook });
 
-    it('should attachs events on given nodes', () => {
-      delete div.events;
+    expect(td.explain(cb).callCount).toEqual(1);
+    expect(td.explain(hook).callCount).toEqual(1);
+  });
+});
 
-      addEvents(div, 'ok', cb);
-      expect(div.events).not.to.be.undefined;
-    });
+test.group('addEvents', t => {
+  setup(t);
 
-    it('should not register event-handlers twice', () => {
-      delete div.events;
+  test('should skip non valid functions', ({ expect }) => {
+    addEvents(div, 'example');
+    expect(div.events.example).toBeUndefined();
+  });
 
-      addEvents(div, 'onclick', cb);
-      addEvents(div, 'onclick', cb);
+  test('should attachs events on given nodes', ({ expect }) => {
+    delete div.events;
 
-      expect(div.events.click.length).to.eql(1);
-    });
+    addEvents(div, 'ok', cb);
+    expect(div.events).not.toBeUndefined();
+  });
 
-    it('can detach events through the teardown() hook', () => {
-      delete div.events;
+  test('should not register event-handlers twice', ({ expect }) => {
+    delete div.events;
 
-      addEvents(div, 'onclick', cb);
+    addEvents(div, 'onclick', cb);
+    addEvents(div, 'onclick', cb);
 
-      div.teardown();
-      expect(div.events.click).to.eql([]);
-    });
+    expect(div.events.click.length).toEqual(1);
+  });
 
-    it('will invoke attached events through a proxy-handler', () => {
-      addEvents(div, 'onclick', cb);
+  test('can detach events through the teardown() hook', ({ expect }) => {
+    delete div.events;
 
-      div.dispatchEvent(new Event('click'));
+    addEvents(div, 'onclick', cb);
 
-      expect(td.explain(cb).callCount).to.eql(1);
-    });
+    div.teardown();
+    expect(div.events.click).toEqual([]);
+  });
 
-    it('will hook given functions as event-handlers', () => {
-      addEvents(div, 'example', cb);
+  test('will invoke attached events through a proxy-handler', ({ expect }) => {
+    addEvents(div, 'onclick', cb);
 
-      expect(typeof div.events.test).to.eql('function');
-      expect(typeof div.events.example).to.eql('function');
-    });
+    div.dispatchEvent(new Event('click'));
 
-    it('will hook lifecycle-events as node-hooks', () => {
-      addEvents(div, 'oncreate', cb);
-      expect(typeof div.oncreate).to.eql('function');
-    });
+    expect(td.explain(cb).callCount).toEqual(1);
+  });
+
+  test('will hook given functions as event-handlers', ({ expect }) => {
+    addEvents(div, 'example', cb);
+
+    expect(typeof div.events.test).toEqual('function');
+    expect(typeof div.events.example).toEqual('function');
+  });
+
+  test('will hook lifecycle-events as node-hooks', ({ expect }) => {
+    addEvents(div, 'oncreate', cb);
+    expect(typeof div.oncreate).toEqual('function');
   });
 });

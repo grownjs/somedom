@@ -21,7 +21,7 @@ export const h = (tag = 'div', attrs = null, ...children) => {
 };
 
 export const pre = (vnode, svg, cb = render) => {
-  return cb(['pre', ['class', 'highlight'], format(cb(vnode, svg).outerHTML)], svg);
+  return cb(['pre', { class: 'highlight' }, format(cb(vnode, svg).outerHTML)], svg);
 };
 
 export const bind = (tag, ...hooks) => {
