@@ -1,5 +1,5 @@
-import happyDOM from 'happy-dom';
-import jsDOM from 'jsdom';
+import * as happyDOM from 'happy-dom';
+import * as jsDOM from 'jsdom';
 
 import { enable, disable } from '../../../src/ssr/index.js';
 

@@ -30,12 +30,7 @@ test.group('pre', t => {
   t.each.setup(doc.enable);
 
   test('should debug and render given vnodes', ({ expect }) => {
-    let sample = format('<div><span foo="bar" baz="baz">TEXT</span></div>');
-
-    // why no escape this happy-dom?
-    if (!process.env.HAPPY_DOM) {
-      sample = encodeText(sample, { quotes: false });
-    }
+    const sample = encodeText(format('<div><span foo="bar" baz="baz">TEXT</span></div>'), { quotes: false });
 
     expect(pre(['div', null,
       ['span', { foo: 'bar', baz: true }, 'TEXT'],

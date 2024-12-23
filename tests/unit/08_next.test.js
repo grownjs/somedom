@@ -52,24 +52,13 @@ test.group('DOM checks', t => {
   test('should setup .href from some tags', ({ expect }) => {
     const a = render(['a', { href: 'https://soypache.co?q=42' }, 'Link']);
 
-    if (process.env.HAPPY_DOM) {
-      expect(a.getAttribute('href')).toEqual('https://soypache.co?q=42');
-      expect(a.href).toBeUndefined();
-      expect(a.search).toBeUndefined();
-    } else {
-      expect(a.href).toEqual('https://soypache.co/?q=42');
-      expect(a.search).toEqual('?q=42');
-      expect(a.protocol).toEqual('https:');
-      expect(a.host).toEqual('soypache.co');
-    }
+    expect(a.href).toEqual('https://soypache.co/?q=42');
+    expect(a.search).toEqual('?q=42');
+    expect(a.protocol).toEqual('https:');
+    expect(a.host).toEqual('soypache.co');
 
     if (!(process.env.JS_DOM || process.env.HAPPY_DOM)) {
       document.location = 'http://website.com/a/b/c';
-    } else {
-      Object.defineProperty(window, 'location', {
-        value: new URL('http://website.com/a/b/c'),
-        writable: true,
-      });
     }
 
     const b = render(['a', { href: '../foo' }, 'Link']);
@@ -77,14 +66,9 @@ test.group('DOM checks', t => {
     b.hash = 'osom';
     b.search = '?ok=42';
 
-    if (process.env.HAPPY_DOM) {
-      expect(b.getAttribute('href')).toEqual('../foo');
-      expect(b.href).toBeUndefined();
-      expect(b.search).toEqual('?ok=42');
-    } else {
-      // c'mon jsdom you still can!
-      expect(b.href).toEqual(process.env.JS_DOM ? '../foo' : 'http://website.com/a/foo?ok=42#osom');
-    }
+    expect(b.getAttribute('href')).toEqual('../foo');
+    expect(b.href).toEqual(process.env.JS_DOM || process.env.HAPPY_DOM ? '../foo' : 'http://website.com/a/foo?ok=42#osom');
+    expect(b.search).toEqual(process.env.JS_DOM || process.env.HAPPY_DOM ? '' : '?ok=42');
   });
 
   test('should preserve html-entitites from attrs', ({ expect }) => {
@@ -247,6 +231,9 @@ test.group('fragments patching', t => {
   let tmp;
 
   test('should update single nodes', async ({ expect }) => {
+    const body = document.createElement('body');
+    div = document.createElement('div');
+    body.appendChild(div);
     el = div;
     tmp = ['div', null];
     await patch(el, tmp, tmp = ['div', null, ['c']]);
