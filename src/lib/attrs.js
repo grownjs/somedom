@@ -9,7 +9,7 @@ import {
 
 export function assignProps(target, attrs, svg, cb) {
   Object.entries(attrs).forEach(([prop, val]) => {
-    if (prop === 'key') return;
+    if (prop === 'key' || prop === 'open') return;
     if (prop === 'ref') {
       target.oncreate = el => {
         val.current = el;

@@ -85,12 +85,12 @@
 
   function toAttrs(node) {
     if (node.attributes && !node.getAttributeNames) {
-      return [].concat(...Object.entries(node.attributes));
+      return node.attributes;
     }
     return node.getAttributeNames().reduce((memo, key) => {
-      memo.push(key.replace('data-', '@'), node[key] || node.getAttribute(key));
+      memo[key.replace('data-', '@')] = node[key] || node.getAttribute(key);
       return memo;
-    }, []);
+    }, {});
   }
 
   function toNodes(node, children) {
@@ -300,7 +300,7 @@
 
   function assignProps(target, attrs, svg, cb) {
     Object.entries(attrs).forEach(([prop, val]) => {
-      if (prop === 'key') return;
+      if (prop === 'key' || prop === 'open') return;
       if (prop === 'ref') {
         target.oncreate = el => {
           val.current = el;
