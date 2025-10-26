@@ -14,14 +14,13 @@ import doc from './fixtures/env.js';
 
 test.group('h', () => {
   test('should return well formed vnodes', ({ expect }) => {
-    expect(h()).toEqual(['div', null, []]);
-    expect(h('grab')).toEqual(['grab', null, []]);
-    expect(h('grab', 'a')).toEqual(['grab', null, ['a']]);
-    expect(h('grab', 'a', 'beer')).toEqual(['grab', null, ['a', 'beer']]);
-    expect(h('grab', 'a', null, 'beer')).toEqual(['grab', null, ['a', 'beer']]);
-    expect(h('grab', h('a', 'beer'))).toEqual(['grab', null, ['a', null, ['beer']]]);
-    expect(h('grab', [h('a', 'beer')])).toEqual(['grab', null, [['a', null, ['beer']]]]);
-    expect(h('grab', [h('a', ['beer', 'with', 'friends'])])).toEqual(['grab', null, [['a', null, ['beer', 'with', 'friends']]]]);
+    expect(h()).toEqual(['div', {}, []]);
+    expect(h('grab')).toEqual(['grab', {}, []]);
+    expect(h('grab', 'a')).toEqual(['grab', {}, ['a']]);
+    expect(h('grab', 'a', 'beer')).toEqual(['grab', {}, ['a', 'beer']]);
+    expect(h('grab', h('a', 'beer'))).toEqual(['grab', {}, ['a', {}, ['beer']]]);
+    expect(h('grab', [h('a', 'beer')])).toEqual(['grab', {}, [['a', {}, ['beer']]]]);
+    expect(h('grab', [h('a', ['beer', 'with', 'friends'])])).toEqual(['grab', {}, [['a', {}, ['beer', 'with', 'friends']]]]);
   });
 });
 
@@ -37,7 +36,7 @@ test.group('pre', t => {
       sample = encodeText(sample, { quotes: false });
     }
 
-    expect(pre(['div', null,
+    expect(pre(['div', {},
       ['span', { foo: 'bar', baz: true }, 'TEXT'],
     ]).outerHTML).toEqual(`<pre class="highlight">${sample}</pre>`);
   });
@@ -105,7 +104,7 @@ test.group('patch', t => {
     data.map(x => td.when(rm(x.id)).thenDo(() => filter(x.id)));
 
     function view() {
-      const partial = ['ul', null, data.map(x => ['li', { onclick: () => rm(x.id) }, x.value])];
+      const partial = ['ul', {}, data.map(x => ['li', { onclick: () => rm(x.id) }, x.value])];
 
       return useFragment
         ? [partial]
@@ -171,16 +170,16 @@ test.group('patch', t => {
       },
     }]);
 
-    expect($$(['test', null, [1]]).outerHTML).toEqual('<a>1</a>');
-    expect($$(['x', null, [['test', null, 2]]]).outerHTML).toEqual('<x><a>2</a></x>');
-    expect($$(['div', null, [() => ['test', null, [3]]]]).outerHTML).toEqual('<div><a>3</a></div>');
+    expect($$(['test', {}, [1]]).outerHTML).toEqual('<a>1</a>');
+    expect($$(['x', {}, [['test', {}, 2]]]).outerHTML).toEqual('<x><a>2</a></x>');
+    expect($$(['div', {}, [() => ['test', {}, [3]]]]).outerHTML).toEqual('<div><a>3</a></div>');
 
     const div = document.createElement('div');
 
-    mount(div, [['test', null, [1]]], null, $$);
+    mount(div, [['test', {}, [1]]], null, $$);
     expect(div.outerHTML).toEqual('<div><a>1</a></div>');
 
-    await patch(div, [['test', null, [1]]], [['test', null, [2]]], null, $$);
+    await patch(div, [['test', {}, [1]]], [['test', {}, [2]]], null, $$);
     expect(div.outerHTML).toEqual('<div><a>2</a></div>');
   });
 
@@ -208,18 +207,18 @@ test.group('patch', t => {
 
     const prev = [
       '\n',
-      ['nav', null, [
-        ['ul', null, [
-          ['li', null, ['Home']],
+      ['nav', {}, [
+        ['ul', {}, [
+          ['li', {}, ['Home']],
           ['fragment', { key: 'user-menu' }, [
             '\n',
-            ['li', null, ['Profile']],
+            ['li', {}, ['Profile']],
             '\n',
           ]],
         ]],
       ]],
       ['fragment', { key: 'flash-info' }, ['\n']],
-      ['main', null, ['MARKUP']],
+      ['main', {}, ['MARKUP']],
     ];
 
     mount(document.body, prev, null, $$);
@@ -231,14 +230,14 @@ test.group('patch', t => {
 
     const next = [
       '\n',
-      ['nav', null, [
-        ['ul', null, [
-          ['li', null, ['Home']],
+      ['nav', {}, [
+        ['ul', {}, [
+          ['li', {}, ['Home']],
           ['fragment', { key: 'user-menu' }, ['\n']],
         ]],
       ]],
-      ['fragment', { key: 'flash-info' }, [['p', null, 'Done.'], '\n']],
-      ['main', null, ['FORM']],
+      ['fragment', { key: 'flash-info' }, [['p', {}, 'Done.'], '\n']],
+      ['main', {}, ['FORM']],
     ];
 
     await patch(document.body, prev, next, null, $$);
