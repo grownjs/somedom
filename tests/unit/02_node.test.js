@@ -14,7 +14,7 @@ test.group('DocumentFragment', t => {
   t.each.setup(doc.enable);
 
   test('should return fragments before mount', ({ expect }) => {
-    const tmp = createElement([['foo', null, ['b', null, ['bar']]]]);
+    const tmp = createElement([['foo', {}, ['b', {}, ['bar']]]]);
 
     expect(tmp.childNodes[0].tagName).toEqual('FOO');
     expect(tmp.childNodes[0].childNodes[0].tagName).toEqual('B');
@@ -23,8 +23,8 @@ test.group('DocumentFragment', t => {
 
   test('should flatten arrays as fragments', ({ expect }) => {
     const tree = createElement([
-      ['span', null, ['foo']],
-      ['span', null, ['bar']],
+      ['span', {}, ['foo']],
+      ['span', {}, ['bar']],
     ]);
 
     const div = document.createElement('div');
@@ -41,8 +41,8 @@ test.group('DocumentFragment', t => {
     }];
 
     createElement([
-      ['p', null, [
-        ['span', null, ['value: ', value]],
+      ['p', {}, [
+        ['span', {}, ['value: ', value]],
       ]],
       children,
     ]).mount(document.body);
@@ -51,14 +51,14 @@ test.group('DocumentFragment', t => {
   });
 
   test('should render children indistinctly', ({ expect }) => {
-    expect(createElement(['p', null, 'hola', 'mundo']).outerHTML).toEqual('<p>holamundo</p>');
-    expect(createElement(['p', null, 'hola', 'mundo']).childNodes.length).toEqual(2);
+    expect(createElement(['p', {}, 'hola', 'mundo']).outerHTML).toEqual('<p>holamundo</p>');
+    expect(createElement(['p', {}, 'hola', 'mundo']).childNodes.length).toEqual(2);
 
-    expect(createElement(['p', null, ['hola', 'mundo']]).outerHTML).toEqual('<p>holamundo</p>');
-    expect(createElement(['p', null, ['hola', 'mundo']]).childNodes.length).toEqual(2);
+    expect(createElement(['p', {}, ['hola', 'mundo']]).outerHTML).toEqual('<p>holamundo</p>');
+    expect(createElement(['p', {}, ['hola', 'mundo']]).childNodes.length).toEqual(2);
 
-    expect(createElement(['p', null, [['hola', 'mundo']]]).outerHTML).toEqual('<p>holamundo</p>');
-    expect(createElement(['p', null, [['hola', 'mundo']]]).childNodes.length).toEqual(2);
+    expect(createElement(['p', {}, [['hola', 'mundo']]]).outerHTML).toEqual('<p>holamundo</p>');
+    expect(createElement(['p', {}, [['hola', 'mundo']]]).childNodes.length).toEqual(2);
   });
 });
 
@@ -72,7 +72,7 @@ test.group('updateElement', t => {
 
   const factory = (...children) => ({
     vnode: [
-      ['span', null, ['OK']],
+      ['span', {}, ['OK']],
       ...children,
     ],
     result: `<div><span>OK</span>${children.reduce((memo, it) => memo.concat(it), []).join('')}</div>`,
@@ -126,7 +126,7 @@ test.group('updateElement', t => {
 
   test('should flatten all nested Fragments into a single one', async ({ expect }) => {
     const vdom = value => [
-      ['small', null, ['TEXT']],
+      ['small', {}, ['TEXT']],
       ['\n', '\n\n\n  PATH=/:id/edit\n  ', ['\n  ', value, ':\n'], '\n\n'],
       ['\n', '\n\n\n'],
     ];
@@ -149,7 +149,7 @@ test.group('updateElement', t => {
 
     expect(document.body.innerHTML).toEqual('<div><b>OSOM</b></div>');
 
-    const old = [['div', { class: 'x' }, ['b', null, 'OSOM']]];
+    const old = [['div', { class: 'x' }, ['b', {}, 'OSOM']]];
     const next = [['div', { class: 'y', '@html': '<em>OK</em>' }]];
 
     await updateElement(document.body, old, next);
@@ -205,11 +205,11 @@ test.group('createElement', t => {
   });
 
   test('should handle regular html-elements', ({ expect }) => {
-    expect(createElement(['span', null]).tagName).toEqual('SPAN');
+    expect(createElement(['span', {}]).tagName).toEqual('SPAN');
   });
 
   test('should handle svg-elements too', ({ expect }) => {
-    expect(createElement(['svg', null]).namespaceURI).toContain('svg');
+    expect(createElement(['svg', {}]).namespaceURI).toContain('svg');
   });
 
   test('should call factories recursively', ({ expect }) => {
@@ -236,7 +236,7 @@ test.group('createElement', t => {
   });
 
   test('should wrap trees as DocumentFragment nodes', ({ expect }) => {
-    const tree = [[[[['p', null, [[[[['i', null]]]]]]]]]];
+    const tree = [[[[['p', {}, [[[[['i', {}]]]]]]]]]];
     const node = createElement(tree);
     const div = document.createElement('div');
     node.mount(div);
@@ -252,7 +252,7 @@ test.group('createElement', t => {
   test('should pass created element to given callback', ({ expect }) => {
     const spy = td.func('callback');
 
-    createElement(['span', null], null, spy);
+    createElement(['span', {}], null, spy);
     expect(td.explain(spy).callCount).toEqual(1);
   });
 
@@ -262,7 +262,7 @@ test.group('createElement', t => {
 
     const Spy = td.func('Component');
 
-    td.when(Spy(attrs, [nodes])).thenReturn(['div', null]);
+    td.when(Spy(attrs, [nodes])).thenReturn(['div', {}]);
 
     expect(createElement([Spy, attrs, nodes]).tagName).toEqual('DIV');
   });
@@ -277,12 +277,12 @@ test.group('createElement', t => {
     const fn = td.func('hook');
 
     td.when(fn())
-      .thenReturn(['div', null]);
+      .thenReturn(['div', {}]);
 
-    td.when(fn(td.matchers.isA(Object), 'span', null, []))
+    td.when(fn(td.matchers.isA(Object), 'span', {}, []))
       .thenReturn(fn);
 
-    const node = createElement(['span', null], null, fn);
+    const node = createElement(['span', {}], null, fn);
 
     expect(td.explain(fn).callCount).toEqual(3);
     expect(node.outerHTML).toEqual('<div></div>');
@@ -297,7 +297,7 @@ test.group('createElement', t => {
     div.enter = td.func('enter');
     div.exit = td.func('exit');
 
-    createElement(['x', null], null, () => div);
+    createElement(['x', {}], null, () => div);
 
     expect(td.explain(div.oncreate).callCount).toEqual(1);
     expect(td.explain(div.enter).callCount).toEqual(1);
@@ -310,7 +310,7 @@ test.group('createElement', t => {
   });
 
   test('should append non-empty values only', ({ expect }) => {
-    expect(createElement(['div', null, [null, false, 0]]).outerHTML).toEqual('<div>false0</div>');
+    expect(createElement(['div', {}, [null, false, 0]]).outerHTML).toEqual('<div>false0</div>');
   });
 
   test('should call oncreate through ref props', ({ expect }) => {
@@ -339,7 +339,7 @@ test.group('mountElement', t => {
   test('should help to mount given vnodes', ({ expect }) => {
     const div = document.createElement('div');
 
-    mountElement(div, ['span', null], h);
+    mountElement(div, ['span', {}], h);
     ok(expect, div);
   });
 
@@ -352,12 +352,12 @@ test.group('mountElement', t => {
   });
 
   test('should use document.body if target is not given', ({ expect }) => {
-    mountElement(['span', null], h);
+    mountElement(['span', {}], h);
     ok(expect, document.body);
   });
 
   test('should fallback to view if arity is 1', ({ expect }) => {
-    mountElement(['span', null]);
+    mountElement(['span', {}]);
     ok(expect, document.body);
   });
 
@@ -366,7 +366,7 @@ test.group('mountElement', t => {
     td.when(document.querySelector('body'))
       .thenReturn(document.body);
 
-    mountElement('body', ['span', null]);
+    mountElement('body', ['span', {}]);
     ok(expect, document.body);
 
     td.reset();
@@ -378,7 +378,7 @@ test.group('mountElement', t => {
   });
 
   test('should create fragments from arrays', ({ expect }) => {
-    mountElement(null, [42, ['i', null, [-1]]]);
+    mountElement(null, [42, ['i', {}, [-1]]]);
     expect(document.body.innerHTML).toEqual('42<i>-1</i>');
   });
 
@@ -387,13 +387,13 @@ test.group('mountElement', t => {
 
     mountElement(div, [
       'Some text ',
-      ['strong', null, ['before HTML']],
+      ['strong', {}, ['before HTML']],
       ': ',
       [
         'because',
         ' ',
-        ['em', null, ['it is']],
-        [' ', [['strong', null, ['possible!']]]],
+        ['em', {}, ['it is']],
+        [' ', [['strong', {}, ['possible!']]]],
       ],
     ]);
 
@@ -426,31 +426,31 @@ test.group('updateElement', t => {
   });
 
   test('can reconcilliate childNodes', async ({ expect }) => {
-    div = await updateElement(div, ['div', null], ['b', null, 'OK!']);
+    div = await updateElement(div, ['div', null], ['b', {}, 'OK!']);
     expect(body.innerHTML).toEqual('<b>OK!</b>');
 
-    div = await updateElement(div, ['b', null, 'OK!'], [['b', null, 'NOT']]);
+    div = await updateElement(div, ['b', {}, 'OK!'], [['b', {}, 'NOT']]);
     expect(body.innerHTML).toEqual('<b>NOT</b>');
   });
 
   test('can reconcilliate root nodes', async ({ expect }) => {
     expect([div.tagName, body.tagName]).toEqual(['DIV', 'BODY']);
-    div = await updateElement(div, ['div', null], ['b', null, 'OK']);
+    div = await updateElement(div, ['div', null], ['b', {}, 'OK']);
     expect(body.innerHTML).toEqual('<b>OK</b>');
     expect(div.outerHTML).toEqual('<b>OK</b>');
 
     expect([div.tagName, body.tagName]).toEqual(['B', 'BODY']);
-    div = await updateElement(div, ['b', null, 'OK'], [['b', null, 'KO']]);
+    div = await updateElement(div, ['b', {}, 'OK'], [['b', {}, 'KO']]);
     expect(body.innerHTML).toEqual('<b>KO</b>');
     expect(div.outerHTML).toEqual('<b>KO</b>');
 
     expect([div.tagName, body.tagName]).toEqual(['B', 'BODY']);
-    div = await updateElement(div, [['b', null, 'KO']], [[['c', null, 'OSOM']]]);
+    div = await updateElement(div, [['b', {}, 'KO']], [[['c', {}, 'OSOM']]]);
     expect(body.innerHTML).toEqual('<b><c>OSOM</c></b>');
     expect(div.outerHTML).toEqual('<b><c>OSOM</c></b>');
 
     expect([div.tagName, body.tagName]).toEqual(['B', 'BODY']);
-    div = await updateElement(div, [[['c', null, 'OSOM']]], 'bar');
+    div = await updateElement(div, [[['c', {}, 'OSOM']]], 'bar');
     expect(body.innerHTML).toEqual('<b>bar</b>');
     expect(div.outerHTML).toEqual('<b>bar</b>');
   });
@@ -459,21 +459,21 @@ test.group('updateElement', t => {
     div = await updateElement(div, ['div', null], [['foo bar']]);
     expect(body.innerHTML).toEqual('<div>foo bar</div>');
 
-    div = await updateElement(div, [['foo bar']], [['some text', [[['b', null, 'OK']]]]]);
+    div = await updateElement(div, [['foo bar']], [['some text', [[['b', {}, 'OK']]]]]);
     expect(div.innerHTML).toEqual('some text<b>OK</b>');
 
-    div = await updateElement(div, [['some text', ['b', null, 'OK']]], ['foo ', 'barX']);
+    div = await updateElement(div, [['some text', ['b', {}, 'OK']]], ['foo ', 'barX']);
     expect(div.innerHTML).toEqual('foo barX');
 
     div = await updateElement(div, ['foo ', 'barX'], ['a ', 'OK']);
     expect(div.innerHTML).toEqual('a OK');
 
-    div = await updateElement(div, ['a ', 'OK'], ['a', null, 'OK']);
+    div = await updateElement(div, ['a ', 'OK'], ['a', {}, 'OK']);
     expect(div.innerHTML).toEqual('OK');
   });
 
   test('can reconcilliate between both text/nodes', async ({ expect }) => {
-    div = await updateElement(div, 'OLD', [['b', null, 'NEW']]);
+    div = await updateElement(div, 'OLD', [['b', {}, 'NEW']]);
     expect(body.innerHTML).toEqual('<div><b>NEW</b></div>');
 
     div = await updateElement(div, [['a', null]], 'FIXME');
@@ -481,22 +481,22 @@ test.group('updateElement', t => {
   });
 
   test('can update nodes if they are the same', async ({ expect }) => {
-    div = await updateElement(div, ['div', null, ['a', null]], ['div', null, 'NEW']);
+    div = await updateElement(div, ['div', {}, ['a', {}]], ['div', {}, 'NEW']);
     expect(div.outerHTML).toEqual('<div>NEW</div>');
   });
 
   test('can replace nodes if they are different', async ({ expect }) => {
-    await updateElement(div, ['div', null], ['b', null, 'NEW']);
+    await updateElement(div, ['div', {}], ['b', {}, 'NEW']);
     expect(body.outerHTML).toEqual('<body><b>NEW</b></body>');
   });
 
   test('can patch node attributes', async ({ expect }) => {
-    await updateElement(a, ['a', null], ['a', { href: '#' }]);
+    await updateElement(a, ['a', {}], ['a', { href: '#' }]);
     expect(a.outerHTML).toEqual('<a href="#"></a>');
   });
 
   test('can update scalar values', async ({ expect }) => {
-    await updateElement(div, ['div', null, 1], ['div', null, 0]);
+    await updateElement(div, ['div', {}, 1], ['div', {}, 0]);
     expect(body.innerHTML).toEqual('<div>0</div>');
   });
 
@@ -504,21 +504,21 @@ test.group('updateElement', t => {
     a.onupdate = td.func('onupdate');
     a.update = td.func('update');
 
-    await updateElement(a, ['a', null], ['a', { href: '#' }]);
+    await updateElement(a, ['a', {}], ['a', { href: '#' }]);
 
     expect(td.explain(a.onupdate).callCount).toEqual(1);
     expect(td.explain(a.update).callCount).toEqual(1);
   });
 
   test('can append childNodes', async ({ expect }) => {
-    await updateElement(a, ['a', null], ['a', null, [[[['c', null, 'd']]]]]);
+    await updateElement(a, ['a', {}], ['a', {}, [[[['c', {}, 'd']]]]]);
     expect(div.innerHTML).toEqual('<a><c>d</c></a>');
   });
 
   test('can remove childNodes', async ({ expect }) => {
-    a.appendChild(createElement(['b', null]));
+    a.appendChild(createElement(['b', {}]));
 
-    await updateElement(a, [[[['b', null]]]], []);
+    await updateElement(a, [[[['b', {}]]]], []);
 
     expect(div.outerHTML).toEqual('<div><a></a></div>');
   });
@@ -534,28 +534,28 @@ test.group('updateElement', t => {
   });
 
   test('will iterate recursively', async ({ expect }) => {
-    a.appendChild(createElement(['b', null]));
-    await updateElement(a, ['a', null, [['b', null]]], ['a', null, [[[[['b', null]]]]]]);
+    a.appendChild(createElement(['b', {}]));
+    await updateElement(a, ['a', {}, [['b', {}]]], ['a', {}, [[[[['b', {}]]]]]]);
     expect(a.outerHTML).toEqual('<a><b></b></a>');
   });
 
   test('will append given children', async ({ expect }) => {
-    a = await updateElement(a, ['a', null], ['a', null, [['b', null]]]);
+    a = await updateElement(a, ['a', {}], ['a', {}, [['b', {}]]]);
     expect(a.outerHTML).toEqual('<a><b></b></a>');
 
-    a = await updateElement(a, ['a', null, [['b', null]]], ['a', null, [[['i', null], [[[['i', null]]]], [[[[['i', null]]]]]]]]);
+    a = await updateElement(a, ['a', {}, [['b', {}]]], ['a', {}, [[['i', {}], [[[['i', {}]]]], [[[[['i', {}]]]]]]]]);
     expect(a.outerHTML).toEqual('<a><i></i><i></i><i></i></a>');
   });
 
   test('patch over function values', async ({ expect }) => {
-    const Em = Array.prototype.concat.bind(['em', null]);
+    const Em = Array.prototype.concat.bind(['em']);
 
     function Del(props, children) {
-      return ['del', null, [[Em, props, children]]];
+      return ['del', {}, [[Em, props, children]]];
     }
 
-    const $old = [[[Del, null, 'OK']]];
-    const $new = [[[[[Del, null, [[['OSOM!']]]]]]]];
+    const $old = [[[Del, {}, 'OK']]];
+    const $new = [[[[[Del, {}, [[['OSOM!']]]]]]]];
 
     createElement($old).mount(a);
     a = await updateElement(a, $old, $new);
@@ -567,21 +567,21 @@ test.group('updateElement', t => {
 
   test('should handle vnodes from factories', async ({ expect }) => {
     function T() {
-      return ['b', null];
+      return ['b', {}];
     }
 
-    await updateElement(a, ['a', null], ['a', null, [T]]);
-    await updateElement(a, ['a', null, [T]], ['a', null, [T]]);
-    await updateElement(a, ['a', null, [T]], ['a', null, [T]]);
+    await updateElement(a, ['a', {}], ['a', {}, [T]]);
+    await updateElement(a, ['a', {}, [T]], ['a', {}, [T]]);
+    await updateElement(a, ['a', {}, [T]], ['a', {}, [T]]);
     expect(a.outerHTML).toEqual('<a><b></b></a>');
 
     function T2() {
-      return [['b', null]];
+      return [['b', {}]];
     }
 
-    await updateElement(a, ['a', null, [T]], ['a', null, [T2]]);
-    await updateElement(a, ['a', null, [T2]], ['a', null, [T2]]);
-    await updateElement(a, ['a', null, [T2]], ['a', null, [T2]]);
+    await updateElement(a, ['a', {}, [T]], ['a', {}, [T2]]);
+    await updateElement(a, ['a', {}, [T2]], ['a', {}, [T2]]);
+    await updateElement(a, ['a', {}, [T2]], ['a', {}, [T2]]);
     expect(a.outerHTML).toEqual('<a><b></b></a>');
   });
 });

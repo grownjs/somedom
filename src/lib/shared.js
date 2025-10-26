@@ -1,3 +1,4 @@
+export const RE_TAG_NAME = /^[A-Za-z-]+$/;
 export const RE_XML_SPLIT = /(>)(<)(\/*)/g;
 export const RE_XML_CLOSE_END = /.+<\/\w[^>]*>$/;
 export const RE_XML_CLOSE_BEGIN = /^<\/\w/;
@@ -32,10 +33,15 @@ export const isPlain = value => value !== null && Object.prototype.toString.call
 export const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
 export const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
 
+export function isTag(value) {
+  return RE_TAG_NAME.test(value);
+}
+
 export function isNode(value) {
   if (isArray(value) && isFunction(value[0])) return true;
-  if (!value || !(isArray(value) && isString(value[0]))) return false;
-  return value[1] === null || (value.length >= 2 && isPlain(value[1]));
+  if (!value || !(isArray(value) && isTag(value[0]))) return false;
+  if (isPlain(value[1]) && value.length >= 2) return true;
+  return false;
 }
 
 export function isEmpty(value) {

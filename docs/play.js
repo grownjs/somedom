@@ -1,6 +1,7 @@
 (function () {
   'use strict';
 
+  const RE_TAG_NAME = /^[A-Za-z-]+$/;
   const RE_XML_SPLIT = /(>)(<)(\/*)/g;
   const RE_XML_CLOSE_END = /.+<\/\w[^>]*>$/;
   const RE_XML_CLOSE_BEGIN = /^<\/\w/;
@@ -35,10 +36,15 @@
   const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
   const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
 
+  function isTag(value) {
+    return RE_TAG_NAME.test(value);
+  }
+
   function isNode(value) {
     if (isArray(value) && isFunction(value[0])) return true;
-    if (!value || !(isArray(value) && isString(value[0]))) return false;
-    return value[1] === null || (value.length >= 2 && isPlain(value[1]));
+    if (!value || !(isArray(value) && isTag(value[0]))) return false;
+    if (isPlain(value[1]) && value.length >= 2) return true;
+    return false;
   }
 
   function isEmpty(value) {
@@ -300,7 +306,7 @@
 
   function assignProps(target, attrs, svg, cb) {
     Object.entries(attrs).forEach(([prop, val]) => {
-      if (prop === 'key') return;
+      if (prop === 'key' || prop === 'open') return;
       if (prop === 'ref') {
         target.oncreate = el => {
           val.current = el;
@@ -625,9 +631,9 @@
   }
 
   const h = (tag = 'div', attrs = null, ...children) => {
-    if (isScalar(attrs)) return [tag, null, [attrs].concat(children).filter(x => !isNot(x))];
-    if (isArray(attrs) && !children.length) return [tag, null, attrs];
-    return [tag, attrs || null, children];
+    if (isScalar(attrs)) return [tag, {}, [attrs].concat(children).filter(x => !isNot(x))];
+    if (isArray(attrs) && !children.length) return [tag, {}, attrs];
+    return [tag, attrs || {}, children];
   };
 
   const pre = (vnode, svg, cb = createElement) => {
@@ -681,6 +687,7 @@
     remove: remove,
     replace: replace,
     detach: detach,
+    RE_TAG_NAME: RE_TAG_NAME,
     RE_XML_SPLIT: RE_XML_SPLIT,
     RE_XML_CLOSE_END: RE_XML_CLOSE_END,
     RE_XML_CLOSE_BEGIN: RE_XML_CLOSE_BEGIN,
@@ -695,6 +702,7 @@
     isPlain: isPlain,
     isObject: isObject,
     isScalar: isScalar,
+    isTag: isTag,
     isNode: isNode,
     isEmpty: isEmpty,
     isBlock: isBlock,
@@ -714,8 +722,8 @@
       .replace(/test\(\s*\([^=()]*\)\s*=>\s*\{/, '')
       .replace(/\}\)\s*;$/, '');
 
-    mountElement(parentNode, ['details', null, [
-      ['summary', null, ['View executed code']],
+    mountElement(parentNode, ['details', {}, [
+      ['summary', {}, ['View executed code']],
       ['pre', { class: 'highlight' }, trim(code)],
     ]]);
   }
