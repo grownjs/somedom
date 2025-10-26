@@ -87,10 +87,10 @@
           <p>Use this function to debug <i>vnodes</i> and <b>tag</b> functions.</p>
           <small>output:</small>
           <script>test(({ pre }, appendChild) => {
-            appendChild(pre(['root', null, [
+            appendChild(pre(['root', {}, [
               ['children', { boolean: true }, [
                 ['node', { string: 'value' }],
-                ['node', null,
+                ['node', {},
                   '\nSome text: ',
                   ['subnode', { number: 1 }],
                   'More text here.\n'
@@ -130,6 +130,7 @@
           <p>Always return a valid <i>HTMLElement</i> or <i>TextNode</i>, otherwise return <code>cb(..., svg)</code>.</p>
           <small>output:</small>
           <script>test(({ bind }, appendChild) => {
+            return
             function debug(vnode, svg, cb) {
               var json = JSON.stringify(vnode, null, 2);
 
@@ -165,15 +166,15 @@
           <script>test(({ mount, render }, appendChild) => {
             mount(test1, 'Mounted at #test1');
 
-            mount('.test2', ['span', null,
-              ['Mounted at ', ['code', null, '.test2']],
+            mount('.test2', ['span', {},
+              ['Mounted at ', ['code', {}, '.test2']],
             ]);
 
             var target = document
               .querySelector('[name=my-target]');
 
             mount(target,
-              render(['code', null, 'Mounted at `[name=my-target]`']));
+              render(['code', {}, 'Mounted at `[name=my-target]`']));
             appendChild();
           });</script>
         </dd>
@@ -186,12 +187,12 @@
 
             mount(test6, [
               'Some text ',
-              ['strong', null, ['before HTML']],
+              ['strong', {}, ['before HTML']],
               ': ',
               [
                 'because',
                 ' ',
-                ['em', null, ['it is']],
+                ['em', {}, ['it is']],
                 [' ', [['strong', { style: css }, 'possible!']]],
               ],
             ]);
@@ -210,7 +211,7 @@
           <fieldset id="test"></fieldset>
           <script>test(({ mount, patch }, appendChild) => {
             function view(counter) {
-              return ['span', null, ['Count: ', counter]];
+              return ['span', {}, ['Count: ', counter]];
             }
 
             var inc = 0;
@@ -272,7 +273,7 @@
             }
 
             function view() {
-              return [['ul', null, shuffle(getItems())]];
+              return [['ul', {}, shuffle(getItems())]];
             }
 
             var dom = view();
@@ -294,7 +295,7 @@
               }
             }
 
-            appendChild(tag(['label', null, [
+            appendChild(tag(['label', {}, [
               ['input', {
                 onclick: toggle,
                 type: 'checkbox',
@@ -332,8 +333,8 @@
           <p>You can render single or nested <i>vnodes</i>, attributes are supported as well.</p>
           <small>output:</small>
           <script>test(({ render }, appendChild) => {
-            appendChild(render(['b', null, ['Bold, ']]));
-            appendChild(render(['em', null, [['span', null, 'Italic ']]]));
+            appendChild(render(['b', {}, ['Bold, ']]));
+            appendChild(render(['em', {}, [['span', {}, 'Italic ']]]));
             appendChild(render(['span', { style: 'color:red' }, '& Colored.']));
           });</script>
         </dd>
@@ -371,10 +372,10 @@
             var Em = (props, children) => ['em', props, children];
 
             function Del(props, children) {
-              return ['del', null, [[Em, props, children]]];
+              return ['del', {}, [[Em, props, children]]];
             }
 
-            appendChild(render([Del, null, 'OSOM!']));
+            appendChild(render([Del, {}, 'OSOM!']));
           });</script>
         </dd>
       </dl>
@@ -406,7 +407,7 @@
             }
 
             function append() {
-              var node = tag(['li', null, [
+              var node = tag(['li', {}, [
                 new Date().toISOString(),
                 Button('Remove', () => remove(node))
               ]]);
@@ -416,7 +417,7 @@
 
             var button = Button('Add item', append);
 
-            mount('#test3', tag(['li', null, [button]]));
+            mount('#test3', tag(['li', {}, [button]]));
             appendChild();
           });</script>
         </dd>
@@ -545,7 +546,7 @@
                   { onclick: () => {
                     unmount(item);
                   }}, 'Remove'],
-                ['span', null, ['EXAMPLE']],
+                ['span', {}, ['EXAMPLE']],
               ]]);
 
               mount('#test4', item);
@@ -554,7 +555,7 @@
             var button = ['button',
               { onclick: append }, 'Add item'];
 
-            mount('#test4', tag(['li', null, [button]]));
+            mount('#test4', tag(['li', {}, [button]]));
             appendChild();
           });</script>
         </dd>
@@ -743,7 +744,7 @@ console.log(ast);
         <dt><code>renderToString(vnode[, cb])</code></dt>
         <dd>
           <p>Returns a new function, when invoked it'll produce HTML as its output.</p>
-          <pre class="highlight">var test = ['h1', null, ['It works!']];
+          <pre class="highlight">var test = ['h1', {}, ['It works!']];
 var dom = renderToString(test);
 var html = await dom();
 

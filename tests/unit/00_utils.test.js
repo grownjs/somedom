@@ -117,8 +117,9 @@ test.group('isNode', () => {
     expect(isNode(['x', 'y'])).toBeFalsy();
     expect(isNode(['x', 'y', 'z'])).toBeFalsy();
     expect(isNode(['x', ['y', 'z']])).toBeFalsy();
+    expect(isNode(['a', null, null, 'x'])).toBeFalsy();
     expect(isNode(['a', undefined])).toBeFalsy();
-    expect(isNode(['a', null])).toBeTruthy();
+    expect(isNode(['a', null])).toBeFalsy();
     expect(isNode(['a', {}])).toBeTruthy();
     expect(isNode([Function])).toBeTruthy();
   });

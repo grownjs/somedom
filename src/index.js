@@ -15,9 +15,9 @@ import {
 import { addEvents } from './lib/events.js';
 
 export const h = (tag = 'div', attrs = null, ...children) => {
-  if (isScalar(attrs)) return [tag, null, [attrs].concat(children).filter(x => !isNot(x))];
-  if (isArray(attrs) && !children.length) return [tag, null, attrs];
-  return [tag, attrs || null, children];
+  if (isScalar(attrs)) return [tag, {}, [attrs].concat(children).filter(x => !isNot(x))];
+  if (isArray(attrs) && !children.length) return [tag, {}, attrs];
+  return [tag, attrs || {}, children];
 };
 
 export const pre = (vnode, svg, cb = render) => {

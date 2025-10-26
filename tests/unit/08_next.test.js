@@ -52,24 +52,13 @@ test.group('DOM checks', t => {
   test('should setup .href from some tags', ({ expect }) => {
     const a = render(['a', { href: 'https://soypache.co?q=42' }, 'Link']);
 
-    if (process.env.HAPPY_DOM) {
-      expect(a.getAttribute('href')).toEqual('https://soypache.co?q=42');
-      expect(a.href).toBeUndefined();
-      expect(a.search).toBeUndefined();
-    } else {
-      expect(a.href).toEqual('https://soypache.co/?q=42');
-      expect(a.search).toEqual('?q=42');
-      expect(a.protocol).toEqual('https:');
-      expect(a.host).toEqual('soypache.co');
-    }
+    expect(a.href).toEqual('https://soypache.co/?q=42');
+    expect(a.search).toEqual('?q=42');
+    expect(a.protocol).toEqual('https:');
+    expect(a.host).toEqual('soypache.co');
 
     if (!(process.env.JS_DOM || process.env.HAPPY_DOM)) {
       document.location = 'http://website.com/a/b/c';
-    } else {
-      Object.defineProperty(window, 'location', {
-        value: new URL('http://website.com/a/b/c'),
-        writable: true,
-      });
     }
 
     const b = render(['a', { href: '../foo' }, 'Link']);
@@ -77,14 +66,9 @@ test.group('DOM checks', t => {
     b.hash = 'osom';
     b.search = '?ok=42';
 
-    if (process.env.HAPPY_DOM) {
-      expect(b.getAttribute('href')).toEqual('../foo');
-      expect(b.href).toBeUndefined();
-      expect(b.search).toEqual('?ok=42');
-    } else {
-      // c'mon jsdom you still can!
-      expect(b.href).toEqual(process.env.JS_DOM ? '../foo' : 'http://website.com/a/foo?ok=42#osom');
-    }
+    expect(b.getAttribute('href')).toEqual('../foo');
+    expect(b.href).toEqual(process.env.JS_DOM || process.env.HAPPY_DOM ? '../foo' : 'http://website.com/a/foo?ok=42#osom');
+    expect(b.search).toEqual(process.env.JS_DOM || process.env.HAPPY_DOM ? '' : '?ok=42');
   });
 
   test('should preserve html-entitites from attrs', ({ expect }) => {
@@ -105,9 +89,9 @@ test.group('quick check', t => {
   setup(t);
 
   test('flatten vnodes', async ({ expect }) => {
-    const target = render(['div', null]);
-    const a = [[['this ', ['b', null, 'is']], ' ', 'a '], ['test ', ['only!']]];
-    const b = [['b', null, 'this ', 'is'], [[[' a '], 'test'], [[[' only!']]]]];
+    const target = render(['div', {}]);
+    const a = [[['this ', ['b', {}, 'is']], ' ', 'a '], ['test ', ['only!']]];
+    const b = [['b', {}, 'this ', 'is'], [[[' a '], 'test'], [[[' only!']]]]];
 
     mount(target, a);
     expect(target.outerHTML).toEqual('<div>this <b>is</b> a test only!</div>');
@@ -122,11 +106,11 @@ test.group('quick check', t => {
       return ['div', props, children];
     }
 
-    mount(document.body, ['ul', null, [
-      ['li', null, 'foo'],
-      [['li', null, [
-        [Test, null, [
-          [Test, null, 'bar'],
+    mount(document.body, ['ul', {}, [
+      ['li', {}, 'foo'],
+      [['li', {}, [
+        [Test, {}, [
+          [Test, {}, 'bar'],
         ]],
       ]]],
     ]]);
@@ -151,7 +135,7 @@ test.group('quick check', t => {
     await patch(div, old, old = [1, 2, 3, 4]);
     expect(plain(div.childNodes)).toEqual(['1', '2', '3', '4']);
 
-    await patch(div, old, old = [['x', null, ['y']]]);
+    await patch(div, old, old = [['x', {}, ['y']]]);
     expect(plain(div.childNodes)).toEqual([['y']]);
   });
 
@@ -161,36 +145,36 @@ test.group('quick check', t => {
     }
 
     mount(div, old = [
-      ['x', null, ['A']],
-      [Test, null, [
-        ['y', null, ['B']],
+      ['x', {}, ['A']],
+      [Test, {}, [
+        ['y', {}, ['B']],
       ]],
-      [Test, null, [
-        ['z', null, ['C']],
-        ['z', null, ['c']],
+      [Test, {}, [
+        ['z', {}, ['C']],
+        ['z', {}, ['c']],
       ]],
-      ['a', null, ['D']],
+      ['a', {}, ['D']],
     ]);
     expect(plain(div)).toEqual(['<x>A</x>', '<y>B</y>', '<z>C</z>', '<z>c</z>', '<a>D</a>']);
 
     await patch(div, old, old = [
-      ['y', null, ['F']],
+      ['y', {}, ['F']],
       '?',
-      [Test, null, [
-        ['x', null, ['E']],
-        ['x', null, ['e']],
+      [Test, {}, [
+        ['x', {}, ['E']],
+        ['x', {}, ['e']],
       ]],
     ]);
     expect(plain(div)).toEqual(['<y>F</y>', '?', '<x>E</x>', '<x>e</x>']);
 
     await patch(div, old, old = [
-      ['y', null, ['O']],
-      ['y', null, ['P']],
-      [Test, null, [
+      ['y', {}, ['O']],
+      ['y', {}, ['P']],
+      [Test, {}, [
       ]],
-      ['x', null, ['Q']],
-      [Test, null, [
-        ['z', null, ['R']],
+      ['x', {}, ['Q']],
+      [Test, {}, [
+        ['z', {}, ['R']],
       ]],
     ]);
     expect(plain(div)).toEqual(['<y>O</y>', '<y>P</y>', '<x>Q</x>', '<z>R</z>']);
@@ -206,8 +190,8 @@ test.group('fragments check', t => {
 
   test('should return an array of nodes', ({ expect }) => {
     div = mount(document.createElement('div'), [
-      ['span', null, ['foo']],
-      ['span', null, ['bar']],
+      ['span', {}, ['foo']],
+      ['span', {}, ['bar']],
     ]);
 
     expect(plain(div)).toEqual(['<span>foo</span>', '<span>bar</span>']);
@@ -215,14 +199,14 @@ test.group('fragments check', t => {
   });
 
   test('should render children indistinctly', ({ expect }) => {
-    expect(render(['p', null, 'hola', 'mundo']).outerHTML).toEqual('<p>holamundo</p>');
-    expect(render(['p', null, 'hola', 'mundo']).childNodes.length).toEqual(2);
+    expect(render(['p', {}, 'hola', 'mundo']).outerHTML).toEqual('<p>holamundo</p>');
+    expect(render(['p', {}, 'hola', 'mundo']).childNodes.length).toEqual(2);
 
-    expect(render(['p', null, ['hola', 'mundo']]).outerHTML).toEqual('<p>holamundo</p>');
-    expect(render(['p', null, ['hola', 'mundo']]).childNodes.length).toEqual(2);
+    expect(render(['p', {}, ['hola', 'mundo']]).outerHTML).toEqual('<p>holamundo</p>');
+    expect(render(['p', {}, ['hola', 'mundo']]).childNodes.length).toEqual(2);
 
-    expect(render(['p', null, [['hola', 'mundo']]]).outerHTML).toEqual('<p>holamundo</p>');
-    expect(render(['p', null, [['hola', 'mundo']]]).childNodes.length).toEqual(2);
+    expect(render(['p', {}, [['hola', 'mundo']]]).outerHTML).toEqual('<p>holamundo</p>');
+    expect(render(['p', {}, [['hola', 'mundo']]]).childNodes.length).toEqual(2);
   });
 
   test('should render fragments from factories', ({ expect }) => {
@@ -232,8 +216,8 @@ test.group('fragments check', t => {
     }, null];
 
     expect(mount(document.createElement('div'), [
-      ['p', null, [
-        ['span', null, ['value: ', value]],
+      ['p', {}, [
+        ['span', {}, ['value: ', value]],
       ]],
       children,
     ]).outerHTML).toEqual('<div><p><span>value: 42</span></p>OK: -1</div>');
@@ -247,24 +231,27 @@ test.group('fragments patching', t => {
   let tmp;
 
   test('should update single nodes', async ({ expect }) => {
+    const body = document.createElement('body');
+    div = document.createElement('div');
+    body.appendChild(div);
     el = div;
-    tmp = ['div', null];
-    await patch(el, tmp, tmp = ['div', null, ['c']]);
+    tmp = ['div', {}];
+    await patch(el, tmp, tmp = ['div', {}, ['c']]);
     expect(plain(el)).toEqual(['c']);
   });
 
   test('should append missing nodes', async ({ expect }) => {
-    await patch(el, tmp, tmp = ['div', null, ['c', 'd']]);
+    await patch(el, tmp, tmp = ['div', {}, ['c', 'd']]);
     expect(plain(el)).toEqual(['c', 'd']);
   });
 
   test('should unmount deleted nodes', async ({ expect }) => {
-    await patch(el, tmp, tmp = ['div', null, ['x']]);
+    await patch(el, tmp, tmp = ['div', {}, ['x']]);
     expect(plain(el)).toEqual(['x']);
   });
 
   test('should replace changed nodes', async ({ expect }) => {
-    el = await patch(el, tmp, tmp = ['a', null, ['x']]);
+    el = await patch(el, tmp, tmp = ['a', {}, ['x']]);
     expect(plain(el)).toEqual(['x']);
     expect(el.outerHTML).toEqual('<a>x</a>');
   });
@@ -273,7 +260,7 @@ test.group('fragments patching', t => {
     await patch(el, tmp, tmp = ['a', 'b', 'c']);
     expect(plain(el)).toEqual(['a', 'b', 'c']);
 
-    await patch(el, tmp, tmp = [['foo', null, ['bar']]]);
+    await patch(el, tmp, tmp = [['foo', {}, ['bar']]]);
     expect(plain(el)).toEqual(['<foo>bar</foo>']);
     expect(el.outerHTML).toEqual('<a><foo>bar</foo></a>');
   });
@@ -288,7 +275,7 @@ test.group('fragments patching', t => {
     await patch(el, tmp, tmp = ['baz']);
     expect(plain(el)).toEqual(['baz']);
 
-    el = await patch(el, tmp, tmp = ['baz', null, ['buzz']]);
+    el = await patch(el, tmp, tmp = ['baz', {}, ['buzz']]);
     expect(plain(el)).toEqual(['buzz']);
     expect(el.outerHTML).toEqual('<baz>buzz</baz>');
   });
