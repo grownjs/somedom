@@ -1,4 +1,4 @@
-export const RE_TAG_NAME = /^[A-Za-z-]+$/;
+export const RE_TAG_NAME = /^[0-9A-Za-z-]+$/;
 export const RE_XML_SPLIT = /(>)(<)(\/*)/g;
 export const RE_XML_CLOSE_END = /.+<\/\w[^>]*>$/;
 export const RE_XML_CLOSE_BEGIN = /^<\/\w/;
