@@ -32,7 +32,7 @@ export default class Fragment {
 
   static from(render, value) {
     const target = new Fragment();
-
+    value = value.filter(_ => _ !== null);
     target.vnode = value;
     value.forEach(vnode => {
       target.appendChild(render(vnode));
