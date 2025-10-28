@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const RE_TAG_NAME = /^[A-Za-z-]+$/;
+  const RE_TAG_NAME = /^[0-9A-Za-z-]+$/;
   const RE_XML_SPLIT = /(>)(<)(\/*)/g;
   const RE_XML_CLOSE_END = /.+<\/\w[^>]*>$/;
   const RE_XML_CLOSE_BEGIN = /^<\/\w/;
@@ -157,7 +157,7 @@
 
     static from(render, value) {
       const target = new Fragment();
-
+      value = value.filter(_ => _ !== null);
       target.vnode = value;
       value.forEach(vnode => {
         target.appendChild(render(vnode));
