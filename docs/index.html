@@ -852,6 +852,7 @@
   parseMarkup,
   markupAdapter,
   renderToString,
+  astToVnode,
   bindHelpers as $,
 } from 'somedom/ssr';</pre>
 
@@ -974,6 +975,21 @@ var ast = parseMarkup(test);
 
 console.log(ast);
 // [ { type: 'element', rawTagName: 'b', tagName: 'b', attributes: [], children: [ [Object] ] } ]</pre>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>astToVnode()</code></summary>
+      <dl>
+        <dt><code>astToVnode(ast)</code></dt>
+        <dd>
+          <p>Converts parsed AST back to vnodes.</p>
+          <pre class="highlight">var ast = parseMarkup('&lt;b&gt;Hello&lt;/b&gt;');
+var vnode = astToVnode(ast);
+
+console.log(vnode);
+// [ 'b', {}, 'Hello' ]</pre>
         </dd>
       </dl>
     </details>
