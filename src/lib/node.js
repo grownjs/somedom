@@ -12,6 +12,7 @@ import {
 } from './shared.js';
 
 import Fragment from './fragment.js';
+import Portal from './portal.js';
 
 export const canMove = () => typeof Element !== 'undefined' && 'moveBefore' in Element.prototype;
 
@@ -26,7 +27,10 @@ export function replaceElement(target, next, svg, cb) {
 
   const newNode = createElement(next, svg, cb);
 
-  if (Fragment.valid(newNode)) {
+  if (Portal.valid(newNode)) {
+    newNode.mount();
+    target.remove();
+  } else if (Fragment.valid(newNode)) {
     detach(target, newNode);
   } else {
     target.replaceWith(newNode);
@@ -37,7 +41,9 @@ export function replaceElement(target, next, svg, cb) {
 export function insertElement(target, next, svg, cb) {
   const newNode = createElement(next, svg, cb);
 
-  if (Fragment.valid(newNode)) {
+  if (Portal.valid(newNode)) {
+    newNode.mount();
+  } else if (Fragment.valid(newNode)) {
     newNode.mount(target);
   } else {
     target.appendChild(newNode);
@@ -69,6 +75,11 @@ export function createElement(vnode, svg, cb) {
 
   if (isFunction(vnode[0])) {
     return createElement(vnode[0](vnode[1], vnode.slice(2)), svg, cb);
+  }
+
+  if (vnode[0] === 'portal') {
+    const [, props, ...children] = vnode;
+    return Portal.from(v => createElement(v, svg, cb), children, props.target);
   }
 
   const isSvg = svg || vnode[0].indexOf('svg') === 0;

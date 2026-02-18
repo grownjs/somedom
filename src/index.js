@@ -20,6 +20,10 @@ export const h = (tag = 'div', attrs = null, ...children) => {
   return [tag, attrs || {}, children];
 };
 
+export const portal = (target, ...children) => {
+  return ['portal', { target }, children];
+};
+
 export const pre = (vnode, svg, cb = render) => {
   return cb(['pre', { class: 'highlight' }, format(cb(vnode, svg).outerHTML)], svg);
 };
@@ -58,3 +62,5 @@ export {
   applyClasses as classes,
   applyAnimations as animation,
 } from './lib/props.js';
+
+export { default as Portal } from './lib/portal.js';
