@@ -926,6 +926,84 @@ var html = await dom();</pre>
         </dd>
       </dl>
     </details>
+
+    <details>
+      <summary><code>d:</code> Directives</summary>
+      <dl>
+        <dt><code>d:show</code></dt>
+        <dd>
+          <p>Shows element when signal is true, hides when false.</p>
+          <small>output:</small>
+          <script>test((somedom, appendChild) => {
+            var { h, signal, render } = somedom;
+            var isVisible = signal(true);
+
+            var el = render(h('div', { 'd:show': isVisible }, 'I am visible'));
+            appendChild(el);
+          });</script>
+        </dd>
+        <dt><code>d:hide</code></dt>
+        <dd>
+          <p>Hides element when signal is true, shows when false (inverse of d:show).</p>
+          <small>output:</small>
+          <script>test((somedom, appendChild) => {
+            var { h, signal, render } = somedom;
+            var isHidden = signal(false);
+
+            var el = render(h('div', { 'd:hide': isHidden }, 'I am hidden'));
+            appendChild(el);
+          });</script>
+        </dd>
+        <dt><code>d:class</code></dt>
+        <dd>
+          <p>Toggles 'active' class based on signal value.</p>
+          <small>output:</small>
+          <script>test((somedom, appendChild) => {
+            var { h, signal, render } = somedom;
+            var isActive = signal(true);
+
+            var el = render(h('button', { 'd:class': isActive }, 'Click me'));
+            appendChild(el);
+          });</script>
+        </dd>
+        <dt><code>d:text</code></dt>
+        <dd>
+          <p>Binds element's textContent to signal value.</p>
+          <small>output:</small>
+          <script>test((somedom, appendChild) => {
+            var { h, signal, render } = somedom;
+            var greeting = signal('Hello');
+
+            var el = render(h('span', { 'd:text': greeting }));
+            appendChild(el);
+          });</script>
+        </dd>
+        <dt><code>d:html</code></dt>
+        <dd>
+          <p>Binds element's innerHTML to signal value.</p>
+          <small>output:</small>
+          <script>test((somedom, appendChild) => {
+            var { h, signal, render } = somedom;
+            var content = signal('<b>Bold</b>');
+
+            var el = render(h('div', { 'd:html': content }));
+            appendChild(el);
+          });</script>
+        </dd>
+        <dt><code>d:model</code></dt>
+        <dd>
+          <p>Two-way binding for form inputs.</p>
+          <small>output:</small>
+          <script>test((somedom, appendChild) => {
+            var { h, signal, render } = somedom;
+            var username = signal('');
+
+            var el = render(h('input', { 'd:model': username, type: 'text' }));
+            appendChild(el);
+          });</script>
+        </dd>
+      </dl>
+    </details>
   </main>
 </body>
 </html>
