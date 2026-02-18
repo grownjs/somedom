@@ -14,6 +14,7 @@ export default {
     } else if (process.env.JS_DOM) {
       env.jsdom = jsDOM;
     }
+
     enable(env);
     hasDOM = !!env.jsdom || !!env.happydom;
   },
