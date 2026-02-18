@@ -4,8 +4,48 @@ import {
 
 import {
   XLINK_PREFIX, XLINK_NS,
-  isDiff, isEmpty, isArray, isObject, isFunction, isScalar,
+  isDiff, isEmpty, isArray, isObject, isFunction, isScalar, isSignal,
 } from './shared.js';
+
+import { effect } from './signals.js';
+
+const SIGNAL_PREFIX = 'signal:';
+
+function isSignalProp(prop) {
+  return prop.indexOf(SIGNAL_PREFIX) === 0;
+}
+
+function bindSignalProp(target, prop, signal) {
+  const domProp = prop.slice(SIGNAL_PREFIX.length);
+
+  if (!target._signalDisposers) {
+    target._signalDisposers = new Map();
+  }
+
+  if (target._signalDisposers.has(prop)) {
+    target._signalDisposers.get(prop)();
+  }
+
+  const dispose = effect(() => {
+    const value = signal.value;
+    if (domProp === 'textContent') {
+      target.textContent = value;
+    } else if (domProp === 'innerHTML') {
+      target.innerHTML = value;
+    } else {
+      target[domProp] = value;
+    }
+  });
+
+  target._signalDisposers.set(prop, dispose);
+}
+
+function cleanupSignalProps(target) {
+  if (target._signalDisposers) {
+    target._signalDisposers.forEach(dispose => dispose());
+    target._signalDisposers.clear();
+  }
+}
 
 export function assignProps(target, attrs, svg, cb) {
   Object.entries(attrs).forEach(([prop, val]) => {
@@ -16,6 +56,15 @@ export function assignProps(target, attrs, svg, cb) {
       };
     } else if (prop === '@html') {
       target.innerHTML = val;
+    } else if (isSignalProp(prop)) {
+      if (val && typeof val === 'object' && 'value' in val) {
+        bindSignalProp(target, prop, val);
+        const originalTeardown = target.teardown;
+        target.teardown = () => {
+          cleanupSignalProps(target);
+          if (originalTeardown) originalTeardown();
+        };
+      }
     } else if (prop.indexOf('class:') === 0) {
       if (!val) {
         target.classList.remove(prop.substr(6));
@@ -26,6 +75,16 @@ export function assignProps(target, attrs, svg, cb) {
       target.style[camelCase(prop.substr(6))] = val;
     } else {
       const name = prop.replace('@', 'data-').replace(XLINK_PREFIX, '');
+
+      if (isSignal(val)) {
+        bindSignalProp(target, 'signal:' + name, val);
+        const originalTeardown = target.teardown;
+        target.teardown = () => {
+          cleanupSignalProps(target);
+          if (originalTeardown) originalTeardown();
+        };
+        return;
+      }
 
       // eslint-disable-next-line no-nested-ternary
       let value = val !== true ? val : (name.includes('-') ? true : name);
@@ -66,6 +125,16 @@ export function updateProps(target, prev, next, svg, cb) {
     return all;
   }, {});
 
-  if (changed) assignProps(target, props, svg, cb);
+  if (changed) {
+    Object.keys(prev).forEach(k => {
+      if (isSignalProp(k) && !(k in next)) {
+        if (target._signalDisposers && target._signalDisposers.has(k)) {
+          target._signalDisposers.get(k)();
+          target._signalDisposers.delete(k);
+        }
+      }
+    });
+    assignProps(target, props, svg, cb);
+  }
   return changed;
 }

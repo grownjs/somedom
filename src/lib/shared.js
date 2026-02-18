@@ -32,6 +32,7 @@ export const isNot = value => typeof value === 'undefined' || value === null;
 export const isPlain = value => value !== null && Object.prototype.toString.call(value) === '[object Object]';
 export const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
 export const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
+export const isSignal = value => value !== null && typeof value === 'object' && 'value' in value;
 
 export function isTag(value) {
   return RE_TAG_NAME.test(value);

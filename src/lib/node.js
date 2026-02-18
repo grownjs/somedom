@@ -8,11 +8,24 @@ import {
 
 import {
   toArray, toNodes, toFragment, isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isDiff, isNot,
-  getKey, getKeyFromNode,
+  getKey, getKeyFromNode, isSignal,
 } from './shared.js';
 
 import Fragment from './fragment.js';
 import Portal from './portal.js';
+
+import { effect } from './signals.js';
+
+function createSignalTextNode(signal) {
+  const textNode = document.createTextNode(String(signal.peek()));
+  
+  const dispose = effect(() => {
+    textNode.nodeValue = String(signal.value);
+  });
+  
+  textNode._signalDispose = dispose;
+  return textNode;
+}
 
 export const canMove = () => typeof Element !== 'undefined' && 'moveBefore' in Element.prototype;
 
@@ -57,6 +70,9 @@ export function createElement(vnode, svg, cb) {
   if (!isNode(vnode)) {
     if (isArray(vnode)) {
       return Fragment.from(v => createElement(v, svg, cb), vnode);
+    }
+    if (isSignal(vnode)) {
+      return createSignalTextNode(vnode);
     }
     return (isScalar(vnode) && document.createTextNode(String(vnode))) || vnode;
   }
@@ -110,6 +126,21 @@ export function createElement(vnode, svg, cb) {
   children.forEach(sub => {
     mountElement(el, sub, isSvg, cb);
   });
+
+  const childNodes = el.childNodes;
+  if (childNodes.length > 0) {
+    const originalTeardown = el.teardown;
+    el.teardown = () => {
+      for (let i = 0; i < childNodes.length; i++) {
+        const child = childNodes[i];
+        if (child._signalDispose) {
+          child._signalDispose();
+        }
+      }
+      if (originalTeardown) originalTeardown();
+    };
+  }
+
   return el;
 }
 

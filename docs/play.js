@@ -318,6 +318,217 @@
   const applyClasses = value => classes(value).join(' ');
   const applyAnimations = (value, name, el) => { el[name] = nextProps(el, classes(value)); };
 
+  let currentEffect = null;
+  let batchDepth = 0;
+  let pendingEffects = new Set();
+
+  function signal(initialValue, options) {
+    let value = initialValue;
+    const subscribers = new Set();
+
+    const read = () => {
+      if (currentEffect && !subscribers.has(currentEffect)) {
+        subscribers.add(currentEffect);
+        currentEffect._deps.add(subscribers);
+      }
+      return value;
+    };
+
+    const write = (newValue) => {
+      if (value !== newValue) {
+        value = newValue;
+        if (batchDepth > 0) {
+          subscribers.forEach(fn => pendingEffects.add(fn));
+        } else {
+          subscribers.forEach(fn => fn());
+        }
+      }
+    };
+
+    const sig = {
+      get value() { return read(); },
+      set value(v) { write(v); },
+      peek() { return value; },
+      subscribe(fn) {
+        if (subscribers.size === 0 && options?.onSubscribe) options.onSubscribe();
+        subscribers.add(fn);
+        return () => {
+          subscribers.delete(fn);
+          if (subscribers.size === 0 && options?.onUnsubscribe) options.onUnsubscribe();
+        };
+      },
+    };
+
+    return sig;
+  }
+
+  function computed(fn) {
+    let cachedValue;
+    let dirty = true;
+    const subscribers = new Set();
+    let deps = [];
+
+    const evaluate = () => {
+      if (!dirty) return cachedValue;
+
+      const prevEffect = currentEffect;
+      currentEffect = run;
+
+      deps.forEach(dep => dep.delete(run));
+      deps = [];
+
+      try {
+        cachedValue = fn();
+      } finally {
+        currentEffect = prevEffect;
+      }
+
+      dirty = false;
+      return cachedValue;
+    };
+
+    function run() {
+      if (currentEffect && !subscribers.has(currentEffect)) {
+        subscribers.add(currentEffect);
+        currentEffect._deps.add(subscribers);
+      }
+      return evaluate();
+    }
+
+    const notify = () => {
+      dirty = true;
+      if (batchDepth > 0) {
+        subscribers.forEach(fn => pendingEffects.add(fn));
+      } else {
+        subscribers.forEach(fn => fn());
+      }
+    };
+
+    run._deps = new Set();
+    
+    const originalEffect = currentEffect;
+    currentEffect = run;
+    try {
+      cachedValue = fn();
+    } finally {
+      deps = [...run._deps];
+      deps.forEach(dep => dep.add(notify));
+      currentEffect = originalEffect;
+    }
+    dirty = false;
+
+    return {
+      get value() { return run(); },
+      peek() {
+        if (dirty) evaluate();
+        return cachedValue;
+      },
+      subscribe(fn) {
+        subscribers.add(fn);
+        return () => subscribers.delete(fn);
+      },
+    };
+  }
+
+  function effect(fn) {
+    let cleanup = null;
+    let disposed = false;
+    const deps = new Set();
+
+    function run() {
+      if (disposed) return;
+
+      if (cleanup) {
+        cleanup();
+        cleanup = null;
+      }
+
+      deps.forEach(dep => dep.delete(run));
+      deps.clear();
+
+      const prevEffect = currentEffect;
+      currentEffect = run;
+      run._deps = deps;
+
+      try {
+        cleanup = fn();
+      } finally {
+        currentEffect = prevEffect;
+      }
+    }
+
+    run._deps = deps;
+    run();
+
+    return function dispose() {
+      disposed = true;
+      if (cleanup) cleanup();
+      deps.forEach(dep => dep.delete(run));
+    };
+  }
+
+  function batch(fn) {
+    batchDepth++;
+    try {
+      fn();
+    } finally {
+      batchDepth--;
+      if (batchDepth === 0 && pendingEffects.size > 0) {
+        const effects = [...pendingEffects];
+        pendingEffects.clear();
+        effects.forEach(fn => fn());
+      }
+    }
+  }
+
+  function untracked(fn) {
+    const prev = currentEffect;
+    currentEffect = null;
+    try {
+      return fn();
+    } finally {
+      currentEffect = prev;
+    }
+  }
+
+  const SIGNAL_PREFIX = 'signal:';
+
+  function isSignalProp(prop) {
+    return prop.indexOf(SIGNAL_PREFIX) === 0;
+  }
+
+  function bindSignalProp(target, prop, signal) {
+    const domProp = prop.substr(SIGNAL_PREFIX);
+
+    if (!target._signalDisposers) {
+      target._signalDisposers = new Map();
+    }
+
+    if (target._signalDisposers.has(prop)) {
+      target._signalDisposers.get(prop)();
+    }
+
+    const dispose = effect(() => {
+      const value = signal.value;
+      if (domProp === 'textContent') {
+        target.textContent = value;
+      } else if (domProp === 'innerHTML') {
+        target.innerHTML = value;
+      } else {
+        target[domProp] = value;
+      }
+    });
+
+    target._signalDisposers.set(prop, dispose);
+  }
+
+  function cleanupSignalProps(target) {
+    if (target._signalDisposers) {
+      target._signalDisposers.forEach(dispose => dispose());
+      target._signalDisposers.clear();
+    }
+  }
+
   function assignProps(target, attrs, svg, cb) {
     Object.entries(attrs).forEach(([prop, val]) => {
       if (prop === 'key' || prop === 'open') return;
@@ -327,6 +538,15 @@
         };
       } else if (prop === '@html') {
         target.innerHTML = val;
+      } else if (isSignalProp(prop)) {
+        if (val && typeof val === 'object' && 'value' in val) {
+          bindSignalProp(target, prop, val);
+          const originalTeardown = target.teardown;
+          target.teardown = () => {
+            cleanupSignalProps(target);
+            if (originalTeardown) originalTeardown();
+          };
+        }
       } else if (prop.indexOf('class:') === 0) {
         if (!val) {
           target.classList.remove(prop.substr(6));
@@ -377,8 +597,58 @@
       return all;
     }, {});
 
-    if (changed) assignProps(target, props, svg, cb);
+    if (changed) {
+      Object.keys(prev).forEach(k => {
+        if (isSignalProp(k) && !(k in next)) {
+          if (target._signalDisposers && target._signalDisposers.has(k)) {
+            target._signalDisposers.get(k)();
+            target._signalDisposers.delete(k);
+          }
+        }
+      });
+      assignProps(target, props, svg, cb);
+    }
     return changed;
+  }
+
+  class Portal {
+    constructor(target) {
+      this.target = isString(target) ? document.querySelector(target) : target;
+      this.childNodes = [];
+      this.nodeType = 11;
+    }
+
+    appendChild(node) {
+      this.childNodes.push(node);
+    }
+
+    mount() {
+      if (!this.target) return;
+      this.childNodes.forEach(node => {
+        this.target.appendChild(node);
+      });
+    }
+
+    unmount() {
+      this.childNodes.forEach(node => {
+        if (node.parentNode) {
+          node.parentNode.removeChild(node);
+        }
+      });
+      this.childNodes = [];
+    }
+
+    static valid(value) {
+      return value instanceof Portal;
+    }
+
+    static from(render, children, target) {
+      const portal = new Portal(target);
+      children.forEach(vnode => {
+        portal.appendChild(render(vnode));
+      });
+      return portal;
+    }
   }
 
   const canMove = () => typeof Element !== 'undefined' && 'moveBefore' in Element.prototype;
@@ -394,7 +664,10 @@
 
     const newNode = createElement(next, svg, cb);
 
-    if (Fragment.valid(newNode)) {
+    if (Portal.valid(newNode)) {
+      newNode.mount();
+      target.remove();
+    } else if (Fragment.valid(newNode)) {
       detach(target, newNode);
     } else {
       target.replaceWith(newNode);
@@ -405,7 +678,9 @@
   function insertElement(target, next, svg, cb) {
     const newNode = createElement(next, svg, cb);
 
-    if (Fragment.valid(newNode)) {
+    if (Portal.valid(newNode)) {
+      newNode.mount();
+    } else if (Fragment.valid(newNode)) {
       newNode.mount(target);
     } else {
       target.appendChild(newNode);
@@ -437,6 +712,11 @@
 
     if (isFunction(vnode[0])) {
       return createElement(vnode[0](vnode[1], vnode.slice(2)), svg, cb);
+    }
+
+    if (vnode[0] === 'portal') {
+      const [, props, ...children] = vnode;
+      return Portal.from(v => createElement(v, svg, cb), children, props.target);
     }
 
     const isSvg = svg || vnode[0].indexOf('svg') === 0;
@@ -704,6 +984,10 @@
     return [tag, attrs || {}, children];
   };
 
+  const portal = (target, ...children) => {
+    return ['portal', { target }, children];
+  };
+
   const pre = (vnode, svg, cb = createElement) => {
     return cb(['pre', { class: 'highlight' }, format(cb(vnode, svg).outerHTML)], svg);
   };
@@ -730,6 +1014,7 @@
   var somedom = /*#__PURE__*/Object.freeze({
     __proto__: null,
     h: h,
+    portal: portal,
     pre: pre,
     bind: bind,
     listeners: listeners,
@@ -741,6 +1026,12 @@
     styles: applyStyles,
     classes: applyClasses,
     animation: applyAnimations,
+    Portal: Portal,
+    signal: signal,
+    computed: computed,
+    effect: effect,
+    batch: batch,
+    untracked: untracked,
     camelCase: camelCase,
     dashCase: dashCase,
     filter: filter,
