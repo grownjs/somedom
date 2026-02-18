@@ -149,4 +149,51 @@ test.group('signal DOM binding', () => {
     
     unmount(el);
   });
+
+  test('should handle signal as child', async ({ expect }) => {
+    const name = signal('World');
+    
+    const vnode = ['div', {}, 'Hello ', name, '!'];
+    const el = render(vnode);
+    mount(document.body, el);
+    
+    expect(el.textContent).toBe('Hello World!');
+    
+    name.value = 'John';
+    expect(el.textContent).toBe('Hello John!');
+    
+    unmount(el);
+  });
+
+  test('should handle signal in attribute value', async ({ expect }) => {
+    const title = signal('Initial');
+    
+    const vnode = ['div', { title: title }, 'Hover me'];
+    const el = render(vnode);
+    mount(document.body, el);
+    
+    expect(el.getAttribute('title').toBe('Initial'));
+    
+    title.value = 'Changed';
+    expect(el.getAttribute('title').toBe('Changed');
+    
+    unmount(el);
+  });
+
+  test('should handle computed in attribute value', async ({ expect }) => {
+    const first = signal('Hello');
+    const last = signal('World');
+    const fullName = computed(() => first.value + ' ' + last.value);
+    
+    const vnode = ['div', { title: fullName }, 'Hover me'];
+    const el = render(vnode);
+    mount(document.body, el);
+    
+    expect(el.getAttribute('title').toBe('Hello World'));
+    
+    first.value = 'Hi';
+    expect(el.getAttribute('title').toBe('Hi World');
+    
+    unmount(el);
+  });
 });
