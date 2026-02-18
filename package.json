@@ -30,7 +30,7 @@
     "test:e2e": "npm run test:run -- -a 'npm run serve' tests/e2e/cases",
     "test:ci": "npm run coverage:unit && npm run report -- -r ${LCOV_OUTPUT:-lcov}",
     "test:ssr": "NODE_ENV=test FORCE_COLOR=1 node tests/main.js",
-    "test": "npm run test:ssr && USE_JSDOM=true npm run test:ssr && npm run test:e2e",
+    "test": "npm run test:ssr && JS_DOM=true npm run test:ssr && npm run test:e2e",
     "coverage": "c8 --x '**/tests/**' -x '**/*.spec.js' -x 'src/ssr/himalaya/**'",
     "coverage:unit": "npm run coverage -- npm run test:ssr",
     "report": "c8 report",

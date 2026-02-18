@@ -8,8 +8,13 @@ export function signal(initialValue, options) {
 
   const read = () => {
     if (currentEffect && !subscribers.has(currentEffect)) {
+      const wasEmpty = subscribers.size === 0;
       subscribers.add(currentEffect);
       currentEffect._deps.add(subscribers);
+      if (currentEffect._signals) {
+        currentEffect._signals.add({ subscribers, options, wasEmpty });
+      }
+      if (wasEmpty && options?.onSubscribe) options.onSubscribe();
     }
     return value;
   };
@@ -114,8 +119,9 @@ export function computed(fn) {
 
 export function effect(fn) {
   let cleanup = null;
-  let disposed = false;
+  const disposed = false;
   const deps = new Set();
+  const signals = new Set();
 
   function run() {
     if (disposed) return;
@@ -127,10 +133,13 @@ export function effect(fn) {
 
     deps.forEach(dep => dep.delete(run));
     deps.clear();
+    signals.forEach(sig => sig.subscribers.delete(run));
+    signals.clear();
 
     const prevEffect = currentEffect;
     currentEffect = run;
     run._deps = deps;
+    run._signals = signals;
 
     try {
       cleanup = fn();
@@ -140,12 +149,18 @@ export function effect(fn) {
   }
 
   run._deps = deps;
+  run._signals = signals;
   run();
 
   return function dispose() {
-    disposed = true;
     if (cleanup) cleanup();
     deps.forEach(dep => dep.delete(run));
+    signals.forEach(sig => {
+      sig.subscribers.delete(run);
+      if (sig.subscribers.size === 0 && sig.wasEmpty && sig.options?.onUnsubscribe) {
+        sig.options.onUnsubscribe();
+      }
+    });
   };
 }
 

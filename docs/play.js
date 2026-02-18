@@ -35,7 +35,7 @@
   const isPlain = value => value !== null && Object.prototype.toString.call(value) === '[object Object]';
   const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
   const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
-  const isSignal = value => value !== null && typeof value === 'object' && 'value' in value;
+  const isSignal = value => value !== null && typeof value === 'object' && 'value' in value && typeof value.peek === 'function';
 
   function isTag(value) {
     return RE_TAG_NAME.test(value);
@@ -329,8 +329,13 @@
 
     const read = () => {
       if (currentEffect && !subscribers.has(currentEffect)) {
+        const wasEmpty = subscribers.size === 0;
         subscribers.add(currentEffect);
         currentEffect._deps.add(subscribers);
+        if (currentEffect._signals) {
+          currentEffect._signals.add({ subscribers, options, wasEmpty });
+        }
+        if (wasEmpty && options?.onSubscribe) options.onSubscribe();
       }
       return value;
     };
@@ -435,11 +440,10 @@
 
   function effect(fn) {
     let cleanup = null;
-    let disposed = false;
     const deps = new Set();
+    const signals = new Set();
 
     function run() {
-      if (disposed) return;
 
       if (cleanup) {
         cleanup();
@@ -448,10 +452,13 @@
 
       deps.forEach(dep => dep.delete(run));
       deps.clear();
+      signals.forEach(sig => sig.subscribers.delete(run));
+      signals.clear();
 
       const prevEffect = currentEffect;
       currentEffect = run;
       run._deps = deps;
+      run._signals = signals;
 
       try {
         cleanup = fn();
@@ -461,12 +468,18 @@
     }
 
     run._deps = deps;
+    run._signals = signals;
     run();
 
     return function dispose() {
-      disposed = true;
       if (cleanup) cleanup();
       deps.forEach(dep => dep.delete(run));
+      signals.forEach(sig => {
+        sig.subscribers.delete(run);
+        if (sig.subscribers.size === 0 && sig.wasEmpty && sig.options?.onUnsubscribe) {
+          sig.options.onUnsubscribe();
+        }
+      });
     };
   }
 
@@ -620,6 +633,8 @@
         target.textContent = value;
       } else if (domProp === 'innerHTML') {
         target.innerHTML = value;
+      } else if (domProp.startsWith('style.')) {
+        target.style[domProp.slice(6)] = value;
       } else {
         target[domProp] = value;
       }

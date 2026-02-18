@@ -135,6 +135,8 @@ function bindSignalProp(target, prop, signal) {
       target.textContent = value;
     } else if (domProp === 'innerHTML') {
       target.innerHTML = value;
+    } else if (domProp.startsWith('style.')) {
+      target.style[domProp.slice(6)] = value;
     } else {
       target[domProp] = value;
     }
