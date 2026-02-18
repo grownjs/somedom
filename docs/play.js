@@ -445,7 +445,7 @@
 
     function run() {
 
-      if (cleanup) {
+      if (typeof cleanup === 'function') {
         cleanup();
         cleanup = null;
       }
@@ -472,7 +472,7 @@
     run();
 
     return function dispose() {
-      if (cleanup) cleanup();
+      if (typeof cleanup === 'function') cleanup();
       deps.forEach(dep => dep.delete(run));
       signals.forEach(sig => {
         sig.subscribers.delete(run);

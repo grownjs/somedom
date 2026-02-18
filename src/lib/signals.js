@@ -126,7 +126,7 @@ export function effect(fn) {
   function run() {
     if (disposed) return;
 
-    if (cleanup) {
+    if (typeof cleanup === 'function') {
       cleanup();
       cleanup = null;
     }
@@ -153,7 +153,7 @@ export function effect(fn) {
   run();
 
   return function dispose() {
-    if (cleanup) cleanup();
+    if (typeof cleanup === 'function') cleanup();
     deps.forEach(dep => dep.delete(run));
     signals.forEach(sig => {
       sig.subscribers.delete(run);
