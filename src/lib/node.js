@@ -8,9 +8,12 @@ import {
 
 import {
   toArray, toNodes, toFragment, isFunction, isScalar, isArray, isNode, isEmpty, isBlock, isDiff, isNot,
+  getKey, getKeyFromNode,
 } from './shared.js';
 
 import Fragment from './fragment.js';
+
+export const canMove = () => typeof Element !== 'undefined' && 'moveBefore' in Element.prototype;
 
 export function destroyElement(target, wait = cb => cb()) {
   const rm = () => target && target.remove();
@@ -74,6 +77,10 @@ export function createElement(vnode, svg, cb) {
   let el = isSvg
     ? document.createElementNS('http://www.w3.org/2000/svg', tag)
     : document.createElement(tag);
+
+  if (props && props.key) {
+    el.setAttribute('data-key', props.key);
+  }
 
   if (isFunction(cb)) {
     el = cb(el, tag, props, children) || el;
@@ -149,6 +156,17 @@ export async function upgradeElements(target, vnode, svg, cb) {
   const next = toArray(vnode);
   const c = Math.max(target.childNodes.length, next.length);
 
+  const oldChildren = Array.from(target.childNodes);
+  const oldByKey = new Map();
+  const usedKeys = new Set();
+
+  for (let i = 0; i < oldChildren.length; i++) {
+    const key = getKeyFromNode(oldChildren[i]);
+    if (key) {
+      oldByKey.set(key, { el: oldChildren[i], index: i });
+    }
+  }
+
   let off = 0;
   let old;
   let el;
@@ -161,28 +179,65 @@ export async function upgradeElements(target, vnode, svg, cb) {
     }
 
     const y = next.shift();
+    const yKey = getKey(y);
 
     if (isNot(y)) {
       tasks.push({ rm: el });
       old = null;
     } else if (isNot(x)) {
-      tasks.push({ add: y });
-      off++;
+      if (yKey && oldByKey.has(yKey) && !usedKeys.has(yKey)) {
+        const oldEl = oldByKey.get(yKey).el;
+        const oldIdx = oldByKey.get(yKey).index;
+        usedKeys.add(yKey);
+        if (oldIdx < off) {
+          tasks.push({ move: oldEl, target: el });
+          off++;
+        } else {
+          tasks.push({ patch: toNodes(oldEl), with: y, target: oldEl });
+          usedKeys.add(yKey);
+        }
+      } else {
+        tasks.push({ add: y });
+        off++;
+      }
     } else {
-      tasks.push({ patch: x, with: y, target: el });
-      off++;
+      const xKey = getKeyFromNode(el);
+      if (yKey && yKey === xKey && !usedKeys.has(yKey)) {
+        tasks.push({ patch: x, with: y, target: el });
+        usedKeys.add(yKey);
+        off++;
+      } else if (yKey && oldByKey.has(yKey) && !usedKeys.has(yKey)) {
+        const oldEl = oldByKey.get(yKey).el;
+        tasks.push({ move: oldEl, target: el });
+        usedKeys.add(yKey);
+        off++;
+      } else {
+        tasks.push({ patch: x, with: y, target: el });
+        off++;
+      }
     }
   }
 
   if (off !== target.childNodes.length) {
     for (let k = target.childNodes.length; k > off; k--) {
-      tasks.push({ rm: target.childNodes[k] });
+      const child = target.childNodes[k - 1];
+      const key = getKeyFromNode(child);
+      if (!key || !usedKeys.has(key)) {
+        tasks.push({ rm: child });
+      }
     }
   }
 
   for (const task of tasks) {
     if (task.rm) await destroyElement(task.rm);
     if (!isNot(task.add)) insertElement(target, task.add, svg, cb);
+    if (task.move) {
+      if (canMove()) {
+        target.moveBefore(task.move, task.target);
+      } else {
+        target.insertBefore(task.move, task.target);
+      }
+    }
     if (!isNot(task.patch)) await patchNode(task.target, task.patch, task.with, svg, cb);
   }
 }

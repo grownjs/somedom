@@ -39,7 +39,7 @@
     "prebuild": "node prebuild.js",
     "precoverage": "npm run lint",
     "prepublishOnly": "NODE_ENV=production npm run build",
-    "test:run": "BASE_URL=http://localhost:8080 testcafe --color ${BROWSER:-chrome:headless}",
+    "test:run": "BASE_URL=http://localhost:8080 npx testcafe --color ${BROWSER:-chrome:headless}",
     "codecov": "codecov --file=coverage/lcov.info -e TRAVIS_NODE_VERSION"
   },
   "author": "Alvaro Cabrera <pateketrueke@gmail.com>",
@@ -80,7 +80,6 @@
     "serialize-javascript": ">=2.1.1",
     "set-value": ">=2.0.1",
     "sirv-cli": "^3.0.1",
-    "testcafe": "^3.7.2",
     "testdouble": "^3.18.0",
     "tough-cookie": ">=2.3.3",
     "uglify-js": ">=2.6.0",

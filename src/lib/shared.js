@@ -56,6 +56,20 @@ export function isEmpty(value) {
 export const isBlock = value => isArray(value) && !isNode(value);
 export const isEven = value => value % 2 === 0;
 
+export function getKey(vnode) {
+  if (isNode(vnode) && isPlain(vnode[1])) {
+    return vnode[1].key;
+  }
+  return undefined;
+}
+
+export function getKeyFromNode(node) {
+  if (node.nodeType === 1) {
+    return node.getAttribute('data-key') || undefined;
+  }
+  return undefined;
+}
+
 export function isDiff(prev, next) {
   if (typeof prev !== typeof next) return true;
   if (isArray(prev)) {
