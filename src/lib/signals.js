@@ -1,6 +1,6 @@
 let currentEffect = null;
 let batchDepth = 0;
-let pendingEffects = new Set();
+const pendingEffects = new Set();
 
 export function signal(initialValue, options) {
   let value = initialValue;
@@ -14,14 +14,14 @@ export function signal(initialValue, options) {
     return value;
   };
 
-  const write = (newValue) => {
+  const write = newValue => {
     if (value !== newValue) {
       value = newValue;
       const subs = [...subscribers];
       if (batchDepth > 0) {
-        subs.forEach(fn => pendingEffects.add(fn));
+        subs.forEach(cb => pendingEffects.add(cb));
       } else {
-        subs.forEach(fn => fn());
+        subs.forEach(cb => cb());
       }
     }
   };
@@ -30,11 +30,11 @@ export function signal(initialValue, options) {
     get value() { return read(); },
     set value(v) { write(v); },
     peek() { return value; },
-    subscribe(fn) {
+    subscribe(cb) {
       if (subscribers.size === 0 && options?.onSubscribe) options.onSubscribe();
-      subscribers.add(fn);
+      subscribers.add(cb);
       return () => {
-        subscribers.delete(fn);
+        subscribers.delete(cb);
         if (subscribers.size === 0 && options?.onUnsubscribe) options.onUnsubscribe();
       };
     },
@@ -80,14 +80,14 @@ export function computed(fn) {
     dirty = true;
     const subs = [...subscribers];
     if (batchDepth > 0) {
-      subs.forEach(fn => pendingEffects.add(fn));
+      subs.forEach(cb => pendingEffects.add(cb));
     } else {
-      subs.forEach(fn => fn());
+      subs.forEach(cb => cb());
     }
   };
 
   run._deps = new Set();
-  
+
   const originalEffect = currentEffect;
   currentEffect = run;
   try {
@@ -105,9 +105,9 @@ export function computed(fn) {
       if (dirty) evaluate();
       return cachedValue;
     },
-    subscribe(fn) {
-      subscribers.add(fn);
-      return () => subscribers.delete(fn);
+    subscribe(cb) {
+      subscribers.add(cb);
+      return () => subscribers.delete(cb);
     },
   };
 }
@@ -158,7 +158,7 @@ export function batch(fn) {
     if (batchDepth === 0 && pendingEffects.size > 0) {
       const effects = [...pendingEffects];
       pendingEffects.clear();
-      effects.forEach(fn => fn());
+      effects.forEach(cb => cb());
     }
   }
 }

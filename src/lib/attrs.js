@@ -91,7 +91,7 @@ function bindDirective(target, prop, val) {
 
     case 'click-outside': {
       const callback = val;
-      const handler = (e) => {
+      const handler = e => {
         if (!target.contains(e.target)) {
           callback(e);
         }
@@ -110,7 +110,7 @@ function bindDirective(target, prop, val) {
 
 function cleanupDirectives(target) {
   if (target._directiveDisposers) {
-    target._directiveDisposers.forEach((dispose) => {
+    target._directiveDisposers.forEach(dispose => {
       if (dispose._cleanup) dispose._cleanup();
       dispose();
     });
@@ -189,7 +189,7 @@ export function assignProps(target, attrs, svg, cb) {
       const name = prop.replace('@', 'data-').replace(XLINK_PREFIX, '');
 
       if (isSignal(val)) {
-        bindSignalProp(target, 'signal:' + name, val);
+        bindSignalProp(target, `signal:${name}`, val);
         const originalTeardown = target.teardown;
         target.teardown = () => {
           cleanupSignalProps(target);

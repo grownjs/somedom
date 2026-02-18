@@ -18,11 +18,11 @@ import { effect } from './signals.js';
 
 function createSignalTextNode(signal) {
   const textNode = document.createTextNode(String(signal.peek()));
-  
+
   const dispose = effect(() => {
     textNode.nodeValue = String(signal.value);
   });
-  
+
   textNode._signalDispose = dispose;
   return textNode;
 }

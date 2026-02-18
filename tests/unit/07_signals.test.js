@@ -1,6 +1,8 @@
 import { test } from '@japa/runner';
 
-import { signal, computed, effect, batch, untracked } from '../../src/lib/signals.js';
+import {
+  signal, computed, effect, batch, untracked,
+} from '../../src/lib/signals.js';
 
 test.group('signal', () => {
   test('should create a signal with initial value', ({ expect }) => {
@@ -24,6 +26,7 @@ test.group('signal', () => {
     let calls = 0;
 
     effect(() => {
+      // eslint-disable-next-line no-unused-expressions
       count.value;
       calls++;
     });
@@ -38,6 +41,7 @@ test.group('signal', () => {
     let calls = 0;
 
     effect(() => {
+      // eslint-disable-next-line no-unused-expressions
       count.value;
       calls++;
     });
@@ -143,6 +147,7 @@ test.group('effect', () => {
     let calls = 0;
 
     effect(() => {
+      // eslint-disable-next-line no-unused-expressions
       count.value;
       calls++;
     });
@@ -168,6 +173,7 @@ test.group('effect', () => {
     let calls = 0;
 
     const dispose = effect(() => {
+      // eslint-disable-next-line no-unused-expressions
       count.value;
       calls++;
     });
@@ -183,7 +189,8 @@ test.group('effect', () => {
     let cleanups = 0;
 
     effect(() => {
-      count.value;
+      // eslint-disable-next-line no-unused-expressions, no-void
+      void count.value;
       return () => {
         cleanups++;
       };
@@ -230,8 +237,10 @@ test.group('batch', () => {
     let calls = 0;
 
     effect(() => {
-      a.value;
-      b.value;
+      // eslint-disable-next-line no-unused-expressions, no-void
+      void a.value;
+      // eslint-disable-next-line no-unused-expressions, no-void
+      void b.value;
       calls++;
     });
 
@@ -252,6 +261,7 @@ test.group('batch', () => {
     let calls = 0;
 
     effect(() => {
+      // eslint-disable-next-line no-unused-expressions
       count.value;
       calls++;
     });

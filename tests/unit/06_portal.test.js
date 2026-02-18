@@ -69,7 +69,7 @@ test.group('Portal', t => {
     const p = Portal.from(
       v => createElement(v),
       [['span', {}, 'One'], ['span', {}, 'Two']],
-      target
+      target,
     );
     p.mount();
 

@@ -1,7 +1,7 @@
 import { test } from '@japa/runner';
 
-import { signal, computed } from '../../src/lib/signals.js';
-import { createElement, destroyElement, updateElement, mountElement as mount } from '../../src/lib/node.js';
+import { signal } from '../../src/lib/signals.js';
+import { mountElement as mount } from '../../src/lib/node.js';
 import doc from './fixtures/env.js';
 
 test.group('d: Directives', t => {

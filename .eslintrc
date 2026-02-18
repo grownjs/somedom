@@ -6,7 +6,8 @@
   },
   "extends": "airbnb-base",
   "parserOptions": {
-    "sourceType": "module"
+    "sourceType": "module",
+    "ecmaVersion": 2020
   },
   "rules" : {
     "max-len": ["error", {

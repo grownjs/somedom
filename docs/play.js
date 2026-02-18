@@ -321,7 +321,7 @@
 
   let currentEffect = null;
   let batchDepth = 0;
-  let pendingEffects = new Set();
+  const pendingEffects = new Set();
 
   function signal(initialValue, options) {
     let value = initialValue;
@@ -335,14 +335,14 @@
       return value;
     };
 
-    const write = (newValue) => {
+    const write = newValue => {
       if (value !== newValue) {
         value = newValue;
         const subs = [...subscribers];
         if (batchDepth > 0) {
-          subs.forEach(fn => pendingEffects.add(fn));
+          subs.forEach(cb => pendingEffects.add(cb));
         } else {
-          subs.forEach(fn => fn());
+          subs.forEach(cb => cb());
         }
       }
     };
@@ -351,11 +351,11 @@
       get value() { return read(); },
       set value(v) { write(v); },
       peek() { return value; },
-      subscribe(fn) {
+      subscribe(cb) {
         if (subscribers.size === 0 && options?.onSubscribe) options.onSubscribe();
-        subscribers.add(fn);
+        subscribers.add(cb);
         return () => {
-          subscribers.delete(fn);
+          subscribers.delete(cb);
           if (subscribers.size === 0 && options?.onUnsubscribe) options.onUnsubscribe();
         };
       },
@@ -401,14 +401,14 @@
       dirty = true;
       const subs = [...subscribers];
       if (batchDepth > 0) {
-        subs.forEach(fn => pendingEffects.add(fn));
+        subs.forEach(cb => pendingEffects.add(cb));
       } else {
-        subs.forEach(fn => fn());
+        subs.forEach(cb => cb());
       }
     };
 
     run._deps = new Set();
-    
+
     const originalEffect = currentEffect;
     currentEffect = run;
     try {
@@ -426,9 +426,9 @@
         if (dirty) evaluate();
         return cachedValue;
       },
-      subscribe(fn) {
-        subscribers.add(fn);
-        return () => subscribers.delete(fn);
+      subscribe(cb) {
+        subscribers.add(cb);
+        return () => subscribers.delete(cb);
       },
     };
   }
@@ -479,7 +479,7 @@
       if (batchDepth === 0 && pendingEffects.size > 0) {
         const effects = [...pendingEffects];
         pendingEffects.clear();
-        effects.forEach(fn => fn());
+        effects.forEach(cb => cb());
       }
     }
   }
@@ -576,7 +576,7 @@
 
       case 'click-outside': {
         const callback = val;
-        const handler = (e) => {
+        const handler = e => {
           if (!target.contains(e.target)) {
             callback(e);
           }
@@ -595,7 +595,7 @@
 
   function cleanupDirectives(target) {
     if (target._directiveDisposers) {
-      target._directiveDisposers.forEach((dispose) => {
+      target._directiveDisposers.forEach(dispose => {
         if (dispose._cleanup) dispose._cleanup();
         dispose();
       });
@@ -674,7 +674,7 @@
         const name = prop.replace('@', 'data-').replace(XLINK_PREFIX, '');
 
         if (isSignal(val)) {
-          bindSignalProp(target, 'signal:' + name, val);
+          bindSignalProp(target, `signal:${name}`, val);
           const originalTeardown = target.teardown;
           target.teardown = () => {
             cleanupSignalProps(target);
@@ -786,11 +786,11 @@
 
   function createSignalTextNode(signal) {
     const textNode = document.createTextNode(String(signal.peek()));
-    
+
     const dispose = effect(() => {
       textNode.nodeValue = String(signal.value);
     });
-    
+
     textNode._signalDispose = dispose;
     return textNode;
   }
@@ -1175,20 +1175,20 @@
 
   const text = (strings, ...values) => {
     let needsComputed = false;
-    
+
     for (const val of values) {
       if (isSignal(val)) {
         needsComputed = true;
         break;
       }
     }
-    
+
     if (!needsComputed) {
       return strings.reduce((result, str, i) => {
         return result + str + (i < values.length ? values[i] : '');
       }, '');
     }
-    
+
     return computed(() => {
       return strings.reduce((result, str, i) => {
         const val = i < values.length ? values[i] : '';

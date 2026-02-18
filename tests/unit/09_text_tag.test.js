@@ -1,6 +1,6 @@
 import { test } from '@japa/runner';
 
-import { signal, computed, batch } from '../../src/lib/signals.js';
+import { signal, computed } from '../../src/lib/signals.js';
 import { createElement, mountElement, destroyElement } from '../../src/lib/node.js';
 import { text } from '../../src/index.js';
 
@@ -17,7 +17,7 @@ test.group('text tag function', () => {
   test('should return computed when signals present', async ({ expect }) => {
     const name = signal('World');
     const result = text`Hello ${name}`;
-    
+
     expect(typeof result).toBe('object');
     expect('value' in result).toBe(true);
     expect(result.value).toBe('Hello World');
@@ -26,16 +26,16 @@ test.group('text tag function', () => {
   test('should update computed when signal changes', async ({ expect }) => {
     const name = signal('World');
     const result = text`Hello ${name}!`;
-    
+
     const vnode = ['div', {}, result];
     const el = render(vnode);
     mount(document.body, el);
-    
+
     expect(el.textContent).toBe('Hello World!');
-    
+
     name.value = 'John';
     expect(el.textContent).toBe('Hello John!');
-    
+
     unmount(el);
   });
 
@@ -43,19 +43,19 @@ test.group('text tag function', () => {
     const first = signal('Hello');
     const last = signal('World');
     const result = text`${first} ${last}!`;
-    
+
     const vnode = ['div', {}, result];
     const el = render(vnode);
     mount(document.body, el);
-    
+
     expect(el.textContent).toBe('Hello World!');
-    
+
     first.value = 'Hi';
     expect(el.textContent).toBe('Hi World!');
-    
+
     last.value = 'There';
     expect(el.textContent).toBe('Hi There!');
-    
+
     unmount(el);
   });
 
@@ -63,16 +63,16 @@ test.group('text tag function', () => {
     const count = signal(5);
     const doubled = computed(() => count.value * 2);
     const result = text`Count: ${doubled}`;
-    
+
     const vnode = ['div', {}, result];
     const el = render(vnode);
     mount(document.body, el);
-    
+
     expect(el.textContent).toBe('Count: 10');
-    
+
     count.value = 10;
     expect(el.textContent).toBe('Count: 20');
-    
+
     unmount(el);
   });
 
@@ -82,19 +82,19 @@ test.group('text tag function', () => {
     const sum = computed(() => a.value + b.value);
     const product = computed(() => sum.value * 10);
     const result = text`Result: ${product}`;
-    
+
     const vnode = ['div', {}, result];
     const el = render(vnode);
     mount(document.body, el);
-    
+
     expect(el.textContent).toBe('Result: 30');
-    
+
     a.value = 5;
     expect(el.textContent).toBe('Result: 70');
-    
+
     b.value = 3;
     expect(el.textContent).toBe('Result: 80');
-    
+
     unmount(el);
   });
 
@@ -102,19 +102,19 @@ test.group('text tag function', () => {
     const name = signal('World');
     const count = signal(5);
     const result = text`Hello ${name}, you have ${count} messages`;
-    
+
     const vnode = ['div', {}, result];
     const el = render(vnode);
     mount(document.body, el);
-    
+
     expect(el.textContent).toBe('Hello World, you have 5 messages');
-    
+
     name.value = 'John';
     expect(el.textContent).toBe('Hello John, you have 5 messages');
-    
+
     count.value = 10;
     expect(el.textContent).toBe('Hello John, you have 10 messages');
-    
+
     unmount(el);
   });
 });

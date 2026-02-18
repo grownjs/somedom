@@ -63,24 +63,26 @@ export {
 
 export { default as Portal } from './lib/portal.js';
 
-export { signal, computed, effect, batch, untracked } from './lib/signals.js';
+export {
+  signal, computed, effect, batch, untracked,
+} from './lib/signals.js';
 
 export const text = (strings, ...values) => {
   let needsComputed = false;
-  
+
   for (const val of values) {
     if (isSignal(val)) {
       needsComputed = true;
       break;
     }
   }
-  
+
   if (!needsComputed) {
     return strings.reduce((result, str, i) => {
       return result + str + (i < values.length ? values[i] : '');
     }, '');
   }
-  
+
   return computed(() => {
     return strings.reduce((result, str, i) => {
       const val = i < values.length ? values[i] : '';
