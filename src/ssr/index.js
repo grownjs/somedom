@@ -81,6 +81,25 @@ export function parseMarkup(html, options) {
   return parse(html, { ...parseDefaults, ...options });
 }
 
+export function astToVnode(ast) {
+  if (!ast) return null;
+  if (Array.isArray(ast)) {
+    return ast.map(astToVnode).filter(x => x != null);
+  }
+  if (ast.type === 'text') {
+    return ast.content;
+  }
+  if (ast.type === 'element') {
+    const attrs = {};
+    for (const { key, value } of ast.attributes) {
+      attrs[key] = value;
+    }
+    const children = ast.children ? ast.children.map(astToVnode).filter(x => x != null) : [];
+    return [ast.tagName, attrs, ...children];
+  }
+  return null;
+}
+
 export function renderToString(vnode, cb = createElement) {
   return useWindow(() => {
     const target = document.createElement('div');
