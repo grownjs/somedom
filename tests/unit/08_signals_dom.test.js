@@ -24,7 +24,7 @@ test.group('signal DOM binding', t => {
 
     const count = signal(0);
 
-    const vnode = ['div', { 'signal:textContent': count }];
+    const vnode = ['div', { 's:textContent': count }];
     const el = render(vnode);
     mount(document.body, el);
 
@@ -48,7 +48,7 @@ test.group('signal DOM binding', t => {
     const b = signal(3);
     const sum = computed(() => a.value + b.value);
 
-    const vnode = ['div', { 'signal:textContent': sum }];
+    const vnode = ['div', { 's:textContent': sum }];
     const el = render(vnode);
     mount(document.body, el);
 
@@ -70,7 +70,7 @@ test.group('signal DOM binding', t => {
 
     const name = signal('John');
 
-    const vnode = ['input', { type: 'text', 'signal:value': name }];
+    const vnode = ['input', { type: 'text', 's:value': name }];
     const el = render(vnode);
     mount(document.body, el);
 
@@ -89,7 +89,7 @@ test.group('signal DOM binding', t => {
 
     const isDisabled = signal(true);
 
-    const vnode = ['button', { 'signal:disabled': isDisabled }, 'Click me'];
+    const vnode = ['button', { 's:disabled': isDisabled }, 'Click me'];
     const el = render(vnode);
     mount(document.body, el);
 
@@ -108,7 +108,7 @@ test.group('signal DOM binding', t => {
 
     const content = signal('<strong>Hello</strong>');
 
-    const vnode = ['div', { 'signal:innerHTML': content }];
+    const vnode = ['div', { 's:innerHTML': content }];
     const el = render(vnode);
     mount(document.body, el);
 
@@ -128,7 +128,7 @@ test.group('signal DOM binding', t => {
     const a = signal(1);
     const b = signal(2);
 
-    const vnode = ['div', { 'signal:textContent': computed(() => a.value + b.value) }];
+    const vnode = ['div', { 's:textContent': computed(() => a.value + b.value) }];
     const el = render(vnode);
     mount(document.body, el);
 
@@ -151,7 +151,7 @@ test.group('signal DOM binding', t => {
 
     const count = signal(0);
 
-    const vnode = ['div', { 'signal:textContent': count }];
+    const vnode = ['div', { 's:textContent': count }];
     const el = render(vnode);
     mount(document.body, el);
 
@@ -172,8 +172,8 @@ test.group('signal DOM binding', t => {
     const color = signal('red');
 
     const vnode = ['span', {
-      'signal:textContent': text,
-      'signal:style.color': color,
+      's:textContent': text,
+      's:style.color': color,
     }];
     const el = render(vnode);
     mount(document.body, el);

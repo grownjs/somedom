@@ -9,7 +9,7 @@ import {
 
 import { effect } from './signals.js';
 
-const SIGNAL_PREFIX = 'signal:';
+const SIGNAL_PREFIX = 's:';
 const DIRECTIVE_PREFIX = 'd:';
 
 function isSignalProp(prop) {
@@ -191,7 +191,7 @@ export function assignProps(target, attrs, svg, cb) {
       const name = prop.replace('@', 'data-').replace(XLINK_PREFIX, '');
 
       if (isSignal(val)) {
-        bindSignalProp(target, `signal:${name}`, val);
+        bindSignalProp(target, `${SIGNAL_PREFIX}${name}`, val);
         const originalTeardown = target.teardown;
         target.teardown = () => {
           cleanupSignalProps(target);

@@ -690,13 +690,13 @@
           });</script>
         </dd>
         <dd>
-          <p>Use <code>signal:</code> prefix for direct DOM property binding.</p>
+          <p>Use <code>s:</code> prefix for direct DOM property binding.</p>
           <small>output:</small>
           <script>test(({ h, signal, render, mount }, appendChild) => {
             var isDisabled = signal(true);
 
             appendChild(render(h('button', {
-              'signal:disabled': isDisabled,
+              's:disabled': isDisabled,
             }, 'Click me')));
           });</script>
         </dd>
