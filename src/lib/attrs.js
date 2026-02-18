@@ -132,9 +132,9 @@ function bindSignalProp(target, prop, signal) {
   const dispose = effect(() => {
     const value = signal.value;
     if (domProp === 'textContent') {
-      target.textContent = value;
+      target.textContent = value == null ? '' : String(value);
     } else if (domProp === 'innerHTML') {
-      target.innerHTML = value;
+      target.innerHTML = value == null ? '' : String(value);
     } else if (domProp.startsWith('style.')) {
       target.style[domProp.slice(6)] = value;
     } else {
