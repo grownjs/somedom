@@ -213,7 +213,7 @@ export function createElementNode(name, props) {
     replaceWith: replace,
     classList: {
       add(...value) {
-        const classes = self.className.trim().split(/\W/);
+        const classes = self.className.trim() ? self.className.trim().split(/\W/).filter(Boolean) : [];
 
         self.className = classes.concat(value.filter(x => classes.indexOf(x) === -1)).join(' ');
       },

@@ -601,6 +601,246 @@
       </dl>
     </details>
 
+    <h3>Available Extensions</h3>
+    <p>Support keys, signals and custom directives.</p>
+
+    <details>
+      <summary><code>keys</code> &amp; <code>moveBefore() detection</code></summary>
+      <dl>
+        <dt><code>key</code></dt>
+        <dd>
+          <p>Use <code>key</code> prop for efficient list reconciliation. Elements with keys are moved instead of recreated.</p>
+          <fieldset id="test-keys"></fieldset>
+          <script>test(({ mount, patch, h }, appendChild) => {
+            var items = [
+              { id: 1, label: 'A' },
+              { id: 2, label: 'B' },
+              { id: 3, label: 'C' },
+            ];
+
+            function view(list) {
+              return list.map(function(item) {
+                return h('li', { key: item.id }, item.label);
+              });
+            }
+
+            var dom = view(items);
+            var node = mount('#test-keys', dom);
+
+            setTimeout(function() {
+              items = [items[2], items[0], items[1]];
+              var old = dom;
+              var next = (dom = view(items));
+              patch(node, old, next);
+            }, 500);
+
+            appendChild();
+          });</script>
+        </dd>
+        <dd>
+          <p>Without keys, elements are destroyed and recreated. With keys, only DOM moves occur.</p>
+          <small>output:</small>
+          <script>test(({ h, render }, appendChild) => {
+            var withKeys = h('div', {}, [
+              h('span', { key: 1 }, 'A'),
+              h('span', { key: 2 }, 'B'),
+            ]);
+
+            appendChild(render(withKeys));
+          });</script>
+        </dd>
+        <dt><code>moveBefore()</code></dt>
+        <dd>
+          <p>For optimized reordering, elements support <code>moveBefore</code> method when available.</p>
+          <small>output:</small>
+          <script>test(({ h, render, mount, patch }, appendChild) => {
+            var items = ['A', 'B', 'C'];
+            var vdom = items.map(function(c) {
+              return h('div', {
+                style: 'display:inline-block;width:20px',
+              }, c);
+            });
+
+            var div = document.createElement('div');
+            var node = mount(div, vdom);
+
+            setTimeout(function() {
+              var old = vdom;
+              vdom = [vdom[2], vdom[0], vdom[1]];
+              patch(node, old, vdom);
+            }, 500);
+
+            appendChild(node);
+          });</script>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>signal()</code> &amp; <code>computed()</code></summary>
+      <dl>
+        <dt><code>signal(initialValue)</code></dt>
+        <dd>
+          <p>Creates a reactive signal that auto-updates DOM when its value changes.</p>
+          <small>output:</small>
+          <script>test(({ h, signal, text, render, mount }, appendChild) => {
+            var name = signal('World');
+
+            appendChild(render(h('div', {}, text`Hello ${name}!`)));
+          });</script>
+        </dd>
+        <dd>
+          <p>Use <code>s:</code> prefix for direct DOM property binding.</p>
+          <small>output:</small>
+          <script>test(({ h, signal, render, mount }, appendChild) => {
+            var isDisabled = signal(true);
+
+            appendChild(render(h('button', {
+              's:disabled': isDisabled,
+            }, 'Click me')));
+          });</script>
+        </dd>
+        <dt><code>computed(fn)</code></dt>
+        <dd>
+          <p>Creates a derived signal that updates when its dependencies change.</p>
+          <small>output:</small>
+          <script>test(({ h, signal, computed, text, render }, appendChild) => {
+            var a = signal(2);
+            var b = signal(3);
+            var sum = computed(() => a.value + b.value);
+
+            appendChild(render(h('div', {}, text`Sum: ${sum}`)));
+          });</script>
+        </dd>
+        <dt><code>text`...`</code></dt>
+        <dd>
+          <p>Template tag for reactive string interpolation.</p>
+          <small>output:</small>
+          <script>test(({ h, signal, text, render }, appendChild) => {
+            var name = signal('John');
+            var count = signal(5);
+
+            appendChild(render(h('div', {}, text`${name} has ${count} items`)));
+          });</script>
+        </dd>
+        <dt><code>effect(fn)</code></dt>
+        <dd>
+          <p>Runs a function whenever its signal dependencies change.</p>
+          <small>output:</small>
+          <script>test(({ h, signal, effect, render }, appendChild) => {
+            var count = signal(0);
+            var log = [];
+
+            effect(() => log.push(count.value));
+            count.value = 1;
+            count.value = 2;
+
+            appendChild(render(h('div', {}, 'Logged: ' + log.join(', '))));
+          });</script>
+        </dd>
+        <dt><code>batch(fn)</code></dt>
+        <dd>
+          <p>Batches multiple signal updates into a single DOM update.</p>
+          <small>output:</small>
+          <script>test(({ h, signal, computed, batch, text, render }, appendChild) => {
+            var a = signal(1);
+            var b = signal(2);
+            var total = computed(() => a.value + b.value);
+
+            appendChild(render(h('div', {}, text`Total: ${total}`)));
+
+            batch(() => {
+              a.value = 10;
+              b.value = 20;
+            });
+          });</script>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>d:</code> Directives</summary>
+      <dl>
+        <dt><code>d:show</code></dt>
+        <dd>
+          <p>Shows element when signal is true, hides when false.</p>
+          <small>output:</small>
+          <script>test(({ h, signal, render }, appendChild) => {
+            var isVisible = signal(true);
+
+            appendChild(render(h('div', {
+              'd:show': isVisible,
+            }, 'I am visible')));
+          });</script>
+        </dd>
+        <dt><code>d:hide</code></dt>
+        <dd>
+          <p>Hides element when signal is true, shows when false (inverse of d:show).</p>
+          <small>output:</small>
+          <script>test(({ h, signal, render }, appendChild) => {
+            var isHidden = signal(false);
+
+            appendChild(render(h('div', {
+              'd:hide': isHidden,
+            }, 'I am hidden')));
+          });</script>
+        </dd>
+        <dt><code>d:class</code></dt>
+        <dd>
+          <p>Toggles 'active' class based on signal value.</p>
+          <small>output:</small>
+          <script>test(({ h, signal, render }, appendChild) => {
+            var isActive = signal(true);
+
+            appendChild(render(h('button', {
+              'd:class': isActive,
+            }, 'Click me')));
+          });</script>
+        </dd>
+        <dt><code>d:text</code></dt>
+        <dd>
+          <p>Binds element's textContent to signal value.</p>
+          <small>output:</small>
+          <script>test(({ h, signal, render }, appendChild) => {
+            var greeting = signal('Hello');
+
+            appendChild(render(h('span', {
+              'd:text': greeting,
+            })));
+          });</script>
+        </dd>
+        <dt><code>d:html</code></dt>
+        <dd>
+          <p>Binds element's innerHTML to signal value.</p>
+          <small>output:</small>
+          <script>test(({ h, signal, render }, appendChild) => {
+            var content = signal('<b>Bold</b>');
+
+            appendChild(render(h('div', {
+              'd:html': content,
+            })));
+          });</script>
+        </dd>
+        <dt><code>d:model</code></dt>
+        <dd>
+          <p>Two-way binding for form inputs.</p>
+          <small>output:</small>
+          <script>test(({ h, text, signal, render }, appendChild) => {
+            var username = signal('');
+
+            appendChild(render(h('div', {}, [
+              h('input', {
+                'd:model': username,
+                type: 'text',
+              }),
+              h('br'),
+              h('span', {}, text`Got: ${username}`),
+            ])));
+          });</script>
+        </dd>
+      </dl>
+    </details>
+
     <h3>Server Side Rendering</h3>
     <p>To render entire <i>vnode</i> trees on the back-end use:</p>
     <pre class="highlight">import {
@@ -612,6 +852,7 @@
   parseMarkup,
   markupAdapter,
   renderToString,
+  astToVnode,
   bindHelpers as $,
 } from 'somedom/ssr';</pre>
 
@@ -734,6 +975,21 @@ var ast = parseMarkup(test);
 
 console.log(ast);
 // [ { type: 'element', rawTagName: 'b', tagName: 'b', attributes: [], children: [ [Object] ] } ]</pre>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>astToVnode()</code></summary>
+      <dl>
+        <dt><code>astToVnode(ast)</code></dt>
+        <dd>
+          <p>Converts parsed AST back to vnodes.</p>
+          <pre class="highlight">var ast = parseMarkup('&lt;b&gt;Hello&lt;/b&gt;');
+var vnode = astToVnode(ast);
+
+console.log(vnode);
+// [ 'b', {}, 'Hello' ]</pre>
         </dd>
       </dl>
     </details>

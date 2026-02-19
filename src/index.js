@@ -1,23 +1,25 @@
-import {
-  invokeProps,
-} from './lib/props.js';
+import { invokeProps } from './lib/props.js';
 
-import {
-  apply, format, filter,
-} from './lib/util.js';
+import { apply, format, filter } from './lib/util.js';
 
 import { createElement as render } from './lib/node.js';
 
 import {
-  isNot, isArray, isScalar, isFunction, isPlain,
+  isNot, isArray, isScalar, isFunction, isPlain, isSignal,
 } from './lib/shared.js';
 
 import { addEvents } from './lib/events.js';
+
+import { computed } from './lib/signals.js';
 
 export const h = (tag = 'div', attrs = null, ...children) => {
   if (isScalar(attrs)) return [tag, {}, [attrs].concat(children).filter(x => !isNot(x))];
   if (isArray(attrs) && !children.length) return [tag, {}, attrs];
   return [tag, attrs || {}, children];
+};
+
+export const portal = (target, ...children) => {
+  return ['portal', { target }, children];
 };
 
 export const pre = (vnode, svg, cb = render) => {
@@ -58,3 +60,34 @@ export {
   applyClasses as classes,
   applyAnimations as animation,
 } from './lib/props.js';
+
+export { default as Portal } from './lib/portal.js';
+
+export {
+  signal, computed, effect, batch, untracked,
+} from './lib/signals.js';
+
+export const text = (strings, ...values) => {
+  let needsComputed = false;
+
+  for (const val of values) {
+    if (isSignal(val)) {
+      needsComputed = true;
+      break;
+    }
+  }
+
+  if (!needsComputed) {
+    return strings.reduce((result, str, i) => {
+      return result + str + (i < values.length ? values[i] : '');
+    }, '');
+  }
+
+  return computed(() => {
+    return strings.reduce((result, str, i) => {
+      const val = i < values.length ? values[i] : '';
+      const value = isSignal(val) ? val.value : val;
+      return result + str + (value != null ? value : '');
+    }, '');
+  });
+};

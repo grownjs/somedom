@@ -32,6 +32,7 @@ export const isNot = value => typeof value === 'undefined' || value === null;
 export const isPlain = value => value !== null && Object.prototype.toString.call(value) === '[object Object]';
 export const isObject = value => value !== null && (typeof value === 'function' || typeof value === 'object');
 export const isScalar = value => isString(value) || typeof value === 'number' || typeof value === 'boolean';
+export const isSignal = value => value !== null && typeof value === 'object' && 'value' in value && typeof value.peek === 'function';
 
 export function isTag(value) {
   return RE_TAG_NAME.test(value);
@@ -55,6 +56,20 @@ export function isEmpty(value) {
 
 export const isBlock = value => isArray(value) && !isNode(value);
 export const isEven = value => value % 2 === 0;
+
+export function getKey(vnode) {
+  if (isNode(vnode) && isPlain(vnode[1])) {
+    return vnode[1].key;
+  }
+  return undefined;
+}
+
+export function getKeyFromNode(node) {
+  if (node.nodeType === 1) {
+    return node.getAttribute('data-key') || undefined;
+  }
+  return undefined;
+}
 
 export function isDiff(prev, next) {
   if (typeof prev !== typeof next) return true;
