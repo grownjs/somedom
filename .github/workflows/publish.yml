@@ -1,0 +1,32 @@
+name: publish
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 23.1.0
+          registry-url: https://registry.npmjs.org
+
+      - name: Publish to NPM
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
+          make dist release
+        env:
+          GIT_AUTHOR_NAME: Alvaro Cabrera
+          GIT_AUTHOR_EMAIL: pateketrueke@gmail.com
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

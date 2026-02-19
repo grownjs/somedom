@@ -24,13 +24,16 @@ e2e: src deps ## Run E2E tests locally
 test: src deps ## Start dev+testing flow
 	@node --watch tests/main.js
 
+dist: src deps
+	@npm run build
+
 check: src deps ## Run coverage checks locally
 	@LCOV_OUTPUT=html npm run test:ci
 
 release: deps
 ifneq ($(CI),)
 	@echo '//registry.npmjs.org/:_authToken=$(NODE_AUTH_TOKEN)' > .npmrc
-	@npm version $(USE_RELEASE_VERSION)
+	@npm publish
 endif
 
 deps: package*.json

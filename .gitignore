@@ -2,7 +2,7 @@
 *.todo
 .claude
 TASKS.md
-CLAUDE.md
+AGENTS.md
 .DS_Store
 .nyc_output
 dist
