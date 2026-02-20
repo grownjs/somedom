@@ -1,6 +1,7 @@
 *.log
 *.todo
 .claude
+.journal
 TASKS.md
 AGENTS.md
 .DS_Store

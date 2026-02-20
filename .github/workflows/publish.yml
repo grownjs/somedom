@@ -27,6 +27,4 @@ jobs:
 
           make dist release
         env:
-          GIT_AUTHOR_NAME: Alvaro Cabrera
-          GIT_AUTHOR_EMAIL: pateketrueke@gmail.com
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
