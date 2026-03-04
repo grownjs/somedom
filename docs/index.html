@@ -601,6 +601,43 @@
       </dl>
     </details>
 
+    <h3>SSR CSS Helpers</h3>
+    <p>Utilities for CSS parsing/stringifying and selector scoping are available from <code>somedom/ssr</code>.</p>
+
+    <details>
+      <summary><code>style()</code>, <code>rulify()</code>, <code>cssify()</code></summary>
+      <dl>
+        <dt><code>import { style, rulify, cssify } from 'somedom/ssr'</code></dt>
+        <dd>
+          <p>Use these helpers to normalize CSS rules and compose final stylesheets from parsed chunks.</p>
+<pre>import { rulify, cssify } from 'somedom/ssr';
+
+const rules = rulify('@media screen { h1 { color: red; } }', 'sample.css');
+const css = cssify(rules);
+// @media screen{h1{color:red;}}</pre>
+        </dd>
+      </dl>
+    </details>
+
+    <details>
+      <summary><code>specify()</code>, <code>classify()</code>, <code>scopify()</code></summary>
+      <dl>
+        <dt><code>import { specify, classify, scopify } from 'somedom/ssr'</code></dt>
+        <dd>
+          <p>Use these helpers to scope selectors and attach scope classes to matching nodes.</p>
+          <p><code>classify()</code> and <code>scopify()</code> accept optional hooks (<code>match</code>, <code>skipNode</code>, <code>appendScopeClass</code>, <code>adapter</code>) for custom trees and adapters.</p>
+<pre>import { scopify } from 'somedom/ssr';
+
+const nodes = [{ name: 'a', attributes: {} }];
+const styles = scopify('x-42', true, 'a { color: red; }', nodes, 'sample.css', {
+  match: () => nodes,
+  appendScopeClass: (node, ref) => {
+    node.attributes.class = `${node.attributes.class || ''} ${ref}`.trim();
+  },
+});</pre>
+        </dd>
+      </dl>
+    </details>
     <h3>Available Extensions</h3>
     <p>Support keys, signals and custom directives.</p>
 
