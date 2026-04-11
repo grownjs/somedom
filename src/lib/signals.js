@@ -15,9 +15,18 @@ export function signal(initialValue, options) {
         currentEffect._signals.add({ subscribers, options, wasEmpty });
       }
       if (wasEmpty && options?.onSubscribe) options.onSubscribe();
+    } else if (!currentEffect && !run._subscribedExternal && typeof sig.subscribe === 'function') {
+      const dispose = sig.subscribe(run);
+      if (typeof dispose === 'function') {
+        run._externalDisposers = run._externalDisposers || new Set();
+        run._externalDisposers.add(dispose);
+        run._subscribedExternal = true;
+      }
     }
     return value;
   };
+
+  const run = () => read();
 
   const write = newValue => {
     if (value !== newValue) {
@@ -53,6 +62,7 @@ export function computed(fn) {
   let dirty = true;
   const subscribers = new Set();
   let deps = [];
+  let notifying = false;
 
   const evaluate = () => {
     if (!dirty) return cachedValue;
@@ -82,12 +92,26 @@ export function computed(fn) {
   }
 
   const notify = () => {
-    dirty = true;
-    const subs = [...subscribers];
-    if (batchDepth > 0) {
-      subs.forEach(cb => pendingEffects.add(cb));
-    } else {
-      subs.forEach(cb => cb());
+    if (notifying) return;
+    notifying = true;
+    try {
+      dirty = true;
+      const subs = [...subscribers];
+      if (batchDepth > 0) {
+        subs.forEach(cb => pendingEffects.add(cb));
+      } else {
+        subs.forEach(cb => cb());
+      }
+      if (!currentEffect && !run._subscribedExternal && typeof sig.subscribe === 'function') {
+        const dispose = sig.subscribe(notify);
+        if (typeof dispose === 'function') {
+          run._externalDisposers = run._externalDisposers || new Set();
+          run._externalDisposers.add(dispose);
+          run._subscribedExternal = true;
+        }
+      }
+    } finally {
+      notifying = false;
     }
   };
 
@@ -104,7 +128,7 @@ export function computed(fn) {
   }
   dirty = false;
 
-  return {
+  const sig = {
     get value() { return run(); },
     peek() {
       if (dirty) evaluate();
@@ -115,6 +139,8 @@ export function computed(fn) {
       return () => subscribers.delete(cb);
     },
   };
+
+  return sig;
 }
 
 export function effect(fn) {
@@ -161,6 +187,10 @@ export function effect(fn) {
         sig.options.onUnsubscribe();
       }
     });
+    if (run._externalDisposers) {
+      run._externalDisposers.forEach(extCleanup => extCleanup());
+      run._externalDisposers.clear();
+    }
   };
 }
 
