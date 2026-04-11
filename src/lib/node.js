@@ -23,6 +23,15 @@ function createSignalTextNode(signal) {
     textNode.nodeValue = String(signal.value);
   });
 
+  if (!dispose._deps?.size && typeof signal.subscribe === 'function') {
+    const unsub = signal.subscribe(() => {
+      textNode.nodeValue = String(signal.peek());
+    });
+    const origDispose = dispose;
+    textNode._signalDispose = () => { origDispose(); unsub(); };
+    return textNode;
+  }
+
   textNode._signalDispose = dispose;
   return textNode;
 }

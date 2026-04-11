@@ -34,23 +34,46 @@ function bindDirective(target, prop, val) {
   let dispose;
 
   switch (directive) {
-    case 'show':
+    case 'show': {
       dispose = effect(() => {
         target.style.display = val.value ? '' : 'none';
       });
+      if (!dispose._deps?.size && typeof val.subscribe === 'function') {
+        const unsub = val.subscribe(() => {
+          target.style.display = val.peek() ? '' : 'none';
+        });
+        const origDispose = dispose;
+        dispose = () => { origDispose(); unsub(); };
+      }
       break;
+    }
 
-    case 'hide':
+    case 'hide': {
       dispose = effect(() => {
         target.style.display = val.value ? 'none' : '';
       });
+      if (!dispose._deps?.size && typeof val.subscribe === 'function') {
+        const unsub = val.subscribe(() => {
+          target.style.display = val.peek() ? 'none' : '';
+        });
+        const origDispose = dispose;
+        dispose = () => { origDispose(); unsub(); };
+      }
       break;
+    }
 
     case 'class': {
       const className = val.className || 'active';
       dispose = effect(() => {
         target.classList.toggle(className, !!val.value);
       });
+      if (!dispose._deps?.size && typeof val.subscribe === 'function') {
+        const unsub = val.subscribe(() => {
+          target.classList.toggle(className, !!val.peek());
+        });
+        const origDispose = dispose;
+        dispose = () => { origDispose(); unsub(); };
+      }
       break;
     }
 
@@ -77,17 +100,33 @@ function bindDirective(target, prop, val) {
       break;
     }
 
-    case 'text':
+    case 'text': {
       dispose = effect(() => {
         target.textContent = val.value;
       });
+      if (!dispose._deps?.size && typeof val.subscribe === 'function') {
+        const unsub = val.subscribe(() => {
+          target.textContent = val.peek();
+        });
+        const origDispose = dispose;
+        dispose = () => { origDispose(); unsub(); };
+      }
       break;
+    }
 
-    case 'html':
+    case 'html': {
       dispose = effect(() => {
         target.innerHTML = val.value;
       });
+      if (!dispose._deps?.size && typeof val.subscribe === 'function') {
+        const unsub = val.subscribe(() => {
+          target.innerHTML = val.peek();
+        });
+        const origDispose = dispose;
+        dispose = () => { origDispose(); unsub(); };
+      }
       break;
+    }
 
     case 'click-outside': {
       const callback = val;
@@ -141,6 +180,24 @@ function bindSignalProp(target, prop, signal) {
       target[domProp] = value;
     }
   });
+
+  if (!dispose._deps?.size && typeof signal.subscribe === 'function') {
+    const unsub = signal.subscribe(() => {
+      const value = signal.peek();
+      if (domProp === 'textContent') {
+        target.textContent = value == null ? '' : String(value);
+      } else if (domProp === 'innerHTML') {
+        target.innerHTML = value == null ? '' : String(value);
+      } else if (domProp.startsWith('style.')) {
+        target.style[domProp.slice(6)] = value;
+      } else {
+        target[domProp] = value;
+      }
+    });
+    const origDispose = dispose;
+    target._signalDisposers.set(prop, () => { origDispose(); unsub(); });
+    return;
+  }
 
   target._signalDisposers.set(prop, dispose);
 }
