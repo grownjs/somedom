@@ -5,7 +5,7 @@ import {
   h, pre, bind, mount, patch, render, listeners, attributes,
 } from '../../src/index.js';
 
-import { tick, trim, format } from '../../src/lib/util.js';
+import { trim, format } from '../../src/lib/util.js';
 import { bindHelpers as $ } from '../../src/ssr/index.js';
 import { encodeText } from '../../src/ssr/doc.js';
 
@@ -132,7 +132,7 @@ test.group('patch', t => {
     for (let i = 0; i < 2; i += 1) {
       $(node).withText(`Item ${i + 1}`).dispatchEvent(new Event('click'));
 
-      await tick(); // eslint-disable-line
+      await Promise.resolve(); // eslint-disable-line
       await patch(node, vnode, vnode = view(), null, tag, null); // eslint-disable-line
     }
 
