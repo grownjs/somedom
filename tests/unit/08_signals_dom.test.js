@@ -200,6 +200,7 @@ test.group('signal DOM binding', t => {
     const vnode = ['div', {}, 'Hello ', name, '!'];
     const el = render(vnode);
     mount(document.body, el);
+    await Promise.resolve();
 
     expect(el.textContent).toBe('Hello World!');
 

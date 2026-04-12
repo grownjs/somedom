@@ -39,6 +39,7 @@ test.group('text tag function', t => {
     const vnode = ['div', {}, result];
     const el = render(vnode);
     mount(document.body, el);
+    await Promise.resolve();
 
     expect(el.textContent).toBe('Hello World!');
 
@@ -60,6 +61,7 @@ test.group('text tag function', t => {
     const vnode = ['div', {}, result];
     const el = render(vnode);
     mount(document.body, el);
+    await Promise.resolve();
 
     expect(el.textContent).toBe('Hello World!');
 
@@ -84,6 +86,7 @@ test.group('text tag function', t => {
     const vnode = ['div', {}, result];
     const el = render(vnode);
     mount(document.body, el);
+    await Promise.resolve();
 
     expect(el.textContent).toBe('Count: 10');
 
@@ -107,6 +110,7 @@ test.group('text tag function', t => {
     const vnode = ['div', {}, result];
     const el = render(vnode);
     mount(document.body, el);
+    await Promise.resolve();
 
     expect(el.textContent).toBe('Result: 30');
 
@@ -131,6 +135,7 @@ test.group('text tag function', t => {
     const vnode = ['div', {}, result];
     const el = render(vnode);
     mount(document.body, el);
+    await Promise.resolve();
 
     expect(el.textContent).toBe('Hello World, you have 5 messages');
 

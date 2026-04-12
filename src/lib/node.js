@@ -16,76 +16,72 @@ import Portal from './portal.js';
 
 import { effect } from './signals.js';
 
-function createSignalTextNode(signal, svg, cb) {
-  const initial = signal.peek();
+function createSignalNode(signal, svg, cb) {
+  // Always start with a stable empty text anchor — no type sniffing at creation.
+  // Initial value + all updates go through the same path, enabling clean DOM
+  // transitions (CSS @starting-style, enter animations) since the anchor is
+  // already mounted when content appears via microtask.
+  let current = document.createTextNode('');
+  let currentVnode = null;
 
-  // vdom signal — value is a vnode (array), null, or false
-  if (isArray(initial) || isNot(initial) || initial === false) {
-    let current = isNot(initial) || initial === false
-      ? document.createTextNode('')
-      : createElement(initial, svg, cb);
-    let currentVnode = isNot(initial) || initial === false ? null : initial;
+  const update = async () => {
+    const next = signal.peek();
+    const dispose = current._signalDispose;
 
-    const handleUpdate = async () => {
-      const next = signal.peek();
-      const empty = isNot(next) || next === false;
-      const dispose = current._signalDispose;
-
-      if (empty && current.nodeType !== 3) {
-        const placeholder = document.createTextNode('');
-        placeholder._signalDispose = dispose;
-        current.replaceWith(placeholder);
-        current = placeholder;
-        currentVnode = null;
-      } else if (!empty && current.nodeType === 3) {
-        const newEl = createElement(next, svg, cb);
-        newEl._signalDispose = dispose;
-        current.replaceWith(newEl);
-        current = newEl;
-        currentVnode = next;
-      } else if (!empty) {
-        current = await upgradeNode(current, currentVnode, next, svg, cb);
-        current._signalDispose = dispose;
-        currentVnode = next;
+    if (isNot(next) || next === false) {
+      if (current.nodeType === 3) { current.nodeValue = ''; }
+      else {
+        const t = document.createTextNode('');
+        t._signalDispose = dispose;
+        current.replaceWith(t);
+        current = t;
       }
-    };
-
-    const dispose = effect(() => { signal.value; });
-
-    if (!dispose._deps?.size && typeof signal.subscribe === 'function') {
-      const unsub = signal.subscribe(() => handleUpdate());
-      current._signalDispose = () => { dispose(); unsub(); };
+      currentVnode = null;
+    } else if (isScalar(next)) {
+      if (current.nodeType === 3) { current.nodeValue = String(next); }
+      else {
+        const t = document.createTextNode(String(next));
+        t._signalDispose = dispose;
+        current.replaceWith(t);
+        current = t;
+      }
+      currentVnode = null;
+    } else if (current.nodeType === 3) {
+      const el = createElement(next, svg, cb);
+      el._signalDispose = dispose;
+      current.replaceWith(el);
+      current = el;
+      currentVnode = next;
     } else {
-      let initialized = false;
-      const disposeUpdate = effect(() => {
-        signal.value;
-        if (initialized) handleUpdate();
-        initialized = true;
-      });
-      current._signalDispose = disposeUpdate;
+      current = await upgradeNode(current, currentVnode, next, svg, cb);
+      current._signalDispose = dispose;
+      currentVnode = next;
     }
+  };
 
-    return current;
-  }
+  // Render initial value as microtask — anchor is in DOM by then
+  Promise.resolve().then(update);
 
-  // scalar signal — original text node behavior
-  const textNode = document.createTextNode(String(initial));
-
-  const dispose = effect(() => {
-    textNode.nodeValue = String(signal.value);
-  });
+  const dispose = effect(() => { signal.value; });
 
   if (!dispose._deps?.size && typeof signal.subscribe === 'function') {
-    const unsub = signal.subscribe(() => {
-      textNode.nodeValue = String(signal.peek());
+    const unsub = signal.subscribe(() => update());
+    current._signalDispose = () => { dispose(); unsub(); };
+  } else {
+    let initialized = false;
+    const disposeUpdate = effect(() => {
+      signal.value;
+      if (initialized) update();
+      initialized = true;
     });
-    const origDispose = dispose;
-    textNode._signalDispose = () => { origDispose(); unsub(); };
-    return textNode;
+    current._signalDispose = disposeUpdate;
   }
 
-  textNode._signalDispose = dispose;
-  return textNode;
+  return current;
+}
+
+function createSignalTextNode(signal, svg, cb) {
+  return createSignalNode(signal, svg, cb);
 }
 
 export const canMove = () => typeof Element !== 'undefined' && 'moveBefore' in Element.prototype;
