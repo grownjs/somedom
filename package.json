@@ -1,6 +1,6 @@
 {
   "name": "somedom",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "description": "Building blocks for the DOM.",
   "type": "module",
   "main": "dist/somedom.cjs",
