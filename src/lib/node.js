@@ -16,8 +16,60 @@ import Portal from './portal.js';
 
 import { effect } from './signals.js';
 
-function createSignalTextNode(signal) {
-  const textNode = document.createTextNode(String(signal.peek()));
+function createSignalTextNode(signal, svg, cb) {
+  const initial = signal.peek();
+
+  // vdom signal — value is a vnode (array), null, or false
+  if (isArray(initial) || isNot(initial) || initial === false) {
+    let current = isNot(initial) || initial === false
+      ? document.createTextNode('')
+      : createElement(initial, svg, cb);
+    let currentVnode = isNot(initial) || initial === false ? null : initial;
+
+    const handleUpdate = async () => {
+      const next = signal.peek();
+      const empty = isNot(next) || next === false;
+      const dispose = current._signalDispose;
+
+      if (empty && current.nodeType !== 3) {
+        const placeholder = document.createTextNode('');
+        placeholder._signalDispose = dispose;
+        current.replaceWith(placeholder);
+        current = placeholder;
+        currentVnode = null;
+      } else if (!empty && current.nodeType === 3) {
+        const newEl = createElement(next, svg, cb);
+        newEl._signalDispose = dispose;
+        current.replaceWith(newEl);
+        current = newEl;
+        currentVnode = next;
+      } else if (!empty) {
+        current = await upgradeNode(current, currentVnode, next, svg, cb);
+        current._signalDispose = dispose;
+        currentVnode = next;
+      }
+    };
+
+    const dispose = effect(() => { signal.value; });
+
+    if (!dispose._deps?.size && typeof signal.subscribe === 'function') {
+      const unsub = signal.subscribe(() => handleUpdate());
+      current._signalDispose = () => { dispose(); unsub(); };
+    } else {
+      let initialized = false;
+      const disposeUpdate = effect(() => {
+        signal.value;
+        if (initialized) handleUpdate();
+        initialized = true;
+      });
+      current._signalDispose = disposeUpdate;
+    }
+
+    return current;
+  }
+
+  // scalar signal — original text node behavior
+  const textNode = document.createTextNode(String(initial));
 
   const dispose = effect(() => {
     textNode.nodeValue = String(signal.value);
@@ -81,7 +133,7 @@ export function createElement(vnode, svg, cb) {
       return Fragment.from(v => createElement(v, svg, cb), vnode);
     }
     if (isSignal(vnode)) {
-      return createSignalTextNode(vnode);
+      return createSignalTextNode(vnode, svg, cb);
     }
     return (isScalar(vnode) && document.createTextNode(String(vnode))) || vnode;
   }
