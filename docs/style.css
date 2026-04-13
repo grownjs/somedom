@@ -1,5 +1,24 @@
 html {
   box-sizing: border-box;
+  background-color: var(--color-bg);
+  background-image: 
+    radial-gradient(1px 1px at 20px 30px, var(--color-text-muted), transparent),
+    radial-gradient(1px 1px at 40px 70px, var(--color-text-muted), transparent),
+    radial-gradient(1px 1px at 50px 160px, var(--color-text-muted), transparent),
+    radial-gradient(1px 1px at 90px 40px, var(--color-text-muted), transparent),
+    radial-gradient(1px 1px at 130px 80px, var(--color-text-muted), transparent),
+    radial-gradient(1px 1px at 160px 120px, var(--color-text-muted), transparent),
+    radial-gradient(1.5px 1.5px at 200px 50px, var(--color-tertiary), transparent),
+    radial-gradient(1px 1px at 220px 140px, var(--color-text-muted), transparent),
+    radial-gradient(1px 1px at 260px 90px, var(--color-text-muted), transparent),
+    radial-gradient(1.5px 1.5px at 300px 30px, var(--color-secondary), transparent),
+    radial-gradient(1px 1px at 340px 150px, var(--color-text-muted), transparent),
+    radial-gradient(1px 1px at 380px 60px, var(--color-text-muted), transparent),
+    radial-gradient(1.5px 1.5px at 420px 100px, var(--color-accent), transparent),
+    radial-gradient(1px 1px at 460px 20px, var(--color-text-muted), transparent),
+    radial-gradient(1px 1px at 500px 130px, var(--color-text-muted), transparent);
+  background-repeat: repeat;
+  background-size: 520px 170px;
 }
 
 x-fragment {
@@ -11,20 +30,36 @@ x-fragment {
   box-sizing: inherit;
 }
 
+:root {
+  --color-bg: #ffffff;
+  --color-bg-alt: #f6f8fa;
+  --color-text: #24292f;
+  --color-text-muted: #57606a;
+  --color-border: #d0d7de;
+  --color-accent: #cf222e;
+  --color-secondary: #1a7f37;
+  --color-tertiary: #8250df;
+  --color-quaternary: #0550ae;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0d1117;
+    --color-bg-alt: #161b22;
+    --color-text: #c9d1d9;
+    --color-text-muted: #8b949e;
+    --color-border: #30363d;
+    --color-accent: #ff7b72;
+    --color-secondary: #7ee787;
+    --color-tertiary: #d2a8ff;
+    --color-quaternary: #79c0ff;
+  }
+}
+
 body {
   font-size: 12pt;
   padding: 0;
-}
-
-body::before {
-  position: fixed;
-  height: 100vh;
-  width: 100%;
-  top: 0;
-  content: ' ';
-  z-index: 1;
-  pointer-events: none;
-  background-image: linear-gradient(transparent, transparent, transparent, white);
+  color: var(--color-text);
 }
 
 html, body {
@@ -35,15 +70,20 @@ body, a, input, button {
   font-family: Montserrat, Helvetica;
 }
 
+a {
+  color: var(--color-quaternary);
+}
+
 main > details > summary {
   outline: none;
-  border-bottom: 1px dashed silver;
+  border-bottom: 1px dashed var(--color-border);
   padding: 4px 0;
+  color: var(--color-accent);
 }
 
 main {
   padding: 12px;
-  max-width: 500px;
+  max-width: 640px;
   margin: 420px auto;
   padding-bottom: 160px;
 }
@@ -51,14 +91,14 @@ main {
 blockquote {
   margin-bottom: 8px;
   padding: 8px 8px 8px 16px;
-  border-left: 4px solid silver;
+  border-left: 4px solid var(--color-tertiary);
 }
 blockquote p:last-child {
   margin: 0;
 }
 
 dd + dd {
-  border-top: 1px solid silver;
+  border-top: 1px solid var(--color-border);
 }
 
 dd details {
@@ -80,7 +120,8 @@ p:last-child {
 span > code,
 li > code,
 p code {
-  background-color: rgba(0, 0, 0, .1);
+  background-color: var(--color-bg-alt);
+  color: var(--color-accent);
 }
 
 span > code::after,
@@ -96,7 +137,8 @@ dt {
   font-weight: bold;
   padding-left: 16px;
   padding-bottom: 8px;
-  border-bottom: 1px solid silver;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
 }
 
 fieldset > div:last-child > p:last-child {
@@ -111,7 +153,7 @@ dd + dt {
 
 section > pre,
 dd {
-  background-color: #edeff0;
+  background-color: var(--color-bg-alt);
 }
 
 dd,
@@ -158,12 +200,12 @@ button + button {
 
 details[open] > summary {
   opacity: 1;
-  color: silver;
+  color: var(--color-text-muted);
 }
 
 small {
   display: block;
-  color: gray;
+  color: var(--color-text-muted);
 }
 
 dt,
@@ -181,7 +223,7 @@ dd summary {
 }
 
 fieldset {
-  border: 1px dashed gray;
+  border: 1px dashed var(--color-border);
 }
 
 dl,
@@ -225,8 +267,8 @@ fieldset + fieldset {
 
 .error {
   color: white;
-  padding: 4px  8px;
-  background: #ab0000;
+  padding: 4px 8px;
+  background: var(--color-accent);
 }
 
 .github-ribbon {
@@ -234,7 +276,7 @@ fieldset + fieldset {
   text-decoration: none;
   text-align: center;
   transform: rotate(40deg);
-  background: #BDC3C7;
+  background: var(--color-tertiary);
   color: white;
   width: 200px;
   height: 30px;
@@ -245,21 +287,21 @@ fieldset + fieldset {
   top: 35px;
 }
 
-.keyword { color: #a71d5d; }
+.keyword { color: var(--color-tertiary); }
 .string,
-.regexp { color: #df5000; }
-.special { color: #0086b3; }
-.class { color: #333333; }
-.number { color: #63a35c; }
-.comment { color: #969896; font-style: italic; }
+.regexp { color: var(--color-secondary); }
+.special { color: var(--color-quaternary); }
+.class { color: var(--color-text); }
+.number { color: var(--color-accent); }
+.comment { color: var(--color-text-muted); font-style: italic; }
 
 .animated {
   animation-duration: 1s;
   animation-fill-mode: both;
 }
 
-.fast { animation-duration: .5s;  }
-.faster { animation-duration: .3s;  }
+.fast { animation-duration: .5s; }
+.faster { animation-duration: .3s; }
 
 .fadeIn { animation-name: fadeIn; }
 .fadeOut { animation-name: fadeOut; }
