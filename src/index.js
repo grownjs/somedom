@@ -64,8 +64,10 @@ export {
 export { default as Portal } from './lib/portal.js';
 
 export {
-  signal, computed, effect, batch, untracked,
+  signal, computed, effect, batch, untracked, trap,
 } from './lib/signals.js';
+
+export { scope } from './lib/context.js';
 
 export const text = (strings, ...values) => {
   let needsComputed = false;

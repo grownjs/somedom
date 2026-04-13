@@ -1,4 +1,5 @@
 let currentEffect = null;
+let currentTrap = null;
 let batchDepth = 0;
 const pendingEffects = new Set();
 
@@ -169,6 +170,12 @@ export function effect(fn) {
 
     try {
       cleanup = fn();
+    } catch (error) {
+      if (currentTrap) {
+        cleanup = currentTrap(error);
+      } else {
+        throw error;
+      }
     } finally {
       currentEffect = prevEffect;
     }
@@ -216,4 +223,16 @@ export function untracked(fn) {
   } finally {
     currentEffect = prev;
   }
+}
+
+export function getCurrentEffect() {
+  return currentEffect;
+}
+
+export function trap(handler) {
+  const prev = currentTrap;
+  currentTrap = handler;
+  return () => {
+    currentTrap = prev;
+  };
 }
