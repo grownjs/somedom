@@ -320,6 +320,7 @@
   const applyAnimations = (value, name, el) => { el[name] = nextProps(el, classes(value)); };
 
   let currentEffect = null;
+  let currentTrap = null;
   let batchDepth = 0;
   const pendingEffects = new Set();
 
@@ -336,9 +337,18 @@
           currentEffect._signals.add({ subscribers, options, wasEmpty });
         }
         if (wasEmpty && options?.onSubscribe) options.onSubscribe();
+      } else if (!currentEffect && !run._subscribedExternal && typeof sig.subscribe === 'function') {
+        const dispose = sig.subscribe(run);
+        if (typeof dispose === 'function') {
+          run._externalDisposers = run._externalDisposers || new Set();
+          run._externalDisposers.add(dispose);
+          run._subscribedExternal = true;
+        }
       }
       return value;
     };
+
+    const run = () => read();
 
     const write = newValue => {
       if (value !== newValue) {
@@ -374,6 +384,7 @@
     let dirty = true;
     const subscribers = new Set();
     let deps = [];
+    let notifying = false;
 
     const evaluate = () => {
       if (!dirty) return cachedValue;
@@ -403,12 +414,26 @@
     }
 
     const notify = () => {
-      dirty = true;
-      const subs = [...subscribers];
-      if (batchDepth > 0) {
-        subs.forEach(cb => pendingEffects.add(cb));
-      } else {
-        subs.forEach(cb => cb());
+      if (notifying) return;
+      notifying = true;
+      try {
+        dirty = true;
+        const subs = [...subscribers];
+        if (batchDepth > 0) {
+          subs.forEach(cb => pendingEffects.add(cb));
+        } else {
+          subs.forEach(cb => cb());
+        }
+        if (!currentEffect && !run._subscribedExternal && typeof sig.subscribe === 'function') {
+          const dispose = sig.subscribe(notify);
+          if (typeof dispose === 'function') {
+            run._externalDisposers = run._externalDisposers || new Set();
+            run._externalDisposers.add(dispose);
+            run._subscribedExternal = true;
+          }
+        }
+      } finally {
+        notifying = false;
       }
     };
 
@@ -425,7 +450,7 @@
     }
     dirty = false;
 
-    return {
+    const sig = {
       get value() { return run(); },
       peek() {
         if (dirty) evaluate();
@@ -436,6 +461,8 @@
         return () => subscribers.delete(cb);
       },
     };
+
+    return sig;
   }
 
   function effect(fn) {
@@ -462,6 +489,12 @@
 
       try {
         cleanup = fn();
+      } catch (error) {
+        if (currentTrap) {
+          cleanup = currentTrap(error);
+        } else {
+          throw error;
+        }
       } finally {
         currentEffect = prevEffect;
       }
@@ -480,6 +513,10 @@
           sig.options.onUnsubscribe();
         }
       });
+      if (run._externalDisposers) {
+        run._externalDisposers.forEach(extCleanup => extCleanup());
+        run._externalDisposers.clear();
+      }
     };
   }
 
@@ -507,6 +544,18 @@
     }
   }
 
+  function getCurrentEffect() {
+    return currentEffect;
+  }
+
+  function trap(handler) {
+    const prev = currentTrap;
+    currentTrap = handler;
+    return () => {
+      currentTrap = prev;
+    };
+  }
+
   const SIGNAL_PREFIX = 's:';
   const DIRECTIVE_PREFIX = 'd:';
 
@@ -532,23 +581,46 @@
     let dispose;
 
     switch (directive) {
-      case 'show':
+      case 'show': {
         dispose = effect(() => {
           target.style.display = val.value ? '' : 'none';
         });
+        if (!dispose._deps?.size && typeof val.subscribe === 'function') {
+          const unsub = val.subscribe(() => {
+            target.style.display = val.peek() ? '' : 'none';
+          });
+          const origDispose = dispose;
+          dispose = () => { origDispose(); unsub(); };
+        }
         break;
+      }
 
-      case 'hide':
+      case 'hide': {
         dispose = effect(() => {
           target.style.display = val.value ? 'none' : '';
         });
+        if (!dispose._deps?.size && typeof val.subscribe === 'function') {
+          const unsub = val.subscribe(() => {
+            target.style.display = val.peek() ? 'none' : '';
+          });
+          const origDispose = dispose;
+          dispose = () => { origDispose(); unsub(); };
+        }
         break;
+      }
 
       case 'class': {
         const className = val.className || 'active';
         dispose = effect(() => {
           target.classList.toggle(className, !!val.value);
         });
+        if (!dispose._deps?.size && typeof val.subscribe === 'function') {
+          const unsub = val.subscribe(() => {
+            target.classList.toggle(className, !!val.peek());
+          });
+          const origDispose = dispose;
+          dispose = () => { origDispose(); unsub(); };
+        }
         break;
       }
 
@@ -575,17 +647,33 @@
         break;
       }
 
-      case 'text':
+      case 'text': {
         dispose = effect(() => {
           target.textContent = val.value;
         });
+        if (!dispose._deps?.size && typeof val.subscribe === 'function') {
+          const unsub = val.subscribe(() => {
+            target.textContent = val.peek();
+          });
+          const origDispose = dispose;
+          dispose = () => { origDispose(); unsub(); };
+        }
         break;
+      }
 
-      case 'html':
+      case 'html': {
         dispose = effect(() => {
           target.innerHTML = val.value;
         });
+        if (!dispose._deps?.size && typeof val.subscribe === 'function') {
+          const unsub = val.subscribe(() => {
+            target.innerHTML = val.peek();
+          });
+          const origDispose = dispose;
+          dispose = () => { origDispose(); unsub(); };
+        }
         break;
+      }
 
       case 'click-outside': {
         const callback = val;
@@ -639,6 +727,24 @@
         target[domProp] = value;
       }
     });
+
+    if (!dispose._deps?.size && typeof signal.subscribe === 'function') {
+      const unsub = signal.subscribe(() => {
+        const value = signal.peek();
+        if (domProp === 'textContent') {
+          target.textContent = value == null ? '' : String(value);
+        } else if (domProp === 'innerHTML') {
+          target.innerHTML = value == null ? '' : String(value);
+        } else if (domProp.startsWith('style.')) {
+          target.style[domProp.slice(6)] = value;
+        } else {
+          target[domProp] = value;
+        }
+      });
+      const origDispose = dispose;
+      target._signalDisposers.set(prop, () => { origDispose(); unsub(); });
+      return;
+    }
 
     target._signalDisposers.set(prop, dispose);
   }
@@ -799,15 +905,77 @@
     }
   }
 
-  function createSignalTextNode(signal) {
-    const textNode = document.createTextNode(String(signal.peek()));
+  function createFunctionTextNode(fn, svg, cb) {
+    const computedSignal = computed(fn);
+    return createSignalNode(computedSignal, svg, cb);
+  }
 
-    const dispose = effect(() => {
-      textNode.nodeValue = String(signal.value);
-    });
+  function createSignalNode(signal, svg, cb) {
+    // Always start with a stable empty text anchor — no type sniffing at creation.
+    // Initial value + all updates go through the same path, enabling clean DOM
+    // transitions (CSS @starting-style, enter animations) since the anchor is
+    // already mounted when content appears via microtask.
+    let current = document.createTextNode('');
+    let currentVnode = null;
 
-    textNode._signalDispose = dispose;
-    return textNode;
+    const update = async () => {
+      const next = signal.peek();
+      const dispose = current._signalDispose;
+
+      if (isNot(next) || next === false) {
+        if (current.nodeType === 3) { current.nodeValue = ''; }
+        else {
+          const t = document.createTextNode('');
+          t._signalDispose = dispose;
+          current.replaceWith(t);
+          current = t;
+        }
+        currentVnode = null;
+      } else if (isScalar(next)) {
+        if (current.nodeType === 3) { current.nodeValue = String(next); }
+        else {
+          const t = document.createTextNode(String(next));
+          t._signalDispose = dispose;
+          current.replaceWith(t);
+          current = t;
+        }
+        currentVnode = null;
+      } else if (current.nodeType === 3) {
+        const el = createElement(next, svg, cb);
+        el._signalDispose = dispose;
+        current.replaceWith(el);
+        current = el;
+        currentVnode = next;
+      } else {
+        current = await upgradeNode(current, currentVnode, next, svg, cb);
+        current._signalDispose = dispose;
+        currentVnode = next;
+      }
+    };
+
+    // Render initial value as microtask — anchor is in DOM by then
+    Promise.resolve().then(update);
+
+    const dispose = effect(() => { signal.value; });
+
+    if (!dispose._deps?.size && typeof signal.subscribe === 'function') {
+      const unsub = signal.subscribe(() => update());
+      current._signalDispose = () => { dispose(); unsub(); };
+    } else {
+      let initialized = false;
+      const disposeUpdate = effect(() => {
+        signal.value;
+        if (initialized) update();
+        initialized = true;
+      });
+      current._signalDispose = disposeUpdate;
+    }
+
+    return current;
+  }
+
+  function createSignalTextNode(signal, svg, cb) {
+    return createSignalNode(signal, svg, cb);
   }
 
   const canMove = () => typeof Element !== 'undefined' && 'moveBefore' in Element.prototype;
@@ -855,7 +1023,10 @@
         return Fragment.from(v => createElement(v, svg, cb), vnode);
       }
       if (isSignal(vnode)) {
-        return createSignalTextNode(vnode);
+        return createSignalTextNode(vnode, svg, cb);
+      }
+      if (isFunction(vnode)) {
+        return createFunctionTextNode(vnode, svg, cb);
       }
       return (isScalar(vnode) && document.createTextNode(String(vnode))) || vnode;
     }
@@ -928,7 +1099,7 @@
   }
 
   function mountElement(target, view, svg, cb) {
-    if (isFunction(view)) {
+    if (isFunction(view) && typeof svg === 'undefined' && typeof cb === 'undefined') {
       cb = view;
       view = target;
       target = undefined;
@@ -1155,6 +1326,51 @@
     }
   }
 
+  function scope(defaultValue) {
+    const subscribers = new Set();
+    let value = defaultValue;
+
+    const read = () => {
+      const currentEffect = getCurrentEffect();
+      if (currentEffect && !subscribers.has(currentEffect)) {
+        subscribers.add(currentEffect);
+        currentEffect._deps.add(subscribers);
+      }
+      return value;
+    };
+
+    const write = newValue => {
+      if (value !== newValue) {
+        value = newValue;
+        const subs = [...subscribers];
+        subs.forEach(cb => cb());
+      }
+    };
+
+    const provide = (newValue, fn) => {
+      const prev = value;
+      value = newValue;
+      try {
+        return fn();
+      } finally {
+        value = prev;
+      }
+    };
+
+    const sig = {
+      get value() { return read(); },
+      set value(v) { write(v); },
+      peek() { return value; },
+      provide,
+      subscribe(cb) {
+        subscribers.add(cb);
+        return () => subscribers.delete(cb);
+      },
+    };
+
+    return sig;
+  }
+
   const h = (tag = 'div', attrs = null, ...children) => {
     if (isScalar(attrs)) return [tag, {}, [attrs].concat(children).filter(x => !isNot(x))];
     if (isArray(attrs) && !children.length) return [tag, {}, attrs];
@@ -1235,6 +1451,8 @@
     effect: effect,
     batch: batch,
     untracked: untracked,
+    trap: trap,
+    scope: scope,
     camelCase: camelCase,
     dashCase: dashCase,
     filter: filter,
