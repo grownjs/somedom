@@ -13,9 +13,9 @@
   ],
   "exports": {
     ".": {
+      "browser": "./dist/somedom.umd.js",
       "import": "./dist/somedom.mjs",
-      "require": "./dist/somedom.cjs",
-      "browser": "./dist/somedom.umd.js"
+      "require": "./dist/somedom.cjs"
     },
     "./ssr": {
       "import": "./dist/index.ssr.mjs",
