@@ -14,7 +14,12 @@ import {
 import Fragment from './fragment.js';
 import Portal from './portal.js';
 
-import { effect } from './signals.js';
+import { effect, computed } from './signals.js';
+
+function createFunctionTextNode(fn, svg, cb) {
+  const computedSignal = computed(fn);
+  return createSignalNode(computedSignal, svg, cb);
+}
 
 function createSignalNode(signal, svg, cb) {
   // Always start with a stable empty text anchor — no type sniffing at creation.
@@ -131,6 +136,9 @@ export function createElement(vnode, svg, cb) {
     if (isSignal(vnode)) {
       return createSignalTextNode(vnode, svg, cb);
     }
+    if (isFunction(vnode)) {
+      return createFunctionTextNode(vnode, svg, cb);
+    }
     return (isScalar(vnode) && document.createTextNode(String(vnode))) || vnode;
   }
 
@@ -202,7 +210,7 @@ export function createElement(vnode, svg, cb) {
 }
 
 export function mountElement(target, view, svg, cb) {
-  if (isFunction(view)) {
+  if (isFunction(view) && typeof svg === 'undefined' && typeof cb === 'undefined') {
     cb = view;
     view = target;
     target = undefined;

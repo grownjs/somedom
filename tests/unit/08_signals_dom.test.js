@@ -249,4 +249,117 @@ test.group('signal DOM binding', t => {
 
     unmount(el);
   });
+
+  test('should handle function as child returning scalar', async ({ expect }) => {
+    if (!doc.hasDOM()) {
+      return expect(true).toBe(true);
+    }
+
+    const vnode = ['div', {}, 'Value: ', () => 42];
+    const el = render(vnode);
+    mount(document.body, el);
+    await Promise.resolve();
+
+    expect(el.textContent).toBe('Value: 42');
+
+    unmount(el);
+  });
+
+  test('should handle function as child with signal dependency', async ({ expect }) => {
+    if (!doc.hasDOM()) {
+      return expect(true).toBe(true);
+    }
+
+    const count = signal(0);
+
+    const vnode = ['div', {}, 'Count: ', () => count.value];
+    const el = render(vnode);
+    mount(document.body, el);
+    await Promise.resolve();
+
+    expect(el.textContent).toBe('Count: 0');
+
+    count.value = 5;
+    await Promise.resolve();
+    expect(el.textContent).toBe('Count: 5');
+
+    count.value = 42;
+    await Promise.resolve();
+    expect(el.textContent).toBe('Count: 42');
+
+    unmount(el);
+  });
+
+  test('should handle function with multiple signal dependencies', async ({ expect }) => {
+    if (!doc.hasDOM()) {
+      return expect(true).toBe(true);
+    }
+
+    const a = signal(2);
+    const b = signal(3);
+
+    const vnode = ['div', {}, 'Sum: ', () => a.value + b.value];
+    const el = render(vnode);
+    mount(document.body, el);
+    await Promise.resolve();
+
+    expect(el.textContent).toBe('Sum: 5');
+
+    a.value = 10;
+    await Promise.resolve();
+    expect(el.textContent).toBe('Sum: 13');
+
+    b.value = 7;
+    await Promise.resolve();
+    expect(el.textContent).toBe('Sum: 17');
+
+    unmount(el);
+  });
+
+  test('should handle mixed content with function children', async ({ expect }) => {
+    if (!doc.hasDOM()) {
+      return expect(true).toBe(true);
+    }
+
+    const name = signal('World');
+    const count = signal(0);
+
+    const vnode = ['p', {}, 'Hello ', () => name.value, '! Count: ', () => count.value];
+    const el = render(vnode);
+    mount(document.body, el);
+    await Promise.resolve();
+
+    expect(el.textContent).toBe('Hello World! Count: 0');
+
+    name.value = 'John';
+    await Promise.resolve();
+    expect(el.textContent).toBe('Hello John! Count: 0');
+
+    count.value = 5;
+    await Promise.resolve();
+    expect(el.textContent).toBe('Hello John! Count: 5');
+
+    unmount(el);
+  });
+
+  test('should cleanup function child effect on unmount', async ({ expect }) => {
+    if (!doc.hasDOM()) {
+      return expect(true).toBe(true);
+    }
+
+    const count = signal(0);
+
+    const vnode = ['div', {}, () => count.value];
+    const el = render(vnode);
+    mount(document.body, el);
+    await Promise.resolve();
+
+    expect(el.textContent).toBe('0');
+
+    await unmount(el);
+
+    count.value = 100;
+    await Promise.resolve();
+    expect(el.textContent).toBe('0');
+  });
 });
