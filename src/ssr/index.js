@@ -35,7 +35,7 @@ export function enable(env) {
       window = new Window();
     } else {
       const { JSDOM } = env.jsdom;
-      ({ window } = new JSDOM());
+      ({ window } = new JSDOM('', { url: 'http://localhost', storageQuota: 10000000 }));
     }
 
     _global.document = window.document;
