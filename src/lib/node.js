@@ -213,7 +213,7 @@ export function createElement(vnode, svg, cb) {
   return el;
 }
 
- export function hydrateElement(target, view, svg, cb) {
+export function hydrateElement(target, view, svg, cb) {
   if (isFunction(view) && typeof svg === 'undefined' && typeof cb === 'undefined') {
     cb = view;
     view = target;
