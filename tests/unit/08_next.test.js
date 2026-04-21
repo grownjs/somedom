@@ -66,9 +66,27 @@ test.group('DOM checks', t => {
     b.hash = 'osom';
     b.search = '?ok=42';
 
-    expect(b.getAttribute('href')).toEqual('../foo');
-    expect(b.href).toEqual(process.env.JS_DOM || process.env.HAPPY_DOM ? '../foo' : 'http://website.com/a/foo?ok=42#osom');
-    expect(b.search).toEqual(process.env.JS_DOM || process.env.HAPPY_DOM ? '' : '?ok=42');
+    let expectedHref;
+    let expectedSearch;
+    let expectedAttrHref;
+
+    if (process.env.JS_DOM) {
+      expectedAttrHref = 'http://localhost/foo?ok=42#osom';
+      expectedHref = 'http://localhost/foo?ok=42#osom';
+      expectedSearch = '?ok=42';
+    } else if (process.env.HAPPY_DOM) {
+      expectedAttrHref = '../foo';
+      expectedHref = '../foo';
+      expectedSearch = '';
+    } else {
+      expectedAttrHref = '../foo';
+      expectedHref = 'http://website.com/a/foo?ok=42#osom';
+      expectedSearch = '?ok=42';
+    }
+
+    expect(b.getAttribute('href')).toEqual(expectedAttrHref);
+    expect(b.href).toEqual(expectedHref);
+    expect(b.search).toEqual(expectedSearch);
   });
 
   test('should preserve html-entitites from attrs', ({ expect }) => {

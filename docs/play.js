@@ -916,8 +916,9 @@
       const dispose = current._signalDispose;
 
       if (isNot(next) || next === false) {
-        if (current.nodeType === 3) { current.nodeValue = ''; }
-        else {
+        if (current.nodeType === 3) {
+          current.nodeValue = '';
+        } else {
           const t = document.createTextNode('');
           t._signalDispose = dispose;
           current.replaceWith(t);
@@ -925,8 +926,9 @@
         }
         currentVnode = null;
       } else if (isScalar(next)) {
-        if (current.nodeType === 3) { current.nodeValue = String(next); }
-        else {
+        if (current.nodeType === 3) {
+          current.nodeValue = String(next);
+        } else {
           const t = document.createTextNode(String(next));
           t._signalDispose = dispose;
           current.replaceWith(t);
@@ -950,7 +952,7 @@
       Promise.resolve().then(update);
     }
 
-    const dispose = effect(() => { signal.value; });
+    const dispose = effect(() => { signal.value; }); // eslint-disable-line no-unused-expressions
 
     if (!dispose._deps?.size && typeof signal.subscribe === 'function') {
       const unsub = signal.subscribe(() => update());
@@ -958,7 +960,7 @@
     } else {
       let initialized = skipInitial;
       const disposeUpdate = effect(() => {
-        signal.value;
+        signal.value; // eslint-disable-line no-unused-expressions
         if (initialized) update();
         initialized = true;
       });
