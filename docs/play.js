@@ -910,14 +910,7 @@
     return createSignalNode(computedSignal, svg, cb);
   }
 
-  function createSignalNode(signal, svg, cb) {
-    // Always start with a stable empty text anchor — no type sniffing at creation.
-    // Initial value + all updates go through the same path, enabling clean DOM
-    // transitions (CSS @starting-style, enter animations) since the anchor is
-    // already mounted when content appears via microtask.
-    let current = document.createTextNode('');
-    let currentVnode = null;
-
+  function setupSignalNode(signal, svg, cb, current, currentVnode, skipInitial) {
     const update = async () => {
       const next = signal.peek();
       const dispose = current._signalDispose;
@@ -953,8 +946,9 @@
       }
     };
 
-    // Render initial value as microtask — anchor is in DOM by then
-    Promise.resolve().then(update);
+    if (!skipInitial) {
+      Promise.resolve().then(update);
+    }
 
     const dispose = effect(() => { signal.value; });
 
@@ -962,7 +956,7 @@
       const unsub = signal.subscribe(() => update());
       current._signalDispose = () => { dispose(); unsub(); };
     } else {
-      let initialized = false;
+      let initialized = skipInitial;
       const disposeUpdate = effect(() => {
         signal.value;
         if (initialized) update();
@@ -972,6 +966,14 @@
     }
 
     return current;
+  }
+
+  function createSignalNode(signal, svg, cb) {
+    return setupSignalNode(signal, svg, cb, document.createTextNode(''), null, false);
+  }
+
+  function hydrateSignalNode(signal, existingEl, existingVnode, svg, cb) {
+    return setupSignalNode(signal, svg, cb, existingEl, existingVnode, true);
   }
 
   function createSignalTextNode(signal, svg, cb) {
@@ -1096,6 +1098,177 @@
     }
 
     return el;
+  }
+
+  function hydrateElement(target, view, svg, cb) {
+    if (isFunction(view) && typeof svg === 'undefined' && typeof cb === 'undefined') {
+      cb = view;
+      view = target;
+      target = undefined;
+    }
+
+    if (isFunction(svg)) {
+      cb = svg;
+      svg = null;
+    }
+
+    if (isNot(view)) {
+      view = target;
+      target = undefined;
+    }
+
+    if (!target) {
+      target = document.body;
+    }
+
+    if (typeof target === 'string') {
+      target = document.querySelector(target);
+    }
+
+    const vnodes = isBlock(view) ? view : [view];
+    const domChildren = Array.from(target.childNodes);
+    let domIdx = 0;
+
+    for (let i = 0; i < vnodes.length; i++) {
+      const vnode = vnodes[i];
+      if (isNot(vnode) || vnode === false) continue;
+
+      if (isSignal(vnode)) {
+        const domEl = domChildren[domIdx];
+        if (domEl) {
+          hydrateSignalNode(vnode, domEl, domEl.nodeType === 3 ? domEl.nodeValue : toNodes(domEl, true), svg, cb);
+          domIdx++;
+        } else {
+          const node = createSignalTextNode(vnode, svg, cb);
+          target.appendChild(node);
+        }
+        continue;
+      }
+
+      if (isNode(vnode)) {
+        const domEl = domChildren[domIdx];
+
+        if (cb && cb.tags && cb.tags[vnode[0]]) {
+          const tagResult = cb.tags[vnode[0]](vnode[1], toFragment(vnode), cb);
+
+          if (isSignal(tagResult)) {
+            const openMarker = findHydrateOpen(domChildren, domIdx);
+
+            if (openMarker) {
+              const closeIdx = findHydrateClose(domChildren, domChildren.indexOf(openMarker) + 1);
+              const closeMarker = closeIdx !== -1 ? domChildren[closeIdx] : null;
+
+              if (closeMarker) {
+                const claimed = collectBetween(openMarker, closeMarker);
+                openMarker.remove();
+                closeMarker.remove();
+
+                const peeked = tagResult.peek();
+                if (isNot(peeked) || peeked === false) {
+                  const anchor = document.createTextNode('');
+                  target.insertBefore(anchor, claimed.length ? claimed[0] : null);
+                  claimed.forEach(n => n.remove());
+                  hydrateSignalNode(tagResult, anchor, null, svg, cb);
+                } else if (claimed.length === 1) {
+                  hydrateSignalNode(tagResult, claimed[0], toNodes(claimed[0], true), svg, cb);
+                } else if (claimed.length > 1) {
+                  const wrapper = document.createElement('slot');
+                  target.insertBefore(wrapper, claimed[0]);
+                  claimed.forEach(n => wrapper.appendChild(n));
+                  hydrateSignalNode(tagResult, wrapper, ['slot', {}, claimed.map(n => toNodes(n, true))], svg, cb);
+                } else {
+                  const anchor = document.createTextNode('');
+                  target.appendChild(anchor);
+                  hydrateSignalNode(tagResult, anchor, null, svg, cb);
+                }
+                domIdx = closeIdx + 1;
+              } else {
+                if (domEl) domEl.remove();
+                mountElement(target, tagResult, svg, cb);
+              }
+            } else {
+              if (domEl) domEl.remove();
+              mountElement(target, tagResult, svg, cb);
+            }
+          } else {
+            if (domEl) domEl.remove();
+            mountElement(target, tagResult, svg, cb);
+          }
+          continue;
+        }
+
+        if (domEl && domEl.nodeType === 1 && domEl.tagName.toLowerCase() === vnode[0]) {
+          if (!isEmpty(vnode[1])) assignProps(domEl, vnode[1], svg, cb);
+          hydrateElement(domEl, vnode.slice(2), svg, cb);
+          domIdx++;
+        } else {
+          if (domEl) domEl.remove();
+          mountElement(target, vnode, svg, cb);
+        }
+        continue;
+      }
+
+      if (isScalar(vnode)) {
+        const domEl = domChildren[domIdx];
+        if (domEl && domEl.nodeType === 3) {
+          if (isDiff(domEl.nodeValue, String(vnode))) domEl.nodeValue = String(vnode);
+          domIdx++;
+        } else {
+          const node = document.createTextNode(String(vnode));
+          if (domEl) domEl.replaceWith(node);
+          else target.appendChild(node);
+          domIdx++;
+        }
+        continue;
+      }
+
+      if (isArray(vnode)) {
+        for (const item of vnode) {
+          hydrateElement(target, item, svg, cb);
+        }
+        continue;
+      }
+    }
+
+    while (domIdx < domChildren.length) {
+      domChildren[domIdx].remove();
+      domIdx++;
+    }
+
+    return target;
+  }
+
+  function findHydrateOpen(domChildren, fromIdx) {
+    for (let i = fromIdx; i < domChildren.length; i++) {
+      if (domChildren[i].nodeType === 8 && domChildren[i].nodeValue === '[') {
+        return domChildren[i];
+      }
+    }
+    return null;
+  }
+
+  function findHydrateClose(domChildren, fromIdx) {
+    let depth = 1;
+    for (let i = fromIdx; i < domChildren.length; i++) {
+      if (domChildren[i].nodeType === 8) {
+        if (domChildren[i].nodeValue === '[') depth++;
+        else if (domChildren[i].nodeValue === ']') {
+          depth--;
+          if (depth === 0) return i;
+        }
+      }
+    }
+    return -1;
+  }
+
+  function collectBetween(start, end) {
+    const nodes = [];
+    let node = start.nextSibling;
+    while (node && node !== end) {
+      nodes.push(node);
+      node = node.nextSibling;
+    }
+    return nodes;
   }
 
   function mountElement(target, view, svg, cb) {
@@ -1439,6 +1612,7 @@
     attributes: attributes,
     text: text,
     mount: mountElement,
+    hydrate: hydrateElement,
     patch: updateElement,
     render: createElement,
     unmount: destroyElement,

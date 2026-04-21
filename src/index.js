@@ -50,6 +50,7 @@ export * from './lib/shared.js';
 
 export {
   mountElement as mount,
+  hydrateElement as hydrate,
   updateElement as patch,
   createElement as render,
   destroyElement as unmount,
