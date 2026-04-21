@@ -424,6 +424,27 @@
       </dl>
     </details>
 
+    <details>
+      <summary><code>hydrate()</code></summary>
+      <dl>
+        <dt><code>hydrate(target, vnode[, svg[, cb]])</code></dt>
+        <dd>
+          <p>Claims existing SSR DOM nodes instead of creating new ones. Matches elements by tag name, hydrates text nodes, and wires up signal-based reactivity on claimed elements.</p>
+          <p>SSR output should include <code>&lt;!--[--&gt;</code> and <code>&lt;!--]--&gt;</code> bracket comment markers around reactive blocks (e.g. <code>{#if}</code>, <code>{#each}</code>). The hydrate function uses these markers to find and claim the DOM between them, setting up signal subscriptions without any visible flash.</p>
+          <pre class="highlight">// SSR output with bracket markers
+&lt;!--[--&gt;&lt;!--]--&gt;         &lt;!-- empty {#if} block --&gt;
+&lt;!--[--&gt;&lt;p&gt;Yes&lt;/p&gt;&lt;!--]--&gt; &lt;!-- {#if} with content --&gt;
+
+// Client-side hydration
+hydrate(target, vnode, null, tag);</pre>
+          <p>Signal-dependent function children (named <code>$signal</code> or with <code>__reactive</code> flag) are automatically wrapped in <code>computed()</code> and connected to the DOM through <code>hydrateSignalNode()</code>, enabling live updates after hydration.</p>
+        </dd>
+        <dd>
+          <p>When the target element has no children (e.g. fresh mount without SSR), use <code>mount()</code> instead. Hydrating an empty target is equivalent to mounting but may not wire up signal effects the same way.</p>
+        </dd>
+      </dl>
+    </details>
+
     <h3>Available Hooks</h3>
     <p>Listen for events on the DOM, setup element's lifecycle or enhance dynamic <code>class</code> names, etc.</p>
 
