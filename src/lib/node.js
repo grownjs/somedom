@@ -213,7 +213,7 @@ export function createElement(vnode, svg, cb) {
   return el;
 }
 
-export function hydrateElement(target, view, svg, cb) {
+ export function hydrateElement(target, view, svg, cb) {
   if (isFunction(view) && typeof svg === 'undefined' && typeof cb === 'undefined') {
     cb = view;
     view = target;
@@ -254,6 +254,26 @@ export function hydrateElement(target, view, svg, cb) {
       } else {
         const node = createSignalTextNode(vnode, svg, cb);
         target.appendChild(node);
+      }
+      continue;
+    }
+
+    if (isFunction(vnode)) {
+      const domEl = domChildren[domIdx];
+      if (vnode.__reactive || vnode.name === '$signal') {
+        const signal = computed(vnode);
+        if (domEl) {
+          hydrateSignalNode(signal, domEl, domEl.nodeType === 3 ? domEl.nodeValue : toNodes(domEl, true), svg, cb);
+          domIdx++;
+        } else {
+          const node = createSignalTextNode(signal, svg, cb);
+          target.appendChild(node);
+        }
+      } else {
+        const result = vnode();
+        if (result !== undefined && result !== null) {
+          hydrateElement(target, result, svg, cb);
+        }
       }
       continue;
     }
